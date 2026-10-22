@@ -6,22 +6,24 @@ export async function sources(root) {
   const node=card(root,{title:'Reference tools and public equivalents'}),body=document.createElement('div');body.className='source-table';
   body.innerHTML=table(['Reference tool','This site','Coverage / distinction'],[
     ['Logistics & access','Live boundary / OSM map; airports, roads, rail stations, harbours, schools','Viewport queries capped at 500; OAG routes are not reproduced; broadband links to ISED, without a household aggregate.'],
-    ['Community profile','Age pyramid; housing, households, language, immigration, Indigenous identity','Country, province/territory, municipality, census division, metro/agglomeration, economic region, population centre.'],
+    ['Community profile','Economic, resident, household, dwelling, workforce and livability dashboards; station climate normals','Country, province/territory, municipality, census division, metro/agglomeration, economic region, population centre. Each series retains its own period and geographic scope.'],
     ['Community explorer','Search, population filters, live multi-place comparison','Official Census geographies; population centres are not a municipal rural/urban classification.'],
-    ['Market advantages','Household income, housing costs, tenure, suitability and mobility','Income is for 2020. A Census profile, not a current real-estate price feed.'],
-    ['Workforce advantages','Labour rates, NOC occupations, NAICS sectors, education and commuting','Resident labour force in 2021; all genders, Men+, Women+.'],
-    ['Industry insights','Location quotients, specialization/growth bubble chart, treemap','Estimated employment from Business Register size classes; Canada benchmark at same industry level.'],
-    ['Fast-growing industries','Absolute/percentage five-year changes; minimum-base filter','Matched June/December releases. Recoded or suppressed industries have no comparable rate.'],
-    ['Largest industries','2/3/4-digit rankings; 6-digit where published; traded/local; bounds','Canada/provinces and published CMA/CSD geographies. Other levels show a labelled Census sector view.'],
-    ['Talent pipeline','PSIS field enrolments and trends; institution, type, registration, status and gender','Institution or province scope; resident qualifications shown separately for local areas.'],
+    ['Market advantages','Consumer, dwelling and business catchment maps; filterable bins, natural breaks, counts and shares','One marginal distribution at a time, as in the recovered reference. Province maps show municipalities; Canada maps provinces. No inferred intersections.'],
+    ['Workforce advantages','Four education donuts, resident-industry treemap, top occupations, catchment maps and detailed indicators','Resident labour force in 2021; all genders, Men+, Women+. Recent LFS rates are separately labelled.'],
+    ['Industry insights','Location quotients, specialization/growth bubbles and treemap','Published SEPH employment at national/provincial level; Business Register midpoint estimates are a separate option.'],
+    ['Fast-growing industries','Absolute/percentage five-year changes; minimum-base filter; sector-coloured bubbles','SEPH annual comparison, or matched June/December Business Counts releases. Missing or recoded industries have no invented rate.'],
+    ['Largest industries','Sector-grouped employment treemap; rankings, traded/local and tables','SEPH at Canada/provinces; Business Counts at published CMA/CSD geographies. Other local levels show a labelled Census sector view. Traded/local mapping is approximate.'],
+    ['Talent pipeline','PSIS fields and trends; institution, type, registration, status, gender; institution map','Whole-institution counts attach only to exact facility-name matches. Groups with missing components stay unavailable. Resident qualifications remain separate.'],
   ]);node.append(body);root.append(node);
-  notice(root,'Exact Localintel chart parity remains unverified. The reference’s embeds returned HTTP 406 / browser navigation failures during inspection on 2026-10-22. This is an independently implemented public-data counterpart. Proprietary schedules, custom geographies, private classifications and unavailable aggregates are not fabricated.',true);
+  notice(root,'The recovered reference charts and source definitions informed this implementation. Live Manitoba checks matched its largest-industry codes/counts, education counts, resident-industry distribution, participation series and family-income series. This does not establish universal visual or data parity. OAG routes, drive-time areas, complete facility inventories and broadband household aggregates remain unavailable here.',true);
   const refs=card(root,{title:'Public services and documentation'}),list=document.createElement('div');list.className='source-table';list.innerHTML=[
     ['https://www.statcan.gc.ca/en/developers','Statistics Canada developer services'],
     ['https://www12.statcan.gc.ca/wds-sdw/2021profile-profil2021-eng.cfm','Census Profile 2021 Web Data Service guide'],
     ['https://www.statcan.gc.ca/en/developers/wds/user-guide','Statistics Canada WDS guide'],
     ['https://www150.statcan.gc.ca/t1/wds/rest/getAllCubesListLite','Live table catalogue used to discover Business Counts releases'],
     ['https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3710027701','PSIS institutional enrolments'],
+    ['https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410020201','SEPH annual industry employment'],
+    ['https://api.weather.gc.ca/collections/climate-normals?f=json','ECCC station normals; period read from collection metadata'],
     ['https://geo.statcan.gc.ca/geo_wa/rest/services/2021/Cartographic_boundary_files/MapServer','Census cartographic boundary service'],
     ['https://www.openstreetmap.org/copyright','OpenStreetMap licensing and attribution'],
     ['https://ised-isde.canada.ca/app/scr/sittibc/web/bbmap/hm.html?lang=eng','ISED National Broadband Map'],

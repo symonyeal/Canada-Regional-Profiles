@@ -59,3 +59,12 @@ The following inputs document the original Python build. They are not downloaded
 | ISED, National Broadband Data, PHH Speeds (current, 2026-05-12) and Pseudo-Household Demographic Distribution 2021 | broadband availability | inspected 2026-10-22 |
 | OurAirports, `airports.csv` (public domain) | airports with scheduled service | inspected 2026-10-22 |
 | NGA, World Port Index (Pub. 150); Fisheries and Oceans Canada, Small Craft Harbours | ports | inspected 2026-10-22 |
+
+
+## Additional live services inspected 2026-10-22
+
+- SEPH [14-10-0202](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410020201): WDS metadata and annual series read for all employees. The industrial aggregate including unclassified businesses, code 00-91N, supplies each LQ denominator. Live Manitoba top-20 results matched the recorded reference fixture.
+- Annual LFS [14-10-0464](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410046401), annual population [17-10-0005](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710000501), municipal population [17-10-0155](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710015501), and census-family income [11-10-0009](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1110000901): queried as selected WDS coordinates, without CSV downloads. Family income is labelled as family income, even where the reference calls it household income.
+- [CIP Canada 2021 primary-grouping variant](https://www.statcan.gc.ca/en/media/4226): official classification read into the shipped taxonomy rules; observational enrolments remain live WDS queries. Interdisciplinary series 30 is divided by its published subseries.
+- [ECCC climate-normals collection metadata](https://api.weather.gc.ca/collections/climate-normals?f=json): read 2026-10-22. It identifies 1981-2010, correcting the earlier 1991-2020 label. The live adapter queries station/month/normal elements, follows result pagination and reads its period from that metadata.
+- [OpenRailwayMap](https://www.openrailwaymap.org/): live railway overlay based on OpenStreetMap. OSM/Overpass also supplies bounded campus facilities; enrolment values are attached only after exact PSIS institution-name matching.

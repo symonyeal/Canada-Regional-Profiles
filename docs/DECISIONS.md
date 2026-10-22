@@ -28,8 +28,17 @@ Census observations retain their 2021 date and income retains its 2020 date. LFS
 
 ## Independent visual implementation
 
-The reference's nine embeds were inventoried but could not be rendered on this network. Its page headings establish the tool scope. The implementation provides public equivalents with charts, tables, controls, source links and CSV exports. Exact chart parity is unverified. OAG schedules, proprietary classifications, custom area aggregations and an unverified broadband aggregate are not invented.
+The reference's nine embeds were inventoried. Direct inspection failed on this network; the incoming reference reconstruction supplied chart definitions and recorded responses. The implementation uses those definitions with public services, charts, tables, controls, source links and CSV exports. Exact visual parity remains unverified. OAG schedules, proprietary classifications, custom area aggregations and an unverified broadband aggregate are not invented.
 
 ## Request lifetime
 
 A render owns its own DOM root. Navigating replaces that root, and late results cannot replace the newer selection. In-flight requests share a memory cache, failed requests are evicted, timeouts and retries are bounded, and map requests are capped. The shared URL preserves geography, comparison and module controls.
+
+
+## Incoming reference reconstruction retained
+
+During this work origin/main advanced to a467cad. It added recovered chart definitions, a reference fixture and expanded historical analysis. The live client was rebased onto that revision; the analysis, source records and fixtures remain. Incoming generated observations were removed from the served tree, with the entire incoming revision retained in local evidence and Git history.
+
+The live industry default follows the recovered SEPH definition. Its industrial aggregate including unclassified businesses supplies LQ denominators. Largest industries use a sector treemap, fastest-growing industries use employment/growth bubbles, and workforce uses the recorded education denominators and resident-labour-force universes. Business Register estimates remain separate. Target maps sum only one active marginal distribution; they do not manufacture joint income/age counts.
+
+The ECCC collection's metadata identifies 1981-2010 normals. The live site shows that period and the selected station rather than repeating the earlier intended 1991-2020 label. Facility maps use live OSM queries instead of a downloaded ODEF file; exact school-name matches are explicit, and no campus allocation is inferred.

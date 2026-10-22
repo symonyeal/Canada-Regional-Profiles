@@ -1,7 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {decodeSDMX, memoRequest, tablePair, geoMember} from '../site/api.js';
-import {estimate, locationQuotient, change, Profile, rankIndustries, csv, matchesProvince, tradedShare, classifyTrade, validGeographyId, reconcileCounts, fmt} from '../site/model.js';
+import {jenks,binCounts} from '../site/catchment.js';
+import {completeSum,estimate, locationQuotient, change, Profile, rankIndustries, csv, matchesProvince, tradedShare, classifyTrade, validGeographyId, reconcileCounts, fmt} from '../site/model.js';
+
+test('group totals require every published component, including genuine zeros',()=>{
+  assert.equal(completeSum([0,6,3]),9);
+  assert.equal(completeSum([0,null]),null);
+  assert.equal(completeSum([6,undefined]),null);
+  assert.equal(completeSum([]),null);
+});
 
 const fixture = () => ({data: {structure: {dimensions: {series: [
   {id:'REF_AREA',values:[{id:'geo',name:'A place'}]},
@@ -101,4 +109,12 @@ test('cross-border metro areas appear in both constituent provinces',()=>{
 });
 test('published decimal values are not rounded into zero in full-profile tables',()=>{
   assert.equal(fmt(.04),'0.04');assert.equal(fmt(-1.7),'-1.7');
+});
+test('map filters preserve unknown cells and sum one selected dimension',()=>{
+  assert.deepEqual(binCounts([2,3,5],[false,true,true]),{total:10,target:8});
+  assert.deepEqual(binCounts([2,null,5],[true,true,false]),{total:null,target:null});
+});
+test('natural-break classes cover finite values and cap classes to distinct values',()=>{
+  assert.deepEqual(jenks([1,1,1,null],6),[1,1]);
+  const b=jenks([1,2,3,100,101,102],2);assert.equal(b[0],1);assert.equal(b.at(-1),102);assert.equal(b.length,3);
 });

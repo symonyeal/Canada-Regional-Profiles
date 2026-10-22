@@ -61,6 +61,7 @@ export async function census(geo=CANADA) {
 export async function geographies(type='CSD') {
   const rows=decodeSDMX(await request(`${CENSUS}/data/DF_${type}/A5..1.1.1`,undefined,'application/vnd.sdmx.data+json;version=1.0'));
   return rows.map(r=>({...r.area,type,population:r.value,province:r.province,
+    municipalType:r.attributes.GEO_DESC?.name?.match(/, ([^,\[\]]+) \[Census subdivision\]/)?.[1]??'',
     description:r.attributes.GEO_DESC?.name??r.area.name}));
 }
 export async function metadata(pid) {
@@ -132,17 +133,36 @@ export async function labourRates(geo,gender='1',age='1',seasonal) {
   return {pid,metadata:m,territory,adjusted,ages:m.dimension[3].member,
     series:indicators.map((i,j)=>({name:i.memberNameEn,points:data.get(keys[j])??[]}))};
 }
+export async function seph(geo,level='4') {
+  const m=await metadata('14100202'),[gd,ed,nd]=m.dimension,g=geoMember(gd,geo),ca=geoMember(gd,CANADA);
+  if(!g)throw Error('SEPH industry employment is not published at this local geography. Choose Business Register estimates.');
+  const employee=ed.member.find(x=>x.memberNameEn==='All employees'),aggregate=nd.member.find(x=>x.classificationCode==='00-91N');
+  const industries=nd.member.filter(x=>level==='2'?/^\d{2}(?:-\d{2})?$/.test(x.classificationCode??''):new RegExp(`^\\d{${level}}$`).test(x.classificationCode??''));
+  const year=Number(m.cubeEndDate.slice(0,4)),all=[aggregate,...industries],keys=[...new Set([g.memberId,ca.memberId])].flatMap(gi=>all.map(n=>coord([gi,employee.memberId,n.memberId])));
+  const data=await points(m.productId,keys,6),get=(gi,n,y)=>data.get(coord([gi,employee.memberId,n.memberId]))?.find(p=>p.refPer.startsWith(String(y)))?.value??null;
+  return {metadata:m,year,total:get(g.memberId,aggregate,year),nationalTotal:get(ca.memberId,aggregate,year),rows:industries.map(n=>({
+    code:n.classificationCode,name:n.memberNameEn.replace(/ \[[\d-]+\]$/,''),value:get(g.memberId,n,year),previous:get(g.memberId,n,year-5),national:get(ca.memberId,n,year)}))};
+}
+export async function annualSeries(geo,pid,selector={}) {
+  const m=await metadata(pid),gd=m.dimension[0],g=geoMember(gd,geo);if(!g)throw Error('This annual series is not published for the selected geography.');
+  const chosen=m.dimension.map((d,i)=>{if(i===0)return g;const pattern=selector[d.dimensionNameEn];
+    const selected=pattern?d.member.find(x=>pattern.test(x.memberNameEn)):d.member.find(x=>x.parentMemberId==null)??d.member[0];
+    if(!selected)throw Error(`The source does not publish the requested ${d.dimensionNameEn} category.`);return selected;});
+  const key=coord(chosen.map(x=>x.memberId)),data=await points(pid,[key],12);
+  return {metadata:m,values:(data.get(key)??[]).map(p=>({...p,value:p.value==null?null:p.value*10**(p.scalarFactorCode??0)}))};
+}
 export async function psis(geo,{institution='',kind=1,status=1,registration=1,gender=1,periods=5}={}) {
   const m=await metadata('37100277'),gd=m.dimension[0];
   const province=geo.id===CANADA.id?'11124':String(geo.province||geo.id.slice(9,11)).split('_')[0];
   const region=gd.member.find(x=>String(x.classificationCode)===province);
   if(!region) throw Error('No PSIS region is published for this selection.');
-  const institutions=gd.member.filter(x=>x.parentMemberId===region.memberId && x.classificationCode==null);
+  const institutions=gd.member.filter(x=>(geo.id===CANADA.id?x.parentMemberId!=null:x.parentMemberId===region.memberId) && x.classificationCode==null);
   const g=institution?institutions.find(x=>String(x.memberId)===String(institution)):region;
   if(!g) throw Error('The institution does not belong to this province or territory.');
-  const fields=m.dimension[1].member.filter(x=>/^\d{2}\.$/.test(x.classificationCode??''));
+  const fields=m.dimension[1].member.filter(x=>/^\d{2}\.$|^30\.\d{2}$/.test(x.classificationCode??''));
   const keys=fields.map(f=>coord([g.memberId,f.memberId,1,1,kind,registration,status,gender]));
-  const data=await points(m.productId,keys,periods);
-  return {fields:fields.map((f,i)=>({id:f.memberId,name:f.memberNameEn,series:data.get(keys[i])??[]})),
+  const totalKey=coord([g.memberId,1,1,1,kind,registration,status,gender]);
+  const data=await points(m.productId,[...keys,totalKey],periods);
+  return {fields:fields.map((f,i)=>({id:f.memberId,code:f.classificationCode,name:f.memberNameEn,series:data.get(keys[i])??[]})),totalSeries:data.get(totalKey)??[],
     institutions,region:region.memberNameEn,geoName:g.memberNameEn,metadata:m};
 }

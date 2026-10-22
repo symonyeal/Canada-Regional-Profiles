@@ -10,6 +10,11 @@ export async function explorer(root,ctx) {
   notice(root,'A municipality and a metropolitan area are different populations. Selecting population centres identifies concentrated settlements; it does not classify entire municipalities as rural or urban. Census 2021 boundaries are used throughout.');
   let places=(await geographies(type)).filter(g=>matchesProvince(g,ctx.province)&&g.population>=Number(o.minpop??0));
   if(!root.isConnected)return;
+  if(type==='CSD'){
+    const types=[...new Set(places.map(g=>g.municipalType).filter(Boolean))].sort();
+    controls(root,[{key:'placetype',label:'Municipal type',value:o.placetype??'',options:[['','All municipal types'],...types.map(t=>[t,t])]}],ctx.update);
+    if(o.placetype)places=places.filter(g=>g.municipalType===o.placetype);
+  }
   places.sort(o.sort==='name'?(a,b)=>a.name.localeCompare(b.name):(a,b)=>(b.population??-1)-(a.population??-1));
   const node=card(root,{title:'Explore communities',subtitle:ctx.provinceName??'All Canada'}),body=document.createElement('div');body.className='explorer';node.append(body);
   const search=document.createElement('input');search.type='search';search.placeholder='Search community name…';search.setAttribute('aria-label','Search communities');body.append(search);
@@ -29,10 +34,10 @@ export async function explorer(root,ctx) {
       const rows=decodeSDMX(await request(url,undefined,'application/vnd.sdmx.data+json;version=1.0'));
       if(v!==version||!root.isConnected)return;
       const byArea=new Map(slice.map(g=>[g.id,new Profile(rows.filter(r=>r.area.id===g.id))]));
-      const data=slice.map(g=>{const p=byArea.get(g.id);return [g.name,p.value('1'),p.value('3'),p.value('40'),p.value('2228'),p.value('2230')];});
-      area.innerHTML=table(['Community','Population','Growth 2016–21 (%)','Median age','Participation (%)','Unemployment (%)'],data.map(r=>r.map((v,i)=>i===0?v:fmt(v,i>1?'ratio':''))));
+      const data=slice.map(g=>{const p=byArea.get(g.id);return [g.name,g.municipalType||type,p.value('1'),p.value('3'),p.value('40'),p.value('2228'),p.value('2230')];});
+      area.innerHTML=table(['Community','Type','Population','Growth 2016–21 (%)','Median age','Participation (%)','Unemployment (%)'],data.map(r=>r.map((v,i)=>i<2?v:fmt(v,i>2?'ratio':''))));
       area.querySelectorAll('tbody tr').forEach((tr,i)=>{const cell=tr.firstChild;cell.textContent='';const button=document.createElement('button');button.className='row-link';button.textContent=slice[i].name;button.onclick=()=>ctx.choose(slice[i]);cell.append(button);});
-      const b=document.createElement('button');b.className='download';b.textContent='Download this comparison ↓';b.onclick=()=>download('community-comparison.csv',[[url],['Community','Population 2021','Population change 2016–2021 (%)','Median age','Participation (%)','Unemployment (%)'],...data]);area.append(b);
+      const b=document.createElement('button');b.className='download';b.textContent='Download this comparison ↓';b.onclick=()=>download('community-comparison.csv',[[url],['Community','Type','Population 2021','Population change 2016–2021 (%)','Median age','Participation (%)','Unemployment (%)'],...data]);area.append(b);
     }catch(e){if(v===version)area.innerHTML=`<p class="error">${esc(e.message)}</p>`;}
   }
   search.oninput=()=>{page=0;draw();};await draw();

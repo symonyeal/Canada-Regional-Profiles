@@ -19,7 +19,7 @@ function readURL() {
   const q=new URLSearchParams(location.search),legacy=PT.find(x=>x[1]===location.hash.slice(1)),province=q.get('province')??legacy?.[0]??'';
   const type=Object.hasOwn(TYPES,q.get('type'))?q.get('type'):'PR';
   const id=q.get('geo')??(province?`2021A0002${province}`:CANADA.id);
-  const options=Object.fromEntries([...q.entries()].filter(([k])=>['gender','workage','seasonal','level','measure','trade','top','growth','minbase','metric','institution','kind','student','registration','psisgender','topic','exploretype','minpop','sort'].includes(k)));
+  const options=Object.fromEntries([...q.entries()].filter(([k])=>['dashboard','station','airport','display','workview','marketview','marketmode','mapdim','mapbins','mapunit','gender','workage','seasonal','level','measure','trade','top','growth','minbase','metric','institution','talentgroup','program','kind','student','registration','psisgender','topic','exploretype','placetype','minpop','sort'].includes(k)));
   return {province:PT.some(x=>x[0]===province)?province:'',geo:{id:validGeographyId(id)?id:CANADA.id,type,name:q.get('name')??(province?PT.find(x=>x[0]===province)?.[2]:CANADA.name),province},
     view:Object.hasOwn(VIEWS,q.get('view'))?q.get('view'):'community',benchmark:q.get('benchmark')==='PT'?'PT':'CA',options};
 }
@@ -28,7 +28,7 @@ function urlFor(view=S.view) {
   return `${location.pathname}?${q}`;
 }
 function save(){history.replaceState(null,'',urlFor());}
-function update(k,v){S.options={...S.options,[k]:v};save();render();}
+function update(k,v){S.options={...S.options,[k]:v};if(['mapdim','marketmode'].includes(k))delete S.options.mapbins;if(k==='talentgroup')delete S.options.program;save();render();}
 function parentProvince(g){const members=String(g.province??(g.type==='CSD'||g.type==='CD'?g.id.slice(9,11):S.province)).split('_');return members.includes(S.province)?S.province:members[0];}
 function choose(g){S.geo={...g,province:parentProvince(g)};S.province=S.geo.province;S.view='community';S.options={};save();sync();loadPlaces(g.type);render();}
 function sync(){
@@ -69,7 +69,7 @@ async function render(){
     $('region-name').textContent=p.area.name;document.title=`${p.area.name} · ${VIEWS[snapshot.view][0]} · Canada Regional Profiles`;
     $('retrieved').textContent=`Retrieved ${new Date().toLocaleString('en-CA',{dateStyle:'medium',timeStyle:'short'})}`;
     root.replaceChildren();
-    await VIEWS[snapshot.view][1](root,{...snapshot,p,b,provinceName:PT.find(x=>x[0]===snapshot.province)?.[2],update,choose,
+    await VIEWS[snapshot.view][1](root,{...snapshot,p,b,provinceName:PT.find(x=>x[0]===snapshot.province)?.[2],update,choose,persist:(k,v)=>{S.options={...S.options,[k]:v};save();},
       cleanup:fn=>{if(version===renderVersion)cleanups.push(fn);else fn();}});
   }catch(e){if(version===renderVersion)failure(root,e,()=>{clearCache();clearMapCache();render();});}
   finally{if(version===renderVersion)$('content').setAttribute('aria-busy','false');}

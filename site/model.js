@@ -10,6 +10,7 @@ export const validGeographyId=id=>/^2021[AS]\d{6,15}$/.test(id);
 export const LOWER=[1,5,10,20,50,100,200,500], UPPER=[4,9,19,49,99,199,499,Infinity];
 export const MID=LOWER.map((x,i)=>i===7?x:(x+UPPER[i])/2);
 export const numeric = x => x === '' || x == null || !Number.isFinite(Number(x)) ? null : Number(x);
+export const completeSum = values => values.length && values.every(Number.isFinite) ? values.reduce((a,v)=>a+v,0) : null;
 export function estimate(N) {
   if(N.length!==8 || N.some(v=>v==null || !Number.isFinite(v))) return {value:null,lower:null,upper:null};
   const dot = a => N.reduce((s,n,i)=>s+n*a[i],0);
@@ -30,9 +31,9 @@ export function change(current,previous) {
   return {absolute:current==null||previous==null?null:current-previous,
     relative:current==null||previous==null||previous===0?null:current/previous-1};
 }
-export function rankIndustries(rows,metric='value') {
+export function rankIndustries(rows,metric='value',totals={}) {
   const complete=rows.every(r=>r.value!=null && r.national!=null);
-  const total=complete?rows.reduce((s,r)=>s+r.value,0):null, E=complete?rows.reduce((s,r)=>s+r.national,0):null;
+  const total=totals.total??(complete?rows.reduce((s,r)=>s+r.value,0):null), E=totals.nationalTotal??(complete?rows.reduce((s,r)=>s+r.national,0):null);
   return rows.map(r=>({...r,lq:locationQuotient(r.value,total,r.national,E),...change(r.value,r.previous)}))
     .filter(r=>r[metric]!=null).sort((a,b)=>b[metric]-a[metric] || a.code.localeCompare(b.code));
 }

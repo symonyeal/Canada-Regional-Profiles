@@ -1,5 +1,5 @@
 import {esc,fmt,csv} from './model.js';
-export const COLORS=['#087e83','#c18a36','#163e38','#86a99b','#847ca3','#c06c53','#4e7593','#a9b757'];
+export const COLORS=['#7d622e','#473729','#8769ff','#86a99b','#847ca3','#c06c53','#4e7593','#a9b757'];
 let serial=0;
 export function download(name,rows) {
   const a=document.createElement('a'),url=URL.createObjectURL(new Blob([csv(rows)],{type:'text/csv;charset=utf-8'}));
@@ -66,7 +66,7 @@ export function notice(root,text,warning=false) {const el=document.createElement
 export function controls(root,fields,onchange) {
   const el=document.createElement('div');el.className='controls';
   for(const field of fields) {const label=document.createElement('label');label.append(document.createTextNode(field.label));
-    const input=document.createElement('select');input.dataset.control=field.key;
+    const input=document.createElement('select');input.dataset.control=field.key;input.setAttribute('aria-label',field.label);
     for(const [value,text] of field.options) {const o=document.createElement('option');o.value=value;o.textContent=text;input.append(o);}
     input.value=field.value;input.onchange=()=>onchange(field.key,input.value);label.append(input);el.append(label);
   }

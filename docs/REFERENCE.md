@@ -91,3 +91,10 @@ student counts (All Programs 63.0K, Humanities 10.1K, …). Right: a map of inst
 | Boundaries (vector tiles) | StatCan 2021 cartographic boundary files, ArcGIS REST, simplified |
 | Institution locations | Open Database of Educational Facilities v2.1 |
 | Climate normals | ECCC Canadian Climate Normals 1991–2020 |
+
+
+## Runtime implementation follow-up, 2026-10-22
+
+The later live client retains these recovered definitions and chart types. Independent live requests matched the recorded Manitoba top-20 industry codes and employment, annual participation, family income, education numerators and Census industry distribution. This establishes those comparisons, not universal visual parity or an independent verification of every proprietary reference response.
+
+The ECCC collection used by the original climate module identifies itself as **1981-2010**, not 1991-2020: https://api.weather.gc.ca/collections/climate-normals?f=json . The live client reads that period from collection metadata and labels the selected station. The 1991-2020 mentions above record the earlier intended source and must not be read as the actual period returned by this API.
