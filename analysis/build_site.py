@@ -7,6 +7,8 @@ Usage: py -3.14 analysis/build_site.py [CODE ...]      # default: every jurisdic
 """
 import json
 import math
+import re
+import unicodedata
 import sys
 from functools import cache
 
@@ -19,7 +21,7 @@ from analysis.logistics import logistics
 from analysis.regions import CODE, PT
 from analysis.statcan import NAICS, census, psis, table
 
-BUILT = ["YT", "NT", "NU"]          # release order: territories first (regions.PT)
+BUILT = [c for c, _, _ in PT]       # release order: territories first, then west to east (regions.PT)
 MIN_BASE = 20                       # growth rates shown only for industries with ≥ 20 estimated jobs in 2021
 
 
@@ -115,24 +117,29 @@ def workforce(pruid, name, names):
     }
     ind = [{"label": k, "unit": u, "v": {g: fn(g) for g in ids}, "ca": fn("11124")} for k, (u, fn) in f.items()]
     lfs = lfs_latest(pruid, name)
-    if lfs:
-        ind.insert(0, {"label": f"Unemployment rate, {lfs['month']} (LFS)", "unit": "%", "v": {pruid: lfs["u"]},
-                       "ca": None, "note": "three-month moving average, seasonally adjusted"})
-        ind.insert(0, {"label": f"Employed, {lfs['month']} (LFS)", "unit": "n", "v": {pruid: lfs["emp"]}, "ca": None})
+    ca = lfs["ca"] or {}
+    ind.insert(0, {"label": f"Unemployment rate, {lfs['month']} (LFS)", "unit": "%", "v": {pruid: lfs["u"]},
+                   "ca": ca.get("u"), "note": lfs["note"]})
+    ind.insert(0, {"label": f"Employed, {lfs['month']} (LFS)", "unit": "n", "v": {pruid: lfs["emp"]}, "ca": ca.get("emp")})
     return {"regions": [{"id": pruid, "name": name}] + [{"id": k, "name": v} for k, v in names.items()],
             "ind": ind, "src": "Statistics Canada, Census of Population 2021 (tables 98-10-0022, 98-10-0400, "
-                              "98-10-0293); Labour Force Survey (table 14-10-0292)."}
+                              "98-10-0293); Labour Force Survey (tables 14-10-0292, 14-10-0287)."}
 
 
 def lfs_latest(pruid, name):
-    """Latest LFS month for a territory (three-month moving average, seasonally adjusted)."""
-    if pruid not in ("60", "61", "62"): return None
-    T = table("lfs_t", ["REF_DATE", "GEO", "Labour force characteristics", "Gender", "Age group", "Statistics", "Data type"])
-    T = T[(T.GEO == name) & (T.Gender == "Total - Gender") & (T["Age group"] == "15 years and over")
+    """Latest LFS month, seasonally adjusted: territories as three-month moving averages
+    (14-10-0292), provinces and Canada monthly (14-10-0287)."""
+    terr = pruid in ("60", "61", "62")
+    T = table("lfs_t" if terr else "lfs_p",
+              ["REF_DATE", "GEO", "Labour force characteristics", "Gender", "Age group", "Statistics", "Data type"])
+    T = T[(T.Gender == "Total - Gender") & (T["Age group"] == "15 years and over")
           & (T.Statistics == "Estimate") & (T["Data type"] == "Seasonally adjusted")]
     t = T.REF_DATE.max()
-    v = T[T.REF_DATE == t].set_index("Labour force characteristics").VALUE
-    return {"month": pd.Timestamp(t).strftime("%B %Y"), "u": v["Unemployment rate"] / 100, "emp": v["Employment"] * 1000}
+    v = T[T.REF_DATE == t].set_index(["GEO", "Labour force characteristics"]).VALUE
+    ca = None if terr else {"u": v["Canada", "Unemployment rate"] / 100, "emp": v["Canada", "Employment"] * 1000}
+    return {"month": pd.Timestamp(t).strftime("%B %Y"), "u": v[name, "Unemployment rate"] / 100,
+            "emp": v[name, "Employment"] * 1000, "ca": ca,
+            "note": "three-month moving average, seasonally adjusted" if terr else "seasonally adjusted"}
 
 
 # ---------- talent ----------
@@ -209,22 +216,50 @@ def market(pruid, name):
 
 # ---------- assembly ----------
 
+STOP = {"airport", "international", "municipal", "regional", "aerodrome", "de", "du", "the"}
+
+
+def fold(x):
+    """Lower case without accents or periods: 'St. John's, Montréal' → 'st john's, montreal'."""
+    x = x.lower().replace(".", "").replace("’", "'")
+    return "".join(c for c in unicodedata.normalize("NFKD", x) if not unicodedata.combining(c))
+
+
+def words(x):
+    return set(re.findall(r"[\w']+", fold(x))) - STOP
+
+
+def match_airport(g, A):
+    """Index into OurAirports A of the StatCan airport 'Place/Qualifier' g, or None. Candidates
+    are airports whose city or name contains the place; without a qualifier a single candidate is
+    taken; with one, the candidate sharing most qualifier words (place words excluded), if unique."""
+    place, _, qual = g.partition("/")
+    place = fold(re.sub(r" \(.*\)$", "", place).strip())
+    C = [i for i, (c, n) in enumerate(zip(A["city"], A["name"])) if place == fold(c) or place in fold(n)]
+    if not qual:
+        E = [i for i in C if words(A["name"][i]) == words(place)]         # exact name breaks a tie
+        return C[0] if len(C) == 1 else E[0] if len(E) == 1 else None
+    q = words(qual) - words(place)
+    score = {i: len(q & words(A["name"][i])) for i in C}
+    best = max(score.values(), default=0)
+    top = [i for i in C if score[i] == best]
+    return top[0] if best > 0 and len(top) == 1 else None
+
+
 def airports_pax(L, name):
     """Passengers enplaned and deplaned, latest published year per airport (many years are
-    suppressed), joined to OurAirports by the place name before '/'; and the jurisdiction total."""
+    suppressed), matched to OurAirports by match_airport; and the jurisdiction total."""
     T = table("air", ["REF_DATE", "GEO", "Air passenger traffic"])
     T = T[(T["Air passenger traffic"] == "Total, passengers enplaned and deplaned") & T.VALUE.notna()
           & (T.GEO.str.endswith(", " + name) | (T.GEO == name))].sort_values("REF_DATE")
     tot = T[T.GEO == name].iloc[-1]
-    last = T[T.GEO != name].groupby("GEO").last()
-    key = lambda g: g.rsplit(", ", 1)[0].split("/")[0].strip().lower()
-    p = {key(g): (r.VALUE, r.REF_DATE) for g, r in last.iterrows() if r.VALUE > 0}
+    last = T[(T.GEO != name) & (T.VALUE > 0)].groupby("GEO").last()
     A = L["airports"]
-    alt = lambda n: n.split(" / ")[0].replace(" Airport", "").strip().lower()
-    hit = [p.get(c.lower(), p.get(alt(n))) for c, n in zip(A["city"], A["name"])]
-    A["pax"] = [h and h[0] for h in hit]; A["pax_year"] = [h and h[1] for h in hit]
+    A["pax"], A["pax_year"] = [None] * len(A["name"]), [None] * len(A["name"])
+    for g, r in last.iterrows():
+        i = match_airport(g.rsplit(", ", 1)[0], A)
+        if i is not None and A["pax"][i] is None: A["pax"][i], A["pax_year"][i] = r.VALUE, r.REF_DATE
     L["air_total"] = {"pax": tot.VALUE, "year": tot.REF_DATE}
-    return tot.REF_DATE
 
 
 def build(code):

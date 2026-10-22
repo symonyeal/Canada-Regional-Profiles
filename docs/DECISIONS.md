@@ -24,6 +24,11 @@ traded industries hold 35.4% of Canadian estimated employment in June 2026.
 `scattermap` (MapLibre, WebGL) drew neither traces nor a fitted view in headless Edge, with or
 without SwiftShader. The SVG map renders, needs no tile server, and opens from `file://`.
 
+**2026-10-22. Airport passengers: latest published year per airport.** Table 23-10-0253 suppresses
+many airport-years (Whitehorse in every year 2020–2025, Iqaluit since 2022). Each airport shows its
+latest published year beside the value, and the jurisdiction total shows the current year.
+Matching to OurAirports uses the qualifier after "/" where a city has several airports.
+
 **2026-10-22. Workforce regions are census divisions.** Generic NWT names ("Region 1") are
 completed by each division's most populous subdivision, read from table 98-10-0004.
 
@@ -31,8 +36,8 @@ completed by each division's most populous subdivision, read from table 98-10-00
 
 - Ports: neither the World Port Index nor DFO's small craft harbours list Iqaluit's deep-sea
   port, Tuktoyaktuk, or the Skagway gateway to Yukon.
-- Provinces: the Labour Force Survey tile uses table 14-10-0292 (territories only); provinces need
-  14-10-0287.
+- Growth for industries recoded between NAICS 2017 and 2022 (for example, retail 4561, 4581) is not
+  shown, because no 2021 value exists under the new code.
 
 ## Tested and refused
 

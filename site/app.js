@@ -98,7 +98,7 @@ const SECTIONS = {
   largest() { industries("largest-chart", S.trade, (I, i) => I.e[i], "estimated employees", "largest-src"); },
   growing() {
     const g = S.growth === "abs";
-    industries("growing-chart", S.trade2, (I, i) => g ? I.e[i] - I.e0[i] : (I.e0[i] >= D.min_base ? I.e[i] / I.e0[i] - 1 : null),
+    industries("growing-chart", S.trade2, (I, i) => I.e0[i] == null ? null : g ? I.e[i] - I.e0[i] : (I.e0[i] >= D.min_base ? I.e[i] / I.e0[i] - 1 : null),
       g ? "change in estimated employees" : `growth (2021 base ≥ ${D.min_base})`, "growing-src", !g);
   },
 

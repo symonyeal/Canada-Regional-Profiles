@@ -3,7 +3,7 @@ import pytest
 pytestmark = pytest.mark.slow     # needs data/fetched (py -3.14 analysis/fetch.py)
 
 
-@pytest.mark.parametrize("code", ["YT", "NT", "NU"])
+@pytest.mark.parametrize("code", ["YT", "NT", "NU", "PE", "ON"])
 def test_build_certificates(code):
     """build() asserts its certificates: industry levels partition one total; size classes partition
     the business total; broadband CD and hexagon sums equal the household total."""

@@ -15,7 +15,7 @@ not break. Codex reads the same file through [AGENTS.md](AGENTS.md).
 | Add a dependency only after measurement. Use the system Python 3.14; no virtual environment. | numpy and scipy come first. |
 | State what was measured and what was not. | "Not measured" is a finding. A projection is not a measurement. |
 | Every number on the site comes from a public source named under its exhibit; nothing is typed in by hand. | The dashboard is reproducible from `analysis/fetch.py` alone. |
-| Add jurisdictions in the order of `regions.PT`, one per release, by appending to `BUILT` in `build_site.py`. | The user asked for coverage one province or territory at a time, territories first. |
+| Jurisdictions follow the order of `regions.PT`: territories first, then west to east. | Coverage was requested one province or territory at a time, territories first; all thirteen are built. |
 | Read Statistics Canada files through `analysis/statcan.py`. | The files mix UTF-8 and cp1252 bytes behind a byte-order mark; `text()` repairs them in one place. |
 
 ## The model is written once

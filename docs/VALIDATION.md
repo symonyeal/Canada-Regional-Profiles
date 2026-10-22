@@ -9,9 +9,10 @@ known value from a source, a partition that must reconstruct its total), never a
 | Point-in-polygon follows the even-odd rule | square with hole (`tests/test_geo.py`) | passes |
 | Midpoint estimate lies within its class bounds | `tests/test_industry.py` | passes |
 | Σ_i (E_i/ΣE) LQ_i = 1 | `tests/test_industry.py` | passes |
-| NAICS levels 2, 3, 4 partition the same locations and estimated employment | assertion in `build_site.industries` | holds for YT, NT, NU |
-| Size classes partition the business total | assertion in `build_site.market` | holds for YT, NT, NU |
-| Broadband: census-division and hexagon sums equal the household total | assertion in `logistics.broadband` | holds for YT, NT, NU |
+| NAICS levels 2, 3, 4 partition the same locations and estimated employment | assertion in `build_site.industries` | holds for all 13 (build 2026-10-22) |
+| Size classes partition the business total | assertion in `build_site.market` | holds for all 13 (build 2026-10-22) |
+| Broadband: census-division and hexagon sums equal the household total | assertion in `logistics.broadband` | holds for all 13 (build 2026-10-22) |
 | Traded share of Canadian employment near DPS's US figure (about 36%) | printed by `build_site` | 35.4%, measured 2026-10-22; DPS figure cited, not inspected |
 | Pseudo-household totals match Census 2021 occupied dwellings | compare `broadband.households` with 98-10-0004 | YT 17,181 vs 17,185; not yet asserted |
-| Site renders | headless Edge screenshot of NT, 2026-10-22 | map, charts, tiles drawn |
+| Airport passengers attach to the right airport | `tests/test_airports.py`: shared cities resolved by qualifier (Toronto, Ottawa, Montréal), exact-name ties (Vancouver), punctuation (St. John's) | passes |
+| Site renders | headless Edge screenshots of NT, NU (live) and ON, 2026-10-22 | map, charts, tiles drawn |
