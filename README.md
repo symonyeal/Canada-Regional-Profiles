@@ -4,72 +4,72 @@
 
 ## In plain terms
 
-Regional development agencies publish "why invest here" dashboards. They show how a region
-connects to the world, who works there, which industries are largest and growing, where talent
-is trained, and how large the local market is. One example is Advance Rural Manitoba's
-[Why Rural Manitoba](https://advanceruralmanitoba.ca/why-rural-manitoba/), built on a commercial
-platform. This project rebuilds that dashboard from public data alone, for every province and
-territory: the three territories first, then the provinces from west to east.
+Regional development agencies publish "why invest here" dashboards. One is Advance Rural Manitoba's
+[Why Rural Manitoba](https://advanceruralmanitoba.ca/why-rural-manitoba/), assembled from eight
+embedded tools sold by a commercial platform. This project reverse engineers that dashboard: its
+layout, its charts, and the data and formulas behind each number. It then rebuilds the dashboard
+from public data for every province and territory. Coverage starts with the territories and runs
+west to east, and includes a profile for every municipality and First Nations reserve (census
+subdivision).
 
-**What we found.** All thirteen provinces and territories are built. Population is for July 2026,
-employer business locations for June 2026, and 50/10 Mbps is the share of households where that
-speed is available.
+The page has the reference's sections, in its order:
+- **Logistics.** Airports, roads, ports, rail and broadband.
+- **Community profile.** Economic, resident, household, dwelling, workforce and livability
+  dashboards, for the jurisdiction or any community.
+- **Community explorer.**
+- **Market.** Consumers, dwellings and businesses, counted on a map for any criteria.
+- **Workforce.** Indicators and a catchment map.
+- **Industries.** Fastest growing and largest, each split into traded and local.
+- **Talent pipeline.**
 
-| | Residents | Employer locations | 50/10 Mbps | Participation 2021 | Largest traded industry group |
-| --- | --- | --- | --- | --- | --- |
-| Yukon | 50,356 | 1,979 | 94% | 71.8% | Traveller accommodation |
-| Northwest Territories | 45,904 | 1,599 | 93% | 70.7% | Non-metallic mineral mining and quarrying |
-| Nunavut | 43,091 | 751 | 0% (99.9% have LTE) | 58.6% | Metal ore mining |
-| British Columbia | 5,710,598 | 218,192 | 98% | 63.3% | Computer systems design and related services |
-| Alberta | 5,101,050 | 180,659 | 98% | 68.0% | Support activities for mining, and oil and gas extraction |
-| Saskatchewan | 1,278,402 | 43,184 | 91% | 65.4% | Management of companies and enterprises |
-| Manitoba | 1,517,379 | 44,135 | 96% | 64.4% | Management of companies and enterprises |
-| Ontario | 16,262,121 | 511,212 | 98% | 62.8% | Computer systems design and related services |
-| Quebec | 9,067,114 | 279,405 | 99% | 64.1% | Computer systems design and related services |
-| New Brunswick | 883,522 | 26,601 | 96% | 60.1% | Management of companies and enterprises |
-| Nova Scotia | 1,103,419 | 33,100 | 98% | 59.5% | Fishing |
-| Prince Edward Island | 182,989 | 6,865 | 98% | 65.8% | Food merchant wholesalers |
-| Newfoundland and Labrador | 552,462 | 18,736 | 92% | 56.1% | Seafood product preparation and packaging |
+**How exact it is.** For Manitoba, the reference's own location, the rebuild reproduces the
+reference to the unit wherever it uses public data:
+- The 20 largest industries and their employment: SEPH 2025, same order.
+- The fastest-growing industries: change since 2020. One, rail transportation, comes from data
+  that is not public.
+- The education donuts (59.3%, 28.8%, 5.5%, 2.9%), the residents'-industry treemap and the
+  occupation ranking.
+- Labour force participation (66.6%) and median family income ($97,040).
 
-Public administration is the largest employer in the territories. In every province, the
-largest is restaurants and other eating places.
+`tests/test_build.py` checks all of these against the reference's recorded responses.
 
-**What this does not show.** Employment by industry is *estimated*. The Business Register counts
-businesses by size class (1–4 employees, 5–9, …), not their exact employees. We use each class's
-midpoint and count the open class (500+) at 500, so totals that include it are lower bounds.
-Traded versus local follows a United States classification mapped to Canadian codes. Port lists
-miss some northern marine facilities, such as Iqaluit's deep-sea port. Passenger counts are
-suppressed for many airports, including Whitehorse.
+**What this does not show.**
+- The reference's airport route counts (OAG) and drive-time areas are proprietary. Here airports
+  show passenger counts instead, and there are no drive-time areas.
+- Industries whose employment Statistics Canada suppresses are not listed. In the territories that
+  is most of them.
+- The traded/local labels follow a United States classification mapped to Canadian industry codes.
+  They agree with the reference's labels on 93% of its Manitoba industries.
+- Its location quotients differ from the reference's by a constant factor of about 1.09, whose
+  source is unidentified.
+- Northern port lists are incomplete.
 
 ## Overview
 
-`analysis/build_site.py` writes one data file per jurisdiction. The page has six sections, as in
-the reference: logistics, workforce, largest industries, fastest-growing industries, talent
-pipeline and market.
+`docs/REFERENCE.md` records the reverse-engineered reference: every embed, endpoint, chart type,
+dataset and colour. `analysis/build_site.py` writes three files per jurisdiction:
+- `site/data/<CODE>.js`: logistics, profile, industries and talent.
+- `site/data/<CODE>-csd.js`: Census Profile values, business counts and climate by census subdivision.
+- `site/data/<CODE>-geo.js`: boundaries.
 
-Let N ∈ ℕ^{k×8} count the employer locations of k industries in the Business Register's size
-classes [l_j, u_j]. Then
+The page (`site/app.js`, ECharts) filters, sums the census bins a visitor selects, classes the map
+by Jenks natural breaks, and draws.
 
-  e = N m,  N l ≤ e ≤ N u,  LQ_i = (e_i / Σe) / (E_i / ΣE),
-
-with m the class midpoints (the 500+ class at 500) and E the same for Canada. Industry i is
-*traded* when its Canadian 6-digit codes, weighted by national employment, have a mean traded
-share of at least ½. A code's traded share is the fraction of matching NAICS US 2017 codes in a
-traded cluster of Delgado, Porter and Stern (2016), matched on the longest shared prefix. Mapped
-this way, traded industries hold 35.4% of Canadian estimated employment.
-
-| Part | Module | Source |
+| Part | Module | Method or source |
 | --- | --- | --- |
-| Size-class employment, LQ, growth, traded flag | `analysis/industry.py` | Delgado, Porter and Stern (2016) |
-| Lambert conformal conic, point in polygon | `analysis/geo.py` | Snyder (1987) §15 |
-| Roads, rail, ports, airports, broadband | `analysis/logistics.py` | Douglas and Peucker (1973) |
-| Statistics Canada readers | `analysis/statcan.py` | — |
+| Industry employment, change, LQ, traded flag | `analysis/build_site.py`, `analysis/industry.py` | SEPH 14-10-0202; Delgado, Porter and Stern (2016) |
+| Census Profile by jurisdiction, division and subdivision | `analysis/census.py` | Statistics Canada Census Profile SDMX API |
+| Community profile series, explorer, market data | `analysis/profile.py` | LFS 14-10-0464, 17-10-0005/0155, 11-10-0009, Business Register |
+| Talent pipeline | `analysis/talent.py` | PSIS 37-10-0277, CIP 2021 primary groupings, ODEF |
+| Map layers, projection | `analysis/logistics.py`, `analysis/geo.py` | Atlas of Canada 1:1M; Snyder (1987) §15 |
+| Boundaries, climate | `analysis/boundaries.py`, `analysis/climate.py` | StatCan cartographic boundary files; ECCC normals |
 
 Run:
 
 ```text
 py -3.14 -m pip install -r requirements.txt
-py -3.14 analysis/fetch.py              # about 4 GB of public files into data/fetched (gitignored)
-py -3.14 -m analysis.build_site         # writes site/data/*.js (generated, committed)
-py -3.14 -m pytest -q
+py -3.14 analysis/fetch.py              # public files into data/fetched (gitignored); census, boundaries and
+                                        # climate are fetched on first use by their modules
+py -3.14 -m analysis.build_site         # writes site/data/*.js (generated, committed), about 6 minutes
+py -3.14 -m pytest -q                   # -m slow reproduces the reference's Manitoba numbers
 ```

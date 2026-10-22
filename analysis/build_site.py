@@ -1,33 +1,41 @@
-"""Build site/data/<CODE>.js for each province or territory, and site/data/index.js.
+"""Build the site's data files for each province or territory:
 
-The page filters and draws; it computes nothing computed here. Certificates are asserted before
-anything is written.
+  site/data/<CODE>.js      logistics, community profile, industries, talent        (window.DATA[CODE])
+  site/data/<CODE>-csd.js  census subdivisions: explorer, market, catchment          (window.CSD[CODE])
+  site/data/<CODE>-geo.js  boundaries of the jurisdiction and its subdivisions      (window.GEO[CODE])
+  site/data/meta.js        census labels shared by all; site/data/index.js           (window.META, window.INDEX)
 
-Usage: py -3.14 analysis/build_site.py [CODE ...]      # default: every jurisdiction built so far
+The page filters and draws; certificates are asserted before anything is written.
+
+Usage: py -3.14 -m analysis.build_site [CODE ...]      # default: all thirteen
 """
 import json
 import math
 import re
-import unicodedata
 import sys
+import unicodedata
 from functools import cache
 
 import numpy as np
 import pandas as pd
 
+from analysis.boundaries import generalised
+from analysis.climate import nearest
 from analysis.fetch import ROOT
-from analysis.industry import SIZE, counts, employment, growth, lq, traded, traded_share
+from analysis.industry import counts, employment, traded, traded_share
 from analysis.logistics import logistics
+from analysis.profile import census_meta, communities, jurisdiction, series
 from analysis.regions import CODE, PT
-from analysis.statcan import NAICS, census, psis, table
+from analysis.statcan import NAICS, table
+from analysis.talent import talent
 
 BUILT = [c for c, _, _ in PT]       # release order: territories first, then west to east (regions.PT)
-MIN_BASE = 20                       # growth rates shown only for industries with ≥ 20 estimated jobs in 2021
+SECTOR = {"31": "31-33", "32": "31-33", "33": "31-33", "44": "44-45", "45": "44-45", "48": "48-49", "49": "48-49"}
 
 
 def plain(o, nd=6):
     """JSON-native copy of o: arrays to lists, floats to nd significant digits, NaN/∞ to None."""
-    if isinstance(o, dict): return {k: plain(v, nd) for k, v in o.items()}
+    if isinstance(o, dict): return {str(k): plain(v, nd) for k, v in o.items()}
     if isinstance(o, (list, tuple, np.ndarray, pd.Series)): return [plain(v, nd) for v in o]
     if isinstance(o, (float, np.floating)): return None if not math.isfinite(o) else float(f"{o:.{nd}g}")
     if isinstance(o, np.integer): return int(o)
@@ -35,186 +43,58 @@ def plain(o, nd=6):
     return o
 
 
-# ---------- industries ----------
+# ---------- industries: SEPH employment, Business Register where SEPH is suppressed ----------
 
 @cache
 def business():
-    """Location counts for June 2026 and June 2021, and the traded flag of every code."""
-    C1, C0 = counts("bc_2606"), counts("bc_2106")
+    """Business Register location counts (June 2025, June 2020) and the traded flag of every code."""
+    C1, C0 = counts("bc_2506"), counts("bc_2006")
     ca = C1.xs("Canada", level="GEO").droplevel("DGUID")
     c6 = ca[ca.index.get_level_values("code").str.len() == 6]
     C6 = c6.index.get_level_values("code").to_numpy()
     E6 = employment(c6.values)[0]
     p6 = np.array([traded_share(c) for c in C6])
     codes = ca.index.get_level_values("code").unique()
-    T = dict(zip(codes, traded(codes, C6, p6, E6)))
-    share = E6 @ (p6 >= 0.5) / E6.sum()
-    return C1, C0, T, share
+    return C1, C0, dict(zip(codes, traded(codes, C6, p6, E6))), E6 @ (p6 >= 0.5) / E6.sum()
 
 
-def level_of(c):
-    return 2 if "-" in c else len(c)
+@cache
+def seph():
+    """SEPH (14-10-0202), all employees: {year: DataFrame GEO × 4-digit NAICS}, the industrial
+    aggregate [00-91N] by GEO in the latest year y1, and y1."""
+    T = table("seph", ["REF_DATE", "GEO", "Type of employee", NAICS])
+    T = T[T["Type of employee"] == "All employees"]
+    y1 = int(T.REF_DATE.max())
+    agg = T[(T.REF_DATE == y1) & T[NAICS].str.endswith("[00-91N]")].set_index("GEO").VALUE
+    T = T.assign(code=T[NAICS].str.extract(r"\[(\d{4})\]$")[0]).dropna(subset=["code"])
+    return {y: T[T.REF_DATE == y].pivot_table(index="GEO", columns="code", values="VALUE") for y in (y1, y1 - 5)}, agg, y1
 
 
 def industries(name):
-    """Per NAICS level 2, 3, 4: employer locations n, estimated employment e (bounds lo, hi) in
-    June 2026, e0 in June 2021, LQ against Canada, traded flag."""
-    C1, C0, T, _ = business()
-    r1 = C1.xs(name, level="GEO").droplevel("DGUID")
-    ca = C1.xs("Canada", level="GEO").droplevel("DGUID")
-    r0 = C0.xs(name, level="GEO").droplevel("DGUID").droplevel("name")
-    out, tot = {}, []
-    for k in (2, 3, 4):
-        K = ca[[level_of(c) == k for c in ca.index.get_level_values("code")]]
-        R = r1.reindex(K.index, fill_value=0)                   # region aligned to Canada's industries
-        e, lo, hi = employment(R.values)
-        LQ = lq(e, employment(K.values)[0])
-        J = R.values.sum(1) > 0
-        code = R.index.get_level_values("code")[J]
-        e0 = np.array([employment(r0.loc[[c]].values)[0][0] if c in r0.index else np.nan for c in code])
-        out[str(k)] = {"code": list(code), "name": list(R.index.get_level_values("name")[J]), "traded": [T[c] for c in code],
-                       "n": R.values.sum(1)[J], "e": e[J], "lo": lo[J], "hi": hi[J], "lq": LQ[J], "e0": e0}
-        tot.append((R.values.sum(), e.sum()))
-    # certificate: each level partitions the same classified locations and employment
-    assert all(np.isclose(t, tot[0]).all() for t in tot), tot
-    return out
+    """Four-digit industries with published SEPH employment (all employees) in year y1, as the
+    reference dashboard: e (y1), e0 (y1 − 5, None where suppressed), LQ against Canada over the
+    published cells, traded flag, sector, and Business Register employer locations n (June y1)."""
+    C1, _, T, _ = business()
+    S, agg, y1 = seph()
+    e = S[y1].loc[name].dropna()
+    e = e[e > 0]
+    e0 = S[y1 - 5].loc[name].reindex(e.index)
+    E = S[y1].loc["Canada"]
+    L = (e.values / agg[name]) / (E.reindex(e.index).values / agg["Canada"])   # totals: industrial aggregate [00-91N]
+    R = C1.xs(name, level="GEO").droplevel("DGUID")
+    names = dict(zip(R.index.get_level_values("code"), R.index.get_level_values("name")))
+    n = R.sum(1).droplevel("name")
+    title = table("seph", [NAICS]).drop_duplicates()[NAICS]
+    title = dict(zip(title.str.extract(r"\[(\d{4})\]$")[0], title.str.replace(r" \[\d{4}\]$", "", regex=True)))
+    return {"year": y1, "code": list(e.index), "name": [title.get(c) or names.get(c, c) for c in e.index],
+            "sector": [SECTOR.get(c[:2], c[:2]) for c in e.index], "traded": [T.get(c, False) for c in e.index],
+            "e": e.values, "e0": e0.values, "n": n.reindex(e.index).values, "lq": np.round(L, 2),
+            "src": f"Statistics Canada, Survey of Employment, Payrolls and Hours (table 14-10-0202), all employees, {y1}; "
+                   f"change since {y1 - 5}. Industries whose employment SEPH suppresses are not listed. Traded clusters of "
+                   "Delgado, Porter and Stern (2016)."}
 
 
-# ---------- census and LFS ----------
-
-def cd_names(pruid):
-    """CD id → census name; a generic name ('Region 1') is completed by its most populous subdivision."""
-    W = table("c_pop")
-    pop = next(c for c in W.columns if "Population, 2021" in c)
-    lvl = W.DGUID.str[:9]
-    cds = W[(lvl == "2021A0003") & W.DGUID.str[9:].str.startswith(pruid)]
-    csd = W[lvl == "2021A0005"].assign(cd=lambda d: d.DGUID.str[9:13]).sort_values(pop, ascending=False)
-    top = csd.drop_duplicates("cd").set_index("cd").GEO
-    return {d[9:]: f"{g} ({top[d[9:]]} area)" if g.startswith("Region") else g for d, g in zip(cds.DGUID, cds.GEO)}
-
-
-def workforce(pruid, name, names):
-    """Census 2021 indicators for the jurisdiction and each census division; LFS latest for the jurisdiction."""
-    ids = [pruid, *names]
-    A, L, I = census("c_age"), census("c_lfs"), census("c_ind")
-    age, edu = "Age (in single years), average age and median age (128)", "Highest certificate, diploma or degree (16)"
-    A = A[A["Census year (2)"] == 2021].set_index(["id", age])["Total - Gender"]
-    L = L[(L["Statistics (3)"] == "Count") & (L["Gender (3)"] == "Total - Gender")]
-    lt = L[(L["Age (15A)"] == "Total - Age") & L[edu].str.startswith("Total")].set_index("id")
-    l2 = L[L["Age (15A)"] == "25 to 64 years"].set_index(["id", edu])["Total - Labour force status"]
-    I = I[(I["Gender (3a)"] == "Total - Gender") & (I["Age (8G)"] == "Total - Age")
-          & (I["Statistics (5)"] == "% distribution (2021)")].set_index("id")
-    tot = "Total - Highest certificate, diploma or degree"
-    post = "Postsecondary certificate, diploma or degree"
-    f = {
-        "Median age, 2021": ("yrs", lambda g: A[g, "Median age"]),
-        "Aged 15 to 64, 2021": ("%", lambda g: A[g, "15 to 64 years"] / A[g, "Total - Age"]),
-        "Participation rate, 2021": ("%", lambda g: lt.loc[g, "Participation rate"] / 100),
-        "Employment rate, 2021": ("%", lambda g: lt.loc[g, "Employment rate"] / 100),
-        "Unemployment rate, 2021": ("%", lambda g: lt.loc[g, "Unemployment rate"] / 100),
-        "Aged 25 to 64 with a postsecondary credential": ("%", lambda g: l2[g, post] / l2[g, tot]),
-        "Indigenous identity": ("%", lambda g: I.loc[g, "Indigenous identity"] / 100),
-    }
-    ind = [{"label": k, "unit": u, "v": {g: fn(g) for g in ids}, "ca": fn("11124")} for k, (u, fn) in f.items()]
-    lfs = lfs_latest(pruid, name)
-    ca = lfs["ca"] or {}
-    ind.insert(0, {"label": f"Unemployment rate, {lfs['month']} (LFS)", "unit": "%", "v": {pruid: lfs["u"]},
-                   "ca": ca.get("u"), "note": lfs["note"]})
-    ind.insert(0, {"label": f"Employed, {lfs['month']} (LFS)", "unit": "n", "v": {pruid: lfs["emp"]}, "ca": ca.get("emp")})
-    return {"regions": [{"id": pruid, "name": name}] + [{"id": k, "name": v} for k, v in names.items()],
-            "ind": ind, "src": "Statistics Canada, Census of Population 2021 (tables 98-10-0022, 98-10-0400, "
-                              "98-10-0293); Labour Force Survey (tables 14-10-0292, 14-10-0287)."}
-
-
-def lfs_latest(pruid, name):
-    """Latest LFS month, seasonally adjusted: territories as three-month moving averages
-    (14-10-0292), provinces and Canada monthly (14-10-0287)."""
-    terr = pruid in ("60", "61", "62")
-    T = table("lfs_t" if terr else "lfs_p",
-              ["REF_DATE", "GEO", "Labour force characteristics", "Gender", "Age group", "Statistics", "Data type"])
-    T = T[(T.Gender == "Total - Gender") & (T["Age group"] == "15 years and over")
-          & (T.Statistics == "Estimate") & (T["Data type"] == "Seasonally adjusted")]
-    t = T.REF_DATE.max()
-    v = T[T.REF_DATE == t].set_index(["GEO", "Labour force characteristics"]).VALUE
-    ca = None if terr else {"u": v["Canada", "Unemployment rate"] / 100, "emp": v["Canada", "Employment"] * 1000}
-    return {"month": pd.Timestamp(t).strftime("%B %Y"), "u": v[name, "Unemployment rate"] / 100,
-            "emp": v[name, "Employment"] * 1000, "ca": ca,
-            "note": "three-month moving average, seasonally adjusted" if terr else "seasonally adjusted"}
-
-
-# ---------- talent ----------
-
-def talent(name):
-    P = psis()
-    P = P[P.GEO.str.endswith(", " + name) & P.VALUE.notna()]
-    if P.empty: return {"inst": [], "fields": [], "n": {"All": []}, "year": None, "src": SRC_PSIS}
-    y = P.REF_DATE.max(); P = P[P.REF_DATE == y]
-    F = P[P["Field of study"] != "Total, field of study"]
-    fields = sorted(F["Field of study"].str.replace(r" \[\d\d\.\]$", "", regex=True).unique())
-    F = F.assign(f=F["Field of study"].str.replace(r" \[\d\d\.\]$", "", regex=True))
-    X = F.pivot_table(index="GEO", columns="f", values="VALUE", aggfunc="sum", fill_value=0).reindex(columns=fields, fill_value=0)
-    tot = P[P["Field of study"] == "Total, field of study"].set_index("GEO").VALUE
-    inst = [{"name": g.rsplit(", ", 1)[0], "total": tot.get(g, X.loc[g].sum())} for g in X.index]
-    n = {"All": X.sum(0).values, **{g.rsplit(", ", 1)[0]: X.loc[g].values for g in X.index}}
-    return {"inst": sorted(inst, key=lambda d: -d["total"]), "fields": fields, "n": n, "year": y,
-            "src": SRC_PSIS + f" Academic year {y}."}
-
-
-SRC_PSIS = ("Statistics Canada, Postsecondary Student Information System (table 37-10-0277), fields at 2-digit CIP 2021. "
-            "Counts are rounded and small cells suppressed, so fields need not sum to the total.")
-
-
-# ---------- market ----------
-
-def market(pruid, name):
-    W = census("c_pop").set_index("id")
-    H = census("c_inc")
-    H = H[H["Household size (7)"].str.startswith("Total")
-          & H["Household type including census family structure  (11)"].str.startswith("Total")].set_index("id")
-    D = census("c_dwl")
-    D = D[D["Household size (8)"].str.startswith("Total") & D["Number of bedrooms (6)"].str.startswith("Total")
-          & (D["Statistics (3C)"] == "Number of private households")].set_index(["id", "Structural type of dwelling (10)"])
-    Q = table("pop_q", ["REF_DATE", "GEO"]); Q = Q[Q.GEO == name].set_index("REF_DATE").VALUE
-    t = Q.index.max(); t5 = str(int(t[:4]) - 5) + t[4:]
-    B1, B0 = (table(k, ["GEO", "Employment size", NAICS]) for k in ("bc_2606", "bc_2106"))
-    b = {k: B[(B.GEO == name) & (B[NAICS] == "Total, all industries [1]")].set_index("Employment size").VALUE
-         for k, B in (("1", B1), ("0", B0))}
-    pop = Q[t]
-    g = lambda i, c: D.loc[(i, c), "Total - Tenure"]
-    inc, occ, dw = ("Median household total income (2020) (2020 constant dollars)",
-                    "Private dwellings occupied by usual residents, 2021", "Total private dwellings, 2021")
-    n1, n0 = b["1"]["Total, with employees"], b["0"]["Total, with employees"]
-    tot = "Total - Structural type of dwelling"
-    groups = {
-        "Consumers": [
-            {"v": pop, "unit": "n", "label": f"Population, {pd.Timestamp(t).strftime('%B %Y')}"},
-            {"v": pop / Q[t5] - 1, "unit": "%", "label": "Population growth over five years"},
-            {"v": H.loc[pruid, "Number of households (2021)"], "unit": "n", "label": "Households, 2021"},
-            {"v": H.loc[pruid, inc], "unit": "$", "label": "Median household income, 2020",
-             "note": f"Canada ${H.loc['11124', inc]:,.0f}"},
-        ],
-        "Dwellings": [
-            {"v": W.loc[pruid, dw], "unit": "n", "label": "Private dwellings, 2021"},
-            {"v": W.loc[pruid, occ] / W.loc[pruid, dw], "unit": "%", "label": "Occupied by usual residents"},
-            {"v": D.loc[(pruid, tot), "Owner"] / g(pruid, tot), "unit": "%", "label": "Households that own their dwelling",
-             "note": f"Canada {100 * D.loc[('11124', tot), 'Owner'] / g('11124', tot):.1f}%"},
-            {"v": g(pruid, "Single-detached house") / g(pruid, tot), "unit": "%", "label": "Single-detached houses",
-             "note": f"Canada {100 * g('11124', 'Single-detached house') / g('11124', tot):.1f}%"},
-        ],
-        "Businesses": [
-            {"v": n1, "unit": "n", "label": "Employer business locations, June 2026"},
-            {"v": n1 / n0 - 1, "unit": "%", "label": "Change since June 2021"},
-            {"v": 1000 * n1 / pop, "unit": "yrs", "label": "Employer locations per 1,000 residents"},
-            {"v": b["1"][["100 to 199 employees", "200 to 499 employees", "500 plus employees"]].sum(), "unit": "n",
-             "label": "Locations with 100 or more employees"},
-        ],
-    }
-    assert np.isclose(b["1"][SIZE].sum(), b["1"]["Total, with employees"])   # size classes partition the total
-    return {"groups": groups, "src": "Statistics Canada, population estimates (table 17-10-0009); Census of Population 2021 "
-            "(tables 98-10-0004, 98-10-0057, 98-10-0240); Canadian Business Counts (tables 33-10-1174, 33-10-0395)."}
-
-
-# ---------- assembly ----------
+# ---------- logistics: airports ----------
 
 STOP = {"airport", "international", "municipal", "regional", "aerodrome", "de", "du", "the"}
 
@@ -246,84 +126,77 @@ def match_airport(g, A):
     return top[0] if best > 0 and len(top) == 1 else None
 
 
+SECTORS = {"Domestic sector": "domestic", "Transborder sector": "transborder", "Other International sector": "international"}
+
+
 def airports_pax(L, name):
     """Passengers enplaned and deplaned, latest published year per airport (many years are
-    suppressed), matched to OurAirports by match_airport; and the jurisdiction total."""
+    suppressed), split by sector, matched to OurAirports by match_airport; and the jurisdiction total."""
     T = table("air", ["REF_DATE", "GEO", "Air passenger traffic"])
-    T = T[(T["Air passenger traffic"] == "Total, passengers enplaned and deplaned") & T.VALUE.notna()
-          & (T.GEO.str.endswith(", " + name) | (T.GEO == name))].sort_values("REF_DATE")
-    tot = T[T.GEO == name].iloc[-1]
-    last = T[(T.GEO != name) & (T.VALUE > 0)].groupby("GEO").last()
+    T = T[T.VALUE.notna() & (T.GEO.str.endswith(", " + name) | (T.GEO == name))]
+    K = T.pivot_table(index=["GEO", "REF_DATE"], columns="Air passenger traffic", values="VALUE").reset_index()
+    tk = "Total, passengers enplaned and deplaned"
+    K = K[K[tk] > 0].sort_values("REF_DATE")
+    tot = K[K.GEO == name].iloc[-1]
+    last = K[K.GEO != name].groupby("GEO").last()
     A = L["airports"]
-    A["pax"], A["pax_year"] = [None] * len(A["name"]), [None] * len(A["name"])
+    n = len(A["name"])
+    for k in ("pax", "pax_year", *SECTORS.values()): A[k] = [None] * n
     for g, r in last.iterrows():
         i = match_airport(g.rsplit(", ", 1)[0], A)
-        if i is not None and A["pax"][i] is None: A["pax"][i], A["pax_year"][i] = r.VALUE, r.REF_DATE
-    L["air_total"] = {"pax": tot.VALUE, "year": tot.REF_DATE}
+        if i is None or A["pax"][i] is not None: continue
+        A["pax"][i], A["pax_year"][i] = r[tk], r.REF_DATE
+        for s, k in SECTORS.items(): A[k][i] = r.get(s)
+    L["air_total"] = {"pax": tot[tk], "year": tot.REF_DATE, **{k: tot.get(s) for s, k in SECTORS.items()}}
 
+
+SRC_LOGISTICS = {
+    "airports": "OurAirports (scheduled service); Statistics Canada, air passenger traffic by sector (table 23-10-0253), "
+                "latest year published per airport; blank where suppressed. The reference dashboard shows OAG route "
+                "counts, which are proprietary.",
+    "roads": "Natural Resources Canada, Atlas of Canada 1:1,000,000, Roads (2017).",
+    "ports": "NGA World Port Index (Pub. 150); Fisheries and Oceans Canada, Small Craft Harbours. Neither lists every "
+             "northern marine facility.",
+    "rail": "Natural Resources Canada, Atlas of Canada 1:1,000,000, Railways (2017).",
+    "broadband": "ISED, National Broadband Data (current, May 2026) over the 2021 pseudo-household distribution; "
+                 "terrestrial wired and wireless service, satellite excluded.",
+}
+
+
+# ---------- assembly ----------
 
 def build(code):
     pruid, name = CODE[code]
-    names = cd_names(pruid)
     L = logistics(code, name)
     airports_pax(L, name)
-    L["src"] = {
-        "airports": "OurAirports (scheduled service); Statistics Canada, air passenger traffic (table 23-10-0253), "
-                    "latest year published per airport; blank where suppressed.",
-        "roads": "Natural Resources Canada, Atlas of Canada 1:1,000,000, Roads (2017); lengths are of features in the region.",
-        "ports": "NGA World Port Index (Pub. 150); Fisheries and Oceans Canada, Small Craft Harbours. "
-                 "Neither lists every northern marine facility.",
-        "rail": "Natural Resources Canada, Atlas of Canada 1:1,000,000, Railways (2017).",
-        "broadband": "ISED, National Broadband Data (current, May 2026) over the 2021 pseudo-household distribution; "
-                     "terrestrial wired and wireless service, satellite excluded.",
-    }
-    I = industries(name)
-    W = workforce(pruid, name, names)
-    P = talent(name)
-    M = market(pruid, name)
-    four = I["4"]
-    j = int(np.argmax(four["e"])); jt = max((i for i in range(len(four["e"])) if four["traded"][i]), key=lambda i: four["e"][i])
-    dg, _ = growth(np.array(four["e"]), np.array(four["e0"]))
-    jg = int(np.nanargmax(dg))
-    B = L["broadband"]; pop = M["groups"]["Consumers"][0]["v"]
-    ur = next(x for x in W["ind"] if x["label"].startswith("Participation"))
-    claims = {
-        "logistics": f"{len(L['airports']['name'])} airports with scheduled service connect {name}; "
-                     f"{100 * B['share50']:.0f}% of households can get 50/10 Mbps internet",
-        "workforce": f"{100 * ur['v'][pruid]:.1f}% of residents aged 15 and over were in the labour force in 2021, "
-                     f"against {100 * ur['ca']:.1f}% in Canada",
-        "largest": f"{four['name'][j]} is the largest industry group by estimated employment; "
-                   f"the largest traded one is {four['name'][jt]}",
-        "growing": f"{four['name'][jg]} added the most estimated jobs between 2021 and 2026 ({dg[jg]:+,.0f})",
-        "talent": (f"{P['inst'][0]['name']} enrolled {P['inst'][0]['total']:,.0f} students in {P['year']}" if P["inst"]
-                   else f"No postsecondary institution in {name} reports to the PSIS table"),
-        "market": f"{pop:,.0f} residents, {M['groups']['Consumers'][2]['v']:,.0f} households and "
-                  f"{M['groups']['Businesses'][0]['v']:,.0f} employer business locations",
-    }
-    facts = [[f"{pop:,.0f}", "residents"], [f"{M['groups']['Businesses'][0]['v']:,.0f}", "employer business locations"],
-             [f"{100 * B['share50']:.0f}%", "households with 50/10 Mbps"],
-             [f"{len(L['airports']['name'])}", "airports with scheduled service"]]
-    return {"code": code, "name": name, "h1": f"Why {name}",
-            "lede": f"The logistics, workforce, industries, talent and market of {name}, from public data, "
-                    "in the layout of a regional investment-attraction dashboard.",
-            "facts": facts, "claims": claims, "cdnames": names, "logistics": L, "workforce": W, "industries": I,
-            "min_base": MIN_BASE, "talent": P, "market": M,
-            "ind_src": "Statistics Canada, Canadian Business Counts with employees, June 2026 (33-10-1174) and June 2021 "
-                       "(33-10-0395); traded clusters of Delgado, Porter and Stern (2016) mapped from NAICS US 2017."}
+    L["src"] = SRC_LOGISTICS
+    J = jurisdiction(pruid)
+    C = communities(pruid)
+    big = int(np.nanargmax([v if v is not None else -1 for v in C["census"]["1"]]))
+    main = {"code": code, "pruid": pruid, "name": name, "logistics": L,
+            "profile": {"census": J, "series": series(pruid, name), "climate": nearest(pruid, C["lat"][big], C["lon"][big]),
+                        "anchor": C["name"][big]},
+            "industries": industries(name), "talent": talent(pruid, name)}
+    geo = {"pr": generalised("PR", pruid, cap=5e5), "csd": generalised("CSD", pruid, cap=1.5e6)}   # page weight caps (bytes)
+    return main, C, geo
+
+
+def write(path, var, code, obj):
+    body = json.dumps(plain(obj), separators=(",", ":"), ensure_ascii=False, allow_nan=False)
+    path.write_text(f"window.{var} = window.{var} || {{}};\nwindow.{var}[{json.dumps(code)}] = {body};\n", encoding="utf-8")
+    return path.stat().st_size / 1e6
 
 
 def main(codes):
     out = ROOT / "site" / "data"; out.mkdir(parents=True, exist_ok=True)
+    (out / "meta.js").write_text("window.META = " + json.dumps(census_meta(), ensure_ascii=False) + ";\n", encoding="utf-8")
     for c in codes:
-        D = build(c)
-        p = out / f"{c}.js"
-        p.write_text(f"window.DATA = window.DATA || {{}};\nwindow.DATA[{json.dumps(c)}] = "
-                     + json.dumps(plain(D), separators=(",", ":"), ensure_ascii=False, allow_nan=False) + ";\n", encoding="utf-8")
-        print(f"{p}  {p.stat().st_size / 1e6:.2f} MB")
-    built = sorted({*BUILT, *codes}, key=[c for c, _, _ in PT].index)
-    order = [[c, n] for c, _, n in PT[:3]] + [["|", ""]] + [[c, n] for c, _, n in PT[3:]]
-    (out / "index.js").write_text("window.INDEX = " + json.dumps({"built": built, "order": order}) + ";\n", encoding="utf-8")
-    print("traded share of Canadian employment:", round(business()[3], 3))
+        M, C, G = build(c)
+        sizes = [write(out / f"{c}{s}.js", v, c, o) for s, v, o in (("", "DATA", M), ("-csd", "CSD", C), ("-geo", "GEO", G))]
+        print(c, " ".join(f"{s:.2f}" for s in sizes), "MB")
+    order = [[c, n] for c, _, n in PT]
+    (out / "index.js").write_text("window.INDEX = " + json.dumps({"built": BUILT, "order": order}) + ";\n", encoding="utf-8")
+    print("traded share of Canadian employment (Business Register estimate):", round(business()[3], 3))
 
 
 if __name__ == "__main__":

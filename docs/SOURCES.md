@@ -4,33 +4,42 @@ A method is validated by the source it implements. Cite only what this file reco
 add the entry in the change that uses it. Status is **inspected** (read for this project,
 with what was read and when) or **cited** (not yet read).
 
+## Reference
+
+| Source | Used for | Status |
+| --- | --- | --- |
+| Advance Rural Manitoba, *Why Rural Manitoba* (advanceruralmanitoba.ca/why-rural-manitoba), embeds by Localintel (ecdev.org) | the dashboard reproduced: layout, chart types, palette, data definitions (`docs/REFERENCE.md`); recorded Manitoba numbers (`tests/fixtures/reference_mb.json`) | inspected 2026-10-22: eight embeds rendered and their API traffic recorded |
+
 ## Methods
 
 | Source | Used for | Status |
 | --- | --- | --- |
-| Snyder, J. P., *Map Projections: A Working Manual*, USGS Professional Paper 1395, 1987 | §15 Lambert conformal conic, eqs. 14-15, 15-1 to 15-11, 7-9; worked example pp. 295-297 is `tests/test_geo.py` | cited; worked example reproduced to 0.1 m, 2026-10-22 |
-| Douglas, D. H. and Peucker, T. K., "Algorithms for the reduction of the number of points required to represent a digitized line", *Cartographica* 10(2), 1973 | line simplification of map layers (`logistics.dp`) | cited |
-| Krugman, P., *Geography and Trade*, MIT Press, 1991 | locational Gini, tested and refused (DECISIONS) | cited |
-| Jensen, J. B. and Kletzer, L. G., "Tradable Services: Understanding the Scope and Impact of Services Offshoring", *Brookings Trade Forum* 2005 | concentration threshold 0.1, tested and refused (DECISIONS) | cited |
-| Delgado, M., Porter, M. E. and Stern, S., "Defining clusters of related industries", *Journal of Economic Geography* 16(1), 2016 | traded/local classification (`industry.traded_share`, `industry.traded`) | cited; traded 6-digit list taken from the tabulation below |
-| Ellison, G. and Glaeser, E. L., "Geographic concentration in U.S. manufacturing industries", *Journal of Political Economy* 105(5), 1997 | γ index, tested and refused (DECISIONS) | cited |
+| Snyder, J. P., *Map Projections: A Working Manual*, USGS Professional Paper 1395, 1987 | §15 Lambert conformal conic (`geo.py`; spherical form in `site/app.js`); worked example pp. 296-297 is `tests/test_geo.py` | cited; worked example reproduced to 0.1 m |
+| Douglas, D. H. and Peucker, T. K., *Cartographica* 10(2), 1973 | line simplification of map layers (`logistics.dp`) | cited |
+| Jenks, G. F., "The data model concept in statistical mapping", *International Yearbook of Cartography* 7, 1967; Fisher, W. D., *JASA* 53, 1958 | natural-breaks classes of the choropleths (`site/app.js: jenks`), as the reference's `natural_break` legend | cited |
+| Delgado, M., Porter, M. E. and Stern, S., "Defining clusters of related industries", *Journal of Economic Geography* 16(1), 2016 | traded/local classification (`industry.traded_share`, `industry.traded`) | cited; traded 6-digit list from the tabulation below |
 | milocortes/InvESt_complexity (GitHub, commit fd4d430), `porter_transables_cluster_clases_NAICS_2017.md` | the 668 NAICS US 2017 codes in DPS traded clusters (`data/dps_traded_naics_us2017.txt`) | inspected 2026-10-22: 51 clusters; all codes are valid US 2017 codes |
 | US Census Bureau, `2-6 digit_2017_Codes.xlsx` | all 1,057 NAICS US 2017 6-digit codes (`data/naics_us2017_6digit.txt`) | inspected 2026-10-22 |
+| Krugman, P., *Geography and Trade*, 1991; Jensen, J. B. and Kletzer, L. G., *Brookings Trade Forum* 2005; Ellison, G. and Glaeser, E. L., *JPE* 105(5), 1997 | concentration-based traded/local tests, refused (DECISIONS) | cited |
 
 ## Data
 
 | Source | Used for | Status |
 | --- | --- | --- |
-| Statistics Canada, Canadian Business Counts, with employees, June 2026 (table 33-10-1174-01) and June 2021 (33-10-0395-01) | largest and fastest-growing industries; business tiles | inspected 2026-10-22: NAICS to 6 digits, eight size classes |
-| Statistics Canada, Canadian Business Counts, with employees, by CMA and CSD, June 2026 (33-10-1176-01) | concentration test, refused (DECISIONS) | inspected 2026-10-22: 3,307 CSDs, NAICS to 4 digits |
-| Statistics Canada, Postsecondary enrolments by detailed field of study, institution, and program and student characteristics (37-10-0277-01) | talent pipeline | inspected 2026-10-22: 2009/10 to 2024/25; 25.8 GB, sliced once |
-| Statistics Canada, Air passenger traffic at Canadian airports, annual (23-10-0253-01) | airport passengers | inspected 2026-10-22: many airport-years suppressed |
-| Statistics Canada, Census of Population 2021: 98-10-0004 (population and dwellings), 98-10-0022 (age), 98-10-0400 (labour force by education), 98-10-0293 (Indigenous identity), 98-10-0057 (household income), 98-10-0240 (dwelling type by tenure) | workforce and market tiles; census-division names | inspected 2026-10-22: wide format, DGUID levels 0000/0002/0003/0005 |
-| Statistics Canada, Labour Force Survey, territories, three-month moving average (14-10-0292-01) | latest employment and unemployment rate | inspected 2026-10-22 |
-| Statistics Canada, Population estimates, quarterly (17-10-0009-01) | current population and five-year growth | inspected 2026-10-22 |
-| Natural Resources Canada, Atlas of Canada National Scale Data 1:1,000,000: Roads, Railways, Boundary Polygons (2017) | road, rail and boundary layers | inspected 2026-10-22: fields TYPE, CARTO, POL_DIV; NAD83 Canada Atlas Lambert |
-| ISED, National Broadband Data, PHH Speeds (current, 2026-05-12) and Pseudo-Household Demographic Distribution 2021 | share of households with 50/10 Mbps | inspected 2026-10-22: data dictionaries |
+| Statistics Canada, Survey of Employment, Payrolls and Hours, employment by industry, annual (14-10-0202) | largest and fastest-growing industries, LQ | inspected 2026-10-22: reproduces the reference's values; no rail (482) |
+| Statistics Canada, Census Profile 2021, SDMX API (api.statcan.gc.ca/census-recensement/profile/sdmx), dataflows DF_PR, DF_CD, DF_CSD; codelist CL_CHARACTERISTIC | community profile, market, workforce | inspected 2026-10-22: 2,631 characteristics; 165 used |
+| Statistics Canada, Labour Force Survey by province, territory and economic region, annual (14-10-0464) | participation, unemployment, employment series | inspected 2026-10-22 |
+| Statistics Canada, population estimates on July 1 (17-10-0005; census subdivisions 17-10-0155) | population series | inspected 2026-10-22 |
+| Statistics Canada, selected income characteristics of census families (11-10-0009) | median total income series | inspected 2026-10-22 |
+| Statistics Canada, Canadian Business Counts with employees, June 2016 to June 2026 (33-10-0040 … 33-10-1174); by census subdivision, June 2026 (33-10-1176) | establishment series; businesses by subdivision; traded weights | inspected 2026-10-22 |
+| Statistics Canada, Postsecondary enrolments by detailed field, institution and characteristics (37-10-0277) | talent pipeline | inspected 2026-10-22: 2009/10 to 2024/25; 25.8 GB, sliced once |
+| Statistics Canada, Variant of CIP Canada 2021 Version 1.0 – Primary groupings (statcan.gc.ca/en/media/4226) | grouping of fields of study | inspected 2026-10-22: series 30 split by subseries |
+| Statistics Canada, Open Database of Educational Facilities v2.1 (37-26-0001) | campus locations | inspected 2026-10-22 |
+| Statistics Canada, 2021 cartographic boundary files, ArcGIS REST (geo.statcan.gc.ca) | jurisdiction and subdivision boundaries | inspected 2026-10-22: some field lists fail server-side |
+| Statistics Canada, Standard Geographical Classification 2021, Appendix B | census subdivision type names | inspected 2026-10-22 |
+| Statistics Canada, Air passenger traffic at Canadian airports, annual (23-10-0253) | airport passengers by sector | inspected 2026-10-22: many airport-years suppressed |
+| Environment and Climate Change Canada, Canadian Climate Normals 1981–2010 (api.weather.gc.ca, collection climate-normals) | climate summary | inspected 2026-10-22: no Iqaluit station |
+| Natural Resources Canada, Atlas of Canada 1:1,000,000: Roads, Railways, Boundary Polygons (2017) | road and rail layers | inspected 2026-10-22 |
+| ISED, National Broadband Data, PHH Speeds (current, 2026-05-12) and Pseudo-Household Demographic Distribution 2021 | broadband availability | inspected 2026-10-22 |
 | OurAirports, `airports.csv` (public domain) | airports with scheduled service | inspected 2026-10-22 |
-| NGA, World Port Index (Pub. 150) | ports | inspected 2026-10-22: no Yukon or NWT entries |
-| Fisheries and Oceans Canada, Small Craft Harbours Locations and Information | harbours | inspected 2026-10-22 |
-| Localintel, Advance Rural Manitoba, *Why Rural Manitoba* (advanceruralmanitoba.ca/why-rural-manitoba) | the dashboard layout reproduced here: six panels and their data sources | inspected 2026-10-22 |
+| NGA, World Port Index (Pub. 150); Fisheries and Oceans Canada, Small Craft Harbours | ports | inspected 2026-10-22 |

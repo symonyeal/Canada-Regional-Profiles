@@ -1,6 +1,6 @@
 import numpy as np
 
-from analysis.industry import employment, lq, members, traded_share
+from analysis.industry import employment, members, traded_share
 
 
 def test_employment_bounds_hold():
@@ -9,12 +9,6 @@ def test_employment_bounds_hold():
     e, lo, hi = employment(N)
     assert e.tolist() == [2.5, 514.0] and lo.tolist() == [1, 510] and hi[0] == 4 and np.isinf(hi[1])
     assert np.all((lo <= e) & (e <= hi))
-
-
-def test_lq_weighted_mean_is_one():
-    """Σ_i (E_i/ΣE) LQ_i = Σ_i e_i/Σe = 1."""
-    e, E = np.array([1., 3, 6]), np.array([5., 5, 10])
-    assert np.isclose((E / E.sum()) @ lq(e, E), 1)
 
 
 def test_traded_share_longest_prefix():

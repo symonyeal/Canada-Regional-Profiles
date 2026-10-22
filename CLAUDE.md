@@ -17,13 +17,15 @@ not break. Codex reads the same file through [AGENTS.md](AGENTS.md).
 | Every number on the site comes from a public source named under its exhibit; nothing is typed in by hand. | The dashboard is reproducible from `analysis/fetch.py` alone. |
 | Jurisdictions follow the order of `regions.PT`: territories first, then west to east. | Coverage was requested one province or territory at a time, territories first; all thirteen are built. |
 | Read Statistics Canada files through `analysis/statcan.py`. | The files mix UTF-8 and cp1252 bytes behind a byte-order mark; `text()` repairs them in one place. |
+| Where the reference dashboard uses public data, reproduce its numbers; `pytest -m slow` checks Manitoba against its recorded responses. | The project is a reverse engineering of that dashboard (`docs/REFERENCE.md`); a mismatch is a finding to record in DECISIONS, not to hide. |
 
 ## The model is written once
 
-Size-class employment, location quotients and the traded flag live in `analysis/industry.py`;
-geometry in `analysis/geo.py`; map layers in `analysis/logistics.py`; assembly and certificates
-in `analysis/build_site.py`. The site (`site/app.js`) filters and draws `site/data/<CODE>.js` and
-computes nothing the analysis computes.
+Industries (SEPH, traded flag) live in `analysis/build_site.py` and `analysis/industry.py`; Census
+Profile access in `analysis/census.py`; community profile, explorer and market data in
+`analysis/profile.py`; talent in `analysis/talent.py`; geometry in `analysis/geo.py` and
+`analysis/boundaries.py`; map layers in `analysis/logistics.py`. The site (`site/app.js`) filters,
+sums the census bins a visitor selects and draws; it estimates nothing.
 
 ## Code
 

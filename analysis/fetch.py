@@ -23,17 +23,19 @@ SOURCES = {
     "bc_2106": STATCAN.format(33100395),     # Canadian Business Counts, with employees, June 2021
     "bc_csd_2606": STATCAN.format(33101176),  # same, by CMA and CSD, June 2026
     "psis": STATCAN.format(37100277),        # postsecondary enrolments by institution and detailed field
-    "pop_q": STATCAN.format(17100009),       # population estimates, quarterly
-    "lfs_t": STATCAN.format(14100292),       # LFS, territories, three-month moving average
-    "lfs_p": STATCAN.format(14100287),       # LFS, provinces, monthly
     "air": STATCAN.format(23100253),         # air passenger traffic at Canadian airports, annual
-    # Census 2021, Canada / provinces and territories / census divisions / census subdivisions
-    "c_pop": STATCAN.format(98100004),       # population and dwelling counts
-    "c_age": STATCAN.format(98100022),       # age, median age
-    "c_lfs": STATCAN.format(98100400),       # labour force status by highest level of education
-    "c_ind": STATCAN.format(98100293),       # Indigenous identity population
-    "c_inc": STATCAN.format(98100057),       # household income statistics
-    "c_dwl": STATCAN.format(98100240),       # structural type of dwelling by tenure
+    # time series for the community profile (reference: LFS 14-10-0464, population 17-10-0005/0155,
+    # income 11-10-0009, establishments: Business Register June tables)
+    "seph": STATCAN.format(14100202),        # SEPH: employment by industry, annual
+    "lfs_er": STATCAN.format(14100464),      # LFS by province, territory and economic region, annual
+    "pop_a": STATCAN.format(17100005),       # population estimates on July 1, provinces and territories
+    "pop_csd": STATCAN.format(17100155),     # population estimates on July 1, census subdivisions
+    "inc_fam": STATCAN.format(11100009),     # selected income characteristics of census families (T1FF)
+    **{f"bc_{y}06": STATCAN.format(t) for y, t in {16: 33100040, 17: 33100034, 18: 33100092, 19: 33100214, 20: 33100267,
+                                                   22: 33100568, 23: 33100717, 24: 33100761, 25: 33101014}.items()},
+    # talent pipeline
+    "cip_pg": "https://www.statcan.gc.ca/en/media/4226",    # CIP Canada 2021 v1.0, variant: primary groupings
+    "odef": "https://www150.statcan.gc.ca/n1/pub/37-26-0001/2022001/ODEF_v2.1.zip",
     # spatial layers
     "roads": ATLAS + "transportation/AC_1M_Roads.shp.zip",
     "rail": ATLAS + "transportation/AC_1M_Railways.shp.zip",
@@ -44,7 +46,7 @@ SOURCES = {
     "wpi": "https://msi.nga.mil/api/publications/download?key=16920959/SFH00000/UpdatedPub150.csv&type=download",
     "sch0": SCH.format(0), "sch1": SCH.format(1), "sch2": SCH.format(2),
 }
-EXT = {"airports": ".csv", "wpi": ".csv", "sch0": ".json", "sch1": ".json", "sch2": ".json"}
+EXT = {"airports": ".csv", "wpi": ".csv", "sch0": ".json", "sch1": ".json", "sch2": ".json", "cip_pg": ".csv"}
 
 
 def get(name):

@@ -4,83 +4,91 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Canada Regional Profiles</title>
-<meta name="description" content="Logistics, workforce, industries, talent and markets of each Canadian province and territory, from public data.">
+<meta name="description" content="Why each Canadian province and territory: logistics, demographics, communities, markets, workforce, industries and talent, from public data.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Roboto:wght@300;400;500;700&family=Work+Sans:wght@300;400;600;700&display=swap">
 <link rel="stylesheet" href="style.css">
-<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@4.1.1/plotly.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
 <script src="data/index.js"></script>
+<script src="data/meta.js"></script>
 </head>
 <body>
-<header class="top"><div class="wrap">
+<header class="top"><div class="in">
   <a class="brand" href="#top">Canada Regional Profiles</a>
-  <nav><a href="#logistics">Logistics</a><a href="#workforce">Workforce</a><a href="#largest">Largest industries</a>
-    <a href="#growing">Fast growing</a><a href="#talent">Talent</a><a href="#market">Market</a></nav>
-</div></header>
+  <div class="pts" id="pts"></div>
+</div>
+<nav class="tabs"><div class="in">
+  <a href="#logistics">Logistics &amp; Access</a><a href="#workforce">Work Force</a><a href="#largest">Largest Industries</a>
+  <a href="#fastest">Fastest Growing Industries</a><a href="#talent">Talent Pipeline</a><a href="#profile">Community Profile</a>
+</div></nav></header>
 
-<main class="wrap" id="top">
-  <section class="hero">
-    <div class="pts" id="pts"></div>
-    <h1 id="h1"></h1>
-    <p class="lede" id="lede"></p>
-    <div class="facts" id="facts"></div>
-  </section>
+<div class="hero" id="top">
+  <div class="kicker">Our advantage</div>
+  <h1 id="h1"></h1>
+  <p id="lede"></p>
+</div>
 
-  <section id="logistics">
-    <h2 data-claim="logistics"></h2>
-    <p class="note">Networks that connect the region: airports with scheduled passenger service, the national
-      road and rail networks at 1:1,000,000, ports and small craft harbours, and the share of households
-      where 50/10 Mbps internet is available.</p>
-    <div class="row"><div class="seg" id="c-layer"></div></div>
-    <div class="panel"><div id="map" class="map"></div><div class="list" id="layer-list"></div></div>
-    <p class="src" id="layer-src"></p>
-  </section>
+<main>
+  <section class="s" id="logistics"><h2>Logistics by design</h2><div class="dots"><i></i><i></i><i></i><i></i><i></i></div>
+    <p class="lead" data-lead="logistics"></p>
+    <div class="tool"><div class="split">
+      <div><div class="ttl">Logistics &amp; accessibility advantages</div>
+        <p class="desc">Explore the networks that connect the region to the world.</p><div class="opts" id="lg-opts"></div></div>
+      <div class="map"><div class="mapc" id="lg-map"></div><div class="card" id="lg-card"></div></div>
+    </div><div class="src" id="lg-src"></div></div></section>
 
-  <section id="workforce">
-    <h2 data-claim="workforce"></h2>
-    <p class="note">Labour-market and demographic indicators for the whole jurisdiction or one census
-      division, beside the Canadian value.</p>
-    <div class="row"><select id="c-region" aria-label="Region"></select></div>
-    <div class="tiles" id="wf-tiles"></div>
-    <p class="src" id="wf-src"></p>
-  </section>
+  <section class="s" id="profile"><h2>Ideal demographics</h2><div class="dots"><i></i><i></i><i></i><i></i><i></i></div>
+    <p class="lead" data-lead="profile"></p>
+    <div class="tool"><div class="rail"><nav id="cp-rail"></nav><div class="board" id="cp-board"></div></div>
+      <div class="src" id="cp-src"></div></div></section>
 
-  <section id="largest">
-    <h2 data-claim="largest"></h2>
-    <p class="note">Employment estimated from Business Register counts of employer locations by size class
-      (class midpoints; the open class 500+ counted at 500, so a lower bound). Traded industries sell
-      outside the region; local industries serve it. LQ is the location quotient against Canada.</p>
-    <div class="row"><div class="seg" id="c-trade"></div><div class="seg" id="c-level"></div></div>
-    <div id="largest-chart" class="chart"></div>
-    <p class="src" id="largest-src"></p>
-  </section>
+  <section class="s" id="explorer"><h2>Vast resources</h2><div class="dots"><i></i><i></i><i></i><i></i><i></i></div>
+    <p class="lead" data-lead="explorer"></p>
+    <div class="tool"><div class="ex"><h3>Explore our communities</h3>
+      <div><input class="search" id="ex-q" placeholder="Search" aria-label="Search communities"><div class="clist" id="ex-list"></div>
+        <button class="more" id="ex-more">View all communities ›</button></div>
+      <div><div class="chips" id="ex-chips"></div><div class="map" style="height:560px"><div class="mapc" id="ex-map"></div></div></div>
+    </div><div class="src">Statistics Canada, 2021 census subdivisions and their types (Standard Geographical Classification 2021, Appendix B); cartographic boundary files.</div></div></section>
 
-  <section id="growing">
-    <h2 data-claim="growing"></h2>
-    <p class="note">Change in estimated employment between June 2021 and June 2026, same estimator and
-      classification as above.</p>
-    <div class="row"><div class="seg" id="c-trade2"></div><div class="seg" id="c-growth"></div></div>
-    <div id="growing-chart" class="chart"></div>
-    <p class="src" id="growing-src"></p>
-  </section>
+  <section class="s" id="market"><h2>Marketplace vibrancy</h2><div class="dots"><i></i><i></i><i></i><i></i><i></i></div>
+    <p class="lead" data-lead="market"></p>
+    <div class="tool"><div class="rail"><nav id="mk-rail"></nav>
+      <div class="mk"><div class="filters" id="mk-filters"></div>
+        <div class="map" style="height:640px"><div class="mapc" id="mk-map"></div><div class="kpis" id="mk-kpis"></div><div class="unit" id="mk-unit"></div></div></div></div>
+      <div class="src" id="mk-src"></div></div></section>
 
-  <section id="talent">
-    <h2 data-claim="talent"></h2>
-    <p class="note">Postsecondary enrolments at the region's public universities and colleges, by field of study.</p>
-    <div class="row"><select id="c-inst" aria-label="Institution"></select></div>
-    <div class="panel"><div id="talent-chart" class="chart"></div><div class="list" id="talent-list"></div></div>
-    <p class="src" id="talent-src"></p>
-  </section>
+  <section class="s" id="workforce"><h2>Skilled workers</h2><div class="dots"><i></i><i></i><i></i><i></i><i></i></div>
+    <p class="lead" data-lead="workforce"></p>
+    <div class="tool"><div class="rail"><nav id="wf-rail"></nav><div id="wf-body"></div></div>
+      <div class="src" id="wf-src"></div></div></section>
 
-  <section id="market">
-    <h2 data-claim="market"></h2>
-    <p class="note">The local market: consumers, dwellings and businesses.</p>
-    <div class="row"><div class="seg" id="c-market"></div></div>
-    <div class="tiles" id="mk-tiles"></div>
-    <p class="src" id="mk-src"></p>
-  </section>
+  <section class="s" id="fastest"><h2>Fast growing industries</h2><div class="dots"><i></i><i></i><i></i><i></i><i></i></div>
+    <p class="lead" data-lead="fastest"></p>
+    <div class="tool"><div class="split">
+      <div><div class="ttl">Fast growing industries</div><p class="desc" id="fg-desc"></p><div class="opts" id="fg-opts"></div></div>
+      <div><div class="toggle" id="fg-view"></div><div id="fg-chart" class="chart"></div><div class="tbl" id="fg-list"></div></div>
+    </div><div class="src" id="fg-src"></div></div></section>
+
+  <section class="s" id="largest"><h2>Diversity of industry</h2><div class="dots"><i></i><i></i><i></i><i></i><i></i></div>
+    <p class="lead" data-lead="largest"></p>
+    <div class="tool"><div class="split">
+      <div><div class="ttl">Largest industries</div><p class="desc" id="li-desc"></p><div class="opts" id="li-opts"></div></div>
+      <div><div class="toggle" id="li-view"></div><div id="li-chart" class="chart"></div><div class="tbl" id="li-list"></div></div>
+    </div><div class="src" id="li-src"></div></div></section>
+
+  <section class="s" id="talent"><h2>Talent pipeline</h2><div class="dots"><i></i><i></i><i></i><i></i><i></i></div>
+    <p class="lead" data-lead="talent"></p>
+    <div class="tool"><div class="split">
+      <div><div class="ttl">Talent pipeline advantages</div>
+        <p class="desc">Explore the universities and colleges that supply the region's workforce.</p>
+        <div class="opts optscroll" id="tp-opts"></div></div>
+      <div class="map"><div class="mapc" id="tp-map"></div><div class="card" id="tp-card"></div></div>
+    </div><div class="src" id="tp-src"></div></div></section>
 </main>
 
-<footer class="wrap note">All figures come from public sources named under each exhibit. Data: <code>site/data/*.js</code>,
-  written by <code>analysis/build_site.py</code>.</footer>
+<footer>Every figure comes from a public source named under its exhibit; the layout follows a regional investment-attraction
+  dashboard reverse engineered in <code>docs/REFERENCE.md</code>. Data: <code>site/data/*.js</code>, written by
+  <code>analysis/build_site.py</code>.</footer>
 <script src="app.js"></script>
 </body>
 </html>

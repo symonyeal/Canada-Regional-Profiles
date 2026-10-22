@@ -1,5 +1,5 @@
-"""Industry structure from the Business Register: employment estimated from size classes, location
-quotients, growth, and the traded/local split of Delgado, Porter and Stern (2016).
+"""Industry structure from the Business Register: employment estimated from size classes (used to weight
+the traded share of a code), and the traded/local split of Delgado, Porter and Stern (2016).
 
 Let N ∈ ℕ^{k×s} count employer locations of k industries in s employment-size classes [l_j, u_j].
 Employment is bounded by N l ≤ e ≤ N u and estimated by the class midpoints, e = N m; the open
@@ -22,18 +22,6 @@ def employment(N):
     N = np.asarray(N, float)
     hi = np.where(N[:, -1] > 0, np.inf, N[:, :-1] @ u[:-1])
     return N @ m, N @ l, hi
-
-
-def lq(e, E):
-    """Location quotient LQ_i = (e_i / Σe) / (E_i / ΣE) of a region (e) against a reference (E)."""
-    with np.errstate(divide="ignore", invalid="ignore"):
-        return (e / e.sum()) / (E / E.sum())
-
-
-def growth(e1, e0):
-    """Change e1 − e0 and rate e1/e0 − 1 (NaN where e0 = 0)."""
-    with np.errstate(divide="ignore", invalid="ignore"):
-        return e1 - e0, np.where(e0 > 0, e1 / e0 - 1, np.nan)
 
 
 def lines(name):
