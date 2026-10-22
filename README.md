@@ -1,75 +1,68 @@
 # Canada Regional Profiles
 
-**Site: https://symonyeal.github.io/Canada-Regional-Profiles/**
+[Open the dashboard](https://symonyeal.github.io/Canada-Regional-Profiles/)
 
-## In plain terms
+Explore Canadian communities, industries, workforce, housing, incomes, transport and education. Choose Canada, a province or territory, or a local Census geography. The selection carries across the profile tools and into a shareable URL.
 
-Regional development agencies publish "why invest here" dashboards. One is Advance Rural Manitoba's
-[Why Rural Manitoba](https://advanceruralmanitoba.ca/why-rural-manitoba/), assembled from eight
-embedded tools sold by a commercial platform. This project reverse engineers that dashboard: its
-layout, its charts, and the data and formulas behind each number. It then rebuilds the dashboard
-from public data for every province and territory. Coverage starts with the territories and runs
-west to east, and includes a profile for every municipality and First Nations reserve (census
-subdivision).
+The site queries public APIs when opened. It does not ship downloaded observations or prebuilt province data files. Requests are cached in this browser tab's memory; **Refresh** queries them again. No API key, account, server or scheduled dataset build is required.
 
-The page has the reference's sections, in its order:
-- **Logistics.** Airports, roads, ports, rail and broadband.
-- **Community profile.** Economic, resident, household, dwelling, workforce and livability
-  dashboards, for the jurisdiction or any community.
-- **Community explorer.**
-- **Market.** Consumers, dwellings and businesses, counted on a map for any criteria.
-- **Workforce.** Indicators and a catchment map.
-- **Industries.** Fastest growing and largest, each split into traded and local.
-- **Talent pipeline.**
+## What is available
 
-**How exact it is.** For Manitoba, the reference's own location, the rebuild reproduces the
-reference to the unit wherever it uses public data:
-- The 20 largest industries and their employment: SEPH 2025, same order.
-- The fastest-growing industries: change since 2020. One, rail transportation, comes from data
-  that is not public.
-- The education donuts (59.3%, 28.8%, 5.5%, 2.9%), the residents'-industry treemap and the
-  occupation ranking.
-- Labour force participation (66.6%) and median family income ($97,040).
+| Tool | Views and controls |
+| --- | --- |
+| Community profile | Population, age pyramid, housing, household size, tenure, languages, immigration and Indigenous identity; quarterly population estimates for Canada and provinces/territories |
+| Logistics and access | Official boundaries, live road basemap, mapped airports, rail stations, harbours and postsecondary facilities; official broadband map link |
+| Community explorer | Search and compare municipalities, census divisions, metro/agglomeration areas, economic regions and population centres; population filters and local profile links |
+| Market | Household income distributions, housing costs, suitability, condition, construction periods, mobility and citizenship |
+| Workforce | Labour rates, NOC occupations, NAICS sectors, education and commuting; Census gender filters and recent Labour Force Survey trends |
+| Industry insights | Location quotients, specialization/growth bubbles and industry treemap |
+| Fast-growing industries | Matched five-year Business Register comparisons, absolute/percentage change and minimum-base filter |
+| Largest industries | Employer locations and estimated employees; NAICS detail, traded/local filters and estimate bounds |
+| Talent pipeline | Institutional enrolments by field and period; institution type, institution, student status, registration and gender filters; local resident qualifications separately |
+| All characteristics | Search the full published Census Profile, read source notes and export selected characteristics |
 
-`tests/test_build.py` checks all of these against the reference's recorded responses.
+Charts include data tables and CSV exports. The data-and-coverage page names each public source and records requests made during the browser session.
 
-**What this does not show.**
-- The reference's airport route counts (OAG) and drive-time areas are proprietary. Here airports
-  show passenger counts instead, and there are no drive-time areas.
-- Industries whose employment Statistics Canada suppresses are not listed. In the territories that
-  is most of them.
-- The traded/local labels follow a United States classification mapped to Canadian industry codes.
-  They agree with the reference's labels on 93% of its Manitoba industries.
-- Its location quotients differ from the reference's by a constant factor of about 1.09, whose
-  source is unidentified.
-- Northern port lists are incomplete.
+## Scope and differences from the reference
 
-## Overview
+The starting point is [Advance Rural Manitoba](https://advanceruralmanitoba.ca/why-rural-manitoba/), whose page embeds nine Localintel tools. This project provides independently implemented public-data counterparts. Exact chart parity is **unverified**: the reference's embedded tools returned HTTP 406 and browser navigation errors during inspection on 2026-10-22.
 
-`docs/REFERENCE.md` records the reverse-engineered reference: every embed, endpoint, chart type,
-dataset and colour. `analysis/build_site.py` writes three files per jurisdiction:
-- `site/data/<CODE>.js`: logistics, profile, industries and talent.
-- `site/data/<CODE>-csd.js`: Census Profile values, business counts and climate by census subdivision.
-- `site/data/<CODE>-geo.js`: boundaries.
+- Census profiles use 2021 boundaries and observations. Census income is for 2020. A live request does not make those observations current-year estimates.
+- Business Register employee counts are estimates from size classes. Midpoints are used, with 500 for the open 500+ class. That class has no finite upper bound. These are not payroll job counts.
+- The Business Register API omits many zero series. A missing cell becomes zero only when a published row total or size-class subtotal establishes it. Unresolved missing cells remain missing.
+- Business Counts publishes Canada/provinces and selected metro/municipality geographies. Unsupported local levels show a labelled Census resident-labour-force sector view; provincial data are never relabelled as municipal data.
+- Traded/local follows the draft's mapped Delgado, Porter and Stern classification. The NAICS rule lists are configuration, not downloaded observations. Localintel's own classification is not reproduced.
+- Growth compares the latest Business Counts release found in the live catalogue with the same month five years earlier. Recoded or suppressed industries may have no comparison. The draft's minimum baseline of 20 estimated employees remains the default.
+- PSIS describes the institution or provincial school population. A municipal selection does not turn a provincial enrolment total into a municipal one. Enrolments are registrations, not graduates or unique people.
+- OSM features are incomplete, and map queries are capped at 500 results within the viewport. They are not regional facility inventories. OAG flight schedules and frequencies are proprietary and are not reproduced.
+- Broadband links to the official ISED map. A live household coverage aggregate is not connected. The ISED map was blocked by this machine's network during verification.
 
-The page (`site/app.js`, ECharts) filters, sums the census bins a visitor selects, classes the map
-by Jenks natural breaks, and draws.
+See [sources](docs/SOURCES.md), [decisions](docs/DECISIONS.md), [coverage](docs/COVERAGE.md) and [validation](docs/VALIDATION.md).
 
-| Part | Module | Method or source |
-| --- | --- | --- |
-| Industry employment, change, LQ, traded flag | `analysis/build_site.py`, `analysis/industry.py` | SEPH 14-10-0202; Delgado, Porter and Stern (2016) |
-| Census Profile by jurisdiction, division and subdivision | `analysis/census.py` | Statistics Canada Census Profile SDMX API |
-| Community profile series, explorer, market data | `analysis/profile.py` | LFS 14-10-0464, 17-10-0005/0155, 11-10-0009, Business Register |
-| Talent pipeline | `analysis/talent.py` | PSIS 37-10-0277, CIP 2021 primary groupings, ODEF |
-| Map layers, projection | `analysis/logistics.py`, `analysis/geo.py` | Atlas of Canada 1:1M; Snyder (1987) §15 |
-| Boundaries, climate | `analysis/boundaries.py`, `analysis/climate.py` | StatCan cartographic boundary files; ECCC normals |
+## Run locally
 
-Run:
+Use Node 22+ for the dependency-free JavaScript tests. Serve the site with the system Python:
 
 ```text
-py -3.14 -m pip install -r requirements.txt
-py -3.14 analysis/fetch.py              # public files into data/fetched (gitignored); census, boundaries and
-                                        # climate are fetched on first use by their modules
-py -3.14 -m analysis.build_site         # writes site/data/*.js (generated, committed), about 6 minutes
-py -3.14 -m pytest -q                   # -m slow reproduces the reference's Manitoba numbers
+python -m http.server 8765 --directory site
+node --test tests/*.test.js
 ```
+
+Open http://localhost:8765/. The application needs internet access to Statistics Canada, OpenStreetMap, the map service and the chart/map library CDNs. Source outages produce retry states and never trigger a static-data fallback.
+
+GitHub Actions publishes `site/` directly to GitHub Pages on changes to main.
+
+## Historical analysis
+
+`analysis/` retains the original offline Python model for reference and numerical comparison. It is not used by the website or its deployment. Running `analysis/fetch.py` explicitly downloads large source files, and `analysis/build_site.py` explicitly rebuilds the former static outputs; neither belongs to the live workflow.
+
+For its existing unit checks:
+
+```text
+python -m pip install -r requirements.txt
+python -m pytest -q -m "not slow"
+python -m ruff check .
+python -m pip check
+```
+
+The slow historical build checks require the former downloaded input collection. They do not verify the live site.

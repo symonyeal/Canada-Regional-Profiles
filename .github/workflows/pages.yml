@@ -1,7 +1,6 @@
 name: pages
 
-# Publishes site/ as it stands on main. site/data.js is generated locally by analysis/build_site.py
-# and committed, so the deploy needs no Python.
+# Publishes the runtime API client in site/. No observation download or data build is performed.
 on:
   push:
     branches: [main]

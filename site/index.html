@@ -1,94 +1,40 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Canada Regional Profiles</title>
-<meta name="description" content="Why each Canadian province and territory: logistics, demographics, communities, markets, workforce, industries and talent, from public data.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Roboto:wght@300;400;500;700&family=Work+Sans:wght@300;400;600;700&display=swap">
+<meta name="description" content="Explore Canada's communities, workforce, industries, talent and transport using public data queried live from Statistics Canada.">
+<meta name="theme-color" content="#163e38">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%23163e38'/%3E%3Ctext x='10' y='29' font-family='sans-serif' font-size='28' fill='white'%3EC%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
-<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
-<script src="data/index.js"></script>
-<script src="data/meta.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@4.1.1/plotly.min.js" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
+<script type="module" src="app.js"></script>
 </head>
 <body>
-<header class="top"><div class="in">
-  <a class="brand" href="#top">Canada Regional Profiles</a>
-  <div class="pts" id="pts"></div>
+<a class="skip" href="#content">Skip to profile</a>
+<header class="masthead">
+  <a class="brand" href="?view=community"><span class="brand-mark" aria-hidden="true">C<span>R</span>P</span><span>Canada<br><b>Regional Profiles</b></span></a>
+  <div class="masthead-right"><span class="live-dot"></span> Public data, queried live <a href="https://github.com/symonyeal/Canada-Regional-Profiles">Source &amp; methods ↗</a></div>
+</header>
+<div class="intro"><div><p class="eyebrow">REGIONAL ECONOMIC &amp; COMMUNITY DATA</p>
+  <h1 id="region-name">Canada</h1><p id="region-description">Explore the people, industries and connections that shape a place.</p></div>
+  <div class="intro-meta"><span id="geo-type">Country</span><span id="retrieved">Connecting to public sources…</span></div>
 </div>
-<nav class="tabs"><div class="in">
-  <a href="#logistics">Logistics &amp; Access</a><a href="#workforce">Work Force</a><a href="#largest">Largest Industries</a>
-  <a href="#fastest">Fastest Growing Industries</a><a href="#talent">Talent Pipeline</a><a href="#profile">Community Profile</a>
-</div></nav></header>
-
-<div class="hero" id="top">
-  <div class="kicker">Our advantage</div>
-  <h1 id="h1"></h1>
-  <p id="lede"></p>
+<section class="filters" aria-label="Geography and comparison">
+  <label>Province or territory<select id="province"><option value="">Canada · all provinces &amp; territories</option></select></label>
+  <label>Geography level<select id="geo-level"><option value="PR">Province / territory</option><option value="CSD">City / municipality</option><option value="CD">Census division</option><option value="CMACA">Metro / agglomeration</option><option value="ER">Economic region</option><option value="POPCNTR">Population centre</option></select></label>
+  <label class="place-label">Find a place<input id="place-search" type="search" placeholder="Search communities…" aria-label="Filter places by name" autocomplete="off"><select id="place" aria-label="Selected place"><option value="">Select a geography level first</option></select></label>
+  <label>Compare with<select id="benchmark"><option value="CA">Canada</option><option value="PT">Parent province / territory</option></select></label>
+  <button id="refresh" class="button subtle" title="Discard in-memory data and query sources again">↻ Refresh</button>
+  <button id="share" class="button subtle">Copy link</button>
+</section>
+<div id="global-status" class="global-status" role="status" aria-live="polite"></div>
+<div class="workspace">
+  <aside><nav id="navigation" aria-label="Profile tools"></nav><p class="sidebar-note">Choose a place once.<br>Explore it across every tool.</p><a class="method-link" href="?view=sources">Data &amp; coverage ↗</a></aside>
+  <main id="content" tabindex="-1"><noscript>This dashboard requires JavaScript to query its public data sources.</noscript></main>
 </div>
-
-<main>
-  <section class="s" id="logistics"><h2>Logistics by design</h2><div class="dots"><i></i><i></i><i></i><i></i><i></i></div>
-    <p class="lead" data-lead="logistics"></p>
-    <div class="tool"><div class="split">
-      <div><div class="ttl">Logistics &amp; accessibility advantages</div>
-        <p class="desc">Explore the networks that connect the region to the world.</p><div class="opts" id="lg-opts"></div></div>
-      <div class="map"><div class="mapc" id="lg-map"></div><div class="card" id="lg-card"></div></div>
-    </div><div class="src" id="lg-src"></div></div></section>
-
-  <section class="s" id="profile"><h2>Ideal demographics</h2><div class="dots"><i></i><i></i><i></i><i></i><i></i></div>
-    <p class="lead" data-lead="profile"></p>
-    <div class="tool"><div class="rail"><nav id="cp-rail"></nav><div class="board" id="cp-board"></div></div>
-      <div class="src" id="cp-src"></div></div></section>
-
-  <section class="s" id="explorer"><h2>Vast resources</h2><div class="dots"><i></i><i></i><i></i><i></i><i></i></div>
-    <p class="lead" data-lead="explorer"></p>
-    <div class="tool"><div class="ex"><h3>Explore our communities</h3>
-      <div><input class="search" id="ex-q" placeholder="Search" aria-label="Search communities"><div class="clist" id="ex-list"></div>
-        <button class="more" id="ex-more">View all communities ›</button></div>
-      <div><div class="chips" id="ex-chips"></div><div class="map" style="height:560px"><div class="mapc" id="ex-map"></div></div></div>
-    </div><div class="src">Statistics Canada, 2021 census subdivisions and their types (Standard Geographical Classification 2021, Appendix B); cartographic boundary files.</div></div></section>
-
-  <section class="s" id="market"><h2>Marketplace vibrancy</h2><div class="dots"><i></i><i></i><i></i><i></i><i></i></div>
-    <p class="lead" data-lead="market"></p>
-    <div class="tool"><div class="rail"><nav id="mk-rail"></nav>
-      <div class="mk"><div class="filters" id="mk-filters"></div>
-        <div class="map" style="height:640px"><div class="mapc" id="mk-map"></div><div class="kpis" id="mk-kpis"></div><div class="unit" id="mk-unit"></div></div></div></div>
-      <div class="src" id="mk-src"></div></div></section>
-
-  <section class="s" id="workforce"><h2>Skilled workers</h2><div class="dots"><i></i><i></i><i></i><i></i><i></i></div>
-    <p class="lead" data-lead="workforce"></p>
-    <div class="tool"><div class="rail"><nav id="wf-rail"></nav><div id="wf-body"></div></div>
-      <div class="src" id="wf-src"></div></div></section>
-
-  <section class="s" id="fastest"><h2>Fast growing industries</h2><div class="dots"><i></i><i></i><i></i><i></i><i></i></div>
-    <p class="lead" data-lead="fastest"></p>
-    <div class="tool"><div class="split">
-      <div><div class="ttl">Fast growing industries</div><p class="desc" id="fg-desc"></p><div class="opts" id="fg-opts"></div></div>
-      <div><div class="toggle" id="fg-view"></div><div id="fg-chart" class="chart"></div><div class="tbl" id="fg-list"></div></div>
-    </div><div class="src" id="fg-src"></div></div></section>
-
-  <section class="s" id="largest"><h2>Diversity of industry</h2><div class="dots"><i></i><i></i><i></i><i></i><i></i></div>
-    <p class="lead" data-lead="largest"></p>
-    <div class="tool"><div class="split">
-      <div><div class="ttl">Largest industries</div><p class="desc" id="li-desc"></p><div class="opts" id="li-opts"></div></div>
-      <div><div class="toggle" id="li-view"></div><div id="li-chart" class="chart"></div><div class="tbl" id="li-list"></div></div>
-    </div><div class="src" id="li-src"></div></div></section>
-
-  <section class="s" id="talent"><h2>Talent pipeline</h2><div class="dots"><i></i><i></i><i></i><i></i><i></i></div>
-    <p class="lead" data-lead="talent"></p>
-    <div class="tool"><div class="split">
-      <div><div class="ttl">Talent pipeline advantages</div>
-        <p class="desc">Explore the universities and colleges that supply the region's workforce.</p>
-        <div class="opts optscroll" id="tp-opts"></div></div>
-      <div class="map"><div class="mapc" id="tp-map"></div><div class="card" id="tp-card"></div></div>
-    </div><div class="src" id="tp-src"></div></div></section>
-</main>
-
-<footer>Every figure comes from a public source named under its exhibit; the layout follows a regional investment-attraction
-  dashboard reverse engineered in <code>docs/REFERENCE.md</code>. Data: <code>site/data/*.js</code>, written by
-  <code>analysis/build_site.py</code>.</footer>
-<script src="app.js"></script>
+<footer><b>Canada Regional Profiles</b><span>Public sources. Published periods. Local geography.</span><a href="https://www.statcan.gc.ca/en/reference/licence">Statistics Canada Open Licence</a><a href="https://github.com/symonyeal/Canada-Regional-Profiles/issues">Report a data issue ↗</a></footer>
 </body>
 </html>

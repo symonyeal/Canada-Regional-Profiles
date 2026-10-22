@@ -24,6 +24,22 @@ with what was read and when) or **cited** (not yet read).
 
 ## Data
 
+### Live application services (inspected 2026-10-22)
+
+| Public source | Runtime use | Inspection |
+| --- | --- | --- |
+| [Statistics Canada developers](https://www.statcan.gc.ca/en/developers) and [Census Profile WDS guide](https://www12.statcan.gc.ca/wds-sdw/2021profile-profil2021-eng.cfm) | Profile data and geography membership | Official developer page read; live SDMX requests returned 200 with the GitHub Pages CORS origin. The guide page itself presented a browser security check on this network. |
+| [Census Profile SDMX endpoint](https://api.statcan.gc.ca/census-recensement/profile/sdmx/rest/dataflow/all/all/latest) | DF_PR, DF_CD, DF_CSD, DF_CMACA, DF_ER and DF_POPCNTR; published characteristic, gender, statistic and source-note dimensions | Dataflow metadata and sample data read. Dimension order is FREQ, REF_AREA, GENDER, CHARACTERISTIC, STATISTIC. |
+| [Statistics Canada Web Data Service](https://www.statcan.gc.ca/en/developers/wds) | Live catalogue, cube metadata and selected coordinates | Official method list read; getAllCubesListLite, getCubeMetadata and getDataFromCubePidCoordAndLatestNPeriods queried. CORS accepted. |
+| [Live table catalogue](https://www150.statcan.gc.ca/t1/wds/rest/getAllCubesListLite) | Discover current Business Counts releases and same-month five-year baseline | Read; national/province and CMA/CSD table families are matched separately. |
+| [Statistics Canada Census boundaries](https://geo.statcan.gc.ca/geo_wa/rest/services/2021/Cartographic_boundary_files/MapServer) | Selected boundary geometry via public ArcGIS form POST | Service/layer metadata and Winnipeg GeoJSON query read; GET query URLs returned application errors, form POST returned 200 with CORS. |
+| [OpenStreetMap](https://www.openstreetmap.org/copyright) and [Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API) | Live basemap and bounded facility queries | Network features are volunteered map data, not complete inventories. The map displays service errors rather than fabricated facilities. |
+| [ISED National Broadband Data](https://open.canada.ca/data/en/dataset/00a331db-121b-445d-b119-35dbbe3eedd9) | Official broadband map link | Catalogue read. Large bulk-download resources are not used by the live site. The interactive map was blocked by this machine's network; no live household aggregate is claimed. |
+
+### Historical offline inputs
+
+The following inputs document the original Python build. They are not downloaded or served by the live application. The live application queries Business Counts and PSIS through WDS, population estimates through 17-10-0009, and Labour Force Survey rates through 14-10-0287/0292.
+
 | Source | Used for | Status |
 | --- | --- | --- |
 | Statistics Canada, Survey of Employment, Payrolls and Hours, employment by industry, annual (14-10-0202) | largest and fastest-growing industries, LQ | inspected 2026-10-22: reproduces the reference's values; no rail (482) |
