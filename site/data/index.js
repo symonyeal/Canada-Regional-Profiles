@@ -1,0 +1,1 @@
+window.INDEX = {"built": ["YT", "NT", "NU"], "order": [["YT", "Yukon"], ["NT", "Northwest Territories"], ["NU", "Nunavut"], ["|", ""], ["BC", "British Columbia"], ["AB", "Alberta"], ["SK", "Saskatchewan"], ["MB", "Manitoba"], ["ON", "Ontario"], ["QC", "Quebec"], ["NB", "New Brunswick"], ["NS", "Nova Scotia"], ["PE", "Prince Edward Island"], ["NL", "Newfoundland and Labrador"]]};

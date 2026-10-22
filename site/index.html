@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canada Regional Profiles</title>
+<meta name="description" content="Logistics, workforce, industries, talent and markets of each Canadian province and territory, from public data.">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@4.1.1/plotly.min.js"></script>
+<script src="data/index.js"></script>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="#top">Canada Regional Profiles</a>
+  <nav><a href="#logistics">Logistics</a><a href="#workforce">Workforce</a><a href="#largest">Largest industries</a>
+    <a href="#growing">Fast growing</a><a href="#talent">Talent</a><a href="#market">Market</a></nav>
+</div></header>
+
+<main class="wrap" id="top">
+  <section class="hero">
+    <div class="pts" id="pts"></div>
+    <h1 id="h1"></h1>
+    <p class="lede" id="lede"></p>
+    <div class="facts" id="facts"></div>
+  </section>
+
+  <section id="logistics">
+    <h2 data-claim="logistics"></h2>
+    <p class="note">Networks that connect the region: airports with scheduled passenger service, the national
+      road and rail networks at 1:1,000,000, ports and small craft harbours, and the share of households
+      where 50/10 Mbps internet is available.</p>
+    <div class="row"><div class="seg" id="c-layer"></div></div>
+    <div class="panel"><div id="map" class="map"></div><div class="list" id="layer-list"></div></div>
+    <p class="src" id="layer-src"></p>
+  </section>
+
+  <section id="workforce">
+    <h2 data-claim="workforce"></h2>
+    <p class="note">Labour-market and demographic indicators for the whole jurisdiction or one census
+      division, beside the Canadian value.</p>
+    <div class="row"><select id="c-region" aria-label="Region"></select></div>
+    <div class="tiles" id="wf-tiles"></div>
+    <p class="src" id="wf-src"></p>
+  </section>
+
+  <section id="largest">
+    <h2 data-claim="largest"></h2>
+    <p class="note">Employment estimated from Business Register counts of employer locations by size class
+      (class midpoints; the open class 500+ counted at 500, so a lower bound). Traded industries sell
+      outside the region; local industries serve it. LQ is the location quotient against Canada.</p>
+    <div class="row"><div class="seg" id="c-trade"></div><div class="seg" id="c-level"></div></div>
+    <div id="largest-chart" class="chart"></div>
+    <p class="src" id="largest-src"></p>
+  </section>
+
+  <section id="growing">
+    <h2 data-claim="growing"></h2>
+    <p class="note">Change in estimated employment between June 2021 and June 2026, same estimator and
+      classification as above.</p>
+    <div class="row"><div class="seg" id="c-trade2"></div><div class="seg" id="c-growth"></div></div>
+    <div id="growing-chart" class="chart"></div>
+    <p class="src" id="growing-src"></p>
+  </section>
+
+  <section id="talent">
+    <h2 data-claim="talent"></h2>
+    <p class="note">Postsecondary enrolments at the region's public universities and colleges, by field of study.</p>
+    <div class="row"><select id="c-inst" aria-label="Institution"></select></div>
+    <div class="panel"><div id="talent-chart" class="chart"></div><div class="list" id="talent-list"></div></div>
+    <p class="src" id="talent-src"></p>
+  </section>
+
+  <section id="market">
+    <h2 data-claim="market"></h2>
+    <p class="note">The local market: consumers, dwellings and businesses.</p>
+    <div class="row"><div class="seg" id="c-market"></div></div>
+    <div class="tiles" id="mk-tiles"></div>
+    <p class="src" id="mk-src"></p>
+  </section>
+</main>
+
+<footer class="wrap note">All figures come from public sources named under each exhibit. Data: <code>site/data/*.js</code>,
+  written by <code>analysis/build_site.py</code>.</footer>
+<script src="app.js"></script>
+</body>
+</html>
