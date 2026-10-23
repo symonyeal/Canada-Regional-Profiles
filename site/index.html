@@ -1,40 +1,71 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Canada Regional Profiles</title>
-<meta name="description" content="Explore Canada's communities, workforce, industries, talent and transport using public data queried live from Statistics Canada.">
-<meta name="theme-color" content="#163e38">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%23163e38'/%3E%3Ctext x='10' y='29' font-family='sans-serif' font-size='28' fill='white'%3EC%3C/text%3E%3C/svg%3E">
+<meta name="description" content="Logistics, demographics, markets, workforce, industries and postsecondary enrolments for Canada, its provinces and territories and local Census geographies, queried live from public sources.">
+<meta name="theme-color" content="#473729">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23473729'/%3E%3Cpath d='M9 22V10h5.5a3.5 3.5 0 010 7H9m6 0l4 5M19 10v12' stroke='white' stroke-width='2.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Montserrat:wght@700;800&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" crossorigin="anonymous">
 <link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous">
-<script defer src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@4.1.1/plotly.min.js" crossorigin="anonymous"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
-<script type="module" src="app.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js" crossorigin="anonymous"></script>
+<script type="module" src="js/app.js"></script>
 </head>
 <body>
-<a class="skip" href="#content">Skip to profile</a>
-<header class="masthead">
-  <a class="brand" href="?view=community"><span class="brand-mark" aria-hidden="true">C<span>R</span>P</span><span>Canada<br><b>Regional Profiles</b></span></a>
-  <div class="masthead-right"><span class="live-dot"></span> Public data, queried live <a href="https://github.com/symonyeal/Canada-Regional-Profiles">Source &amp; methods ↗</a></div>
+<a class="skip" href="#main">Skip to the profile</a>
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="./"><span class="brand-mark" aria-hidden="true">CRP</span>Canada Regional Profiles</a>
+    <nav class="topbar-links" aria-label="Project">
+      <button type="button" class="link-btn" id="open-sources">Sources and requests</button>
+      <a href="https://github.com/symonyeal/Canada-Regional-Profiles">Source code</a>
+    </nav>
+  </div>
 </header>
-<div class="intro"><div><p class="eyebrow">REGIONAL ECONOMIC &amp; COMMUNITY DATA</p>
-  <h1 id="region-name">Canada</h1><p id="region-description">Explore the people, industries and connections that shape a place.</p></div>
-  <div class="intro-meta"><span id="geo-type">Country</span><span id="retrieved">Connecting to public sources…</span></div>
-</div>
-<section class="filters" aria-label="Geography and comparison">
-  <label>Province or territory<select id="province"><option value="">Canada · all provinces &amp; territories</option></select></label>
-  <label>Geography level<select id="geo-level"><option value="PR">Province / territory</option><option value="CSD">City / municipality</option><option value="CD">Census division</option><option value="CMACA">Metro / agglomeration</option><option value="ER">Economic region</option><option value="POPCNTR">Population centre</option></select></label>
-  <label class="place-label">Find a place<input id="place-search" type="search" placeholder="Search communities…" aria-label="Filter places by name" autocomplete="off"><select id="place" aria-label="Selected place"><option value="">Select a geography level first</option></select></label>
-  <label>Compare with<select id="benchmark"><option value="CA">Canada</option><option value="PT">Parent province / territory</option></select></label>
-  <button id="refresh" class="button subtle" title="Discard in-memory data and query sources again">↻ Refresh</button>
-  <button id="share" class="button subtle">Copy link</button>
+<section class="hero" aria-labelledby="place-name">
+  <div class="wrap">
+    <p class="eyebrow">Regional profile</p>
+    <h1 id="place-name">Canada</h1>
+    <p class="place-meta" id="place-meta">Country · Census 2021 geography</p>
+    <form class="geo-bar" id="geo-bar" role="search" aria-label="Choose a geography" onsubmit="return false">
+      <label class="field"><span>Province or territory</span><select id="province"></select></label>
+      <label class="field"><span>Local geography</span><select id="level">
+        <option value="CSD">Census subdivision (municipality)</option><option value="CD">Census division</option>
+        <option value="CMACA">Metropolitan area or agglomeration</option><option value="ER">Economic region</option><option value="POPCNTR">Population centre</option>
+      </select></label>
+      <div class="field combo">
+        <label for="place-input">Find a place</label>
+        <input id="place-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="place-list" placeholder="Search by name" autocomplete="off">
+        <ul id="place-list" role="listbox" class="combo-list" hidden></ul>
+      </div>
+      <label class="field"><span>Compare with</span><select id="bench"><option value="CA">Canada</option><option value="PT">Province or territory</option></select></label>
+      <div class="geo-actions">
+        <button type="button" class="btn ghost" id="copy-link">Copy link</button>
+        <button type="button" class="btn ghost" id="refresh" title="Discard data held in this tab and query the sources again">Refresh data</button>
+      </div>
+    </form>
+    <p class="geo-status" id="geo-status" role="status" aria-live="polite"></p>
+  </div>
 </section>
-<div id="global-status" class="global-status" role="status" aria-live="polite"></div>
-<div class="workspace">
-  <aside><nav id="navigation" aria-label="Profile tools"></nav><p class="sidebar-note">Choose a place once.<br>Explore it across every tool.</p><a class="method-link" href="?view=sources">Data &amp; coverage ↗</a></aside>
-  <main id="content" tabindex="-1"><noscript>This dashboard requires JavaScript to query its public data sources.</noscript></main>
-</div>
-<footer><b>Canada Regional Profiles</b><span>Public sources. Published periods. Local geography.</span><a href="https://www.statcan.gc.ca/en/reference/licence">Statistics Canada Open Licence</a><a href="https://github.com/symonyeal/Canada-Regional-Profiles/issues">Report a data issue ↗</a></footer>
+<nav class="section-nav" aria-label="Tools">
+  <div class="wrap"><ul id="section-links"></ul></div>
+</nav>
+<main id="main" tabindex="-1"></main>
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <div><strong>Canada Regional Profiles</strong>
+      <p>Observations are requested from Statistics Canada, Environment and Climate Change Canada, Transport Canada, Natural Resources Canada, OpenStreetMap and Wikidata each time the page is used. Every exhibit names its source, geography and reference period.</p></div>
+    <ul>
+      <li><a href="https://www.statcan.gc.ca/en/terms-conditions/open-licence">Statistics Canada Open Licence</a></li>
+      <li><a href="https://open.canada.ca/en/open-government-licence-canada">Open Government Licence – Canada</a></li>
+      <li><a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors (ODbL)</a></li>
+      <li><a href="https://github.com/symonyeal/Canada-Regional-Profiles/issues">Report a data issue</a></li>
+    </ul>
+  </div>
+</footer>
+<noscript><p class="wrap">This page requests its data from public services and needs JavaScript.</p></noscript>
 </body>
 </html>

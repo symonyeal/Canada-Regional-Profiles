@@ -1,8 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {decodeSDMX, memoRequest, tablePair, geoMember} from '../site/api.js';
-import {jenks,binCounts} from '../site/catchment.js';
-import {completeSum,estimate, locationQuotient, change, Profile, rankIndustries, csv, matchesProvince, tradedShare, classifyTrade, validGeographyId, reconcileCounts, fmt} from '../site/model.js';
+import {decodeSDMX, memoRequest, tablePair, geoMember} from '../site/js/api.js';
+import {completeSum,estimate, locationQuotient, change, Profile, rankIndustries, csv, matchesProvince, tradedShare, classifyTrade, validGeographyId, reconcileCounts, fmt, jenks, binCounts} from '../site/js/model.js';
 
 test('group totals require every published component, including genuine zeros',()=>{
   assert.equal(completeSum([0,6,3]),9);

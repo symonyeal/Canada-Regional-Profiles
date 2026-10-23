@@ -1,70 +1,53 @@
 # Sources
 
-A method is validated by the source it implements. Cite only what this file records, and
-add the entry in the change that uses it. Status is **inspected** (read for this project,
-with what was read and when) or **cited** (not yet read).
+A method is validated by the source it implements. Cite only what this file records, and add the entry in the change that uses it. Status is **inspected** (read for this project, with what was read and when) or **cited** (not yet read).
 
 ## Reference
 
 | Source | Used for | Status |
 | --- | --- | --- |
-| Advance Rural Manitoba, *Why Rural Manitoba* (advanceruralmanitoba.ca/why-rural-manitoba), embeds by Localintel (ecdev.org) | the dashboard reproduced: layout, chart types, palette, data definitions (`docs/REFERENCE.md`); recorded Manitoba numbers (`tests/fixtures/reference_mb.json`) | inspected 2026-10-22: eight embeds rendered and their API traffic recorded |
+| Advance Rural Manitoba, *Why Rural Manitoba* (advanceruralmanitoba.ca/why-rural-manitoba), embeds by Localintel (ecdev.org) | the dashboard reproduced: composition, interactions, palette, chart definitions ([REFERENCE.md](REFERENCE.md)); Manitoba values compared in [VALIDATION.md](VALIDATION.md) | inspected 2026-10-22: nine embeds rendered at three widths, controls exercised, API responses recorded |
 
-## Methods
+## Runtime services
+
+Each is queried from the visitor's browser when the exhibit is shown. All were checked from the GitHub Pages origin on 2026-10-22 for cross-origin access.
+
+| Service | Used for | Status |
+| --- | --- | --- |
+| Statistics Canada, [Census Profile 2021 SDMX API](https://api.statcan.gc.ca/census-recensement/profile/sdmx/rest/dataflow/all/all/latest) (DF_PR, DF_CD, DF_CSD, DF_CMACA, DF_ER, DF_POPCNTR) | every Census exhibit, market and catchment maps, geography lists | inspected: dimension order FREQ, REF_AREA, GENDER, CHARACTERISTIC, STATISTIC; requests list the 172 characteristics used (about 100 KB per area instead of 3 MB) |
+| Statistics Canada, [Web Data Service](https://www.statcan.gc.ca/en/developers/wds): getAllCubesListLite, getCubeMetadata, getDataFromCubePidCoordAndLatestNPeriods, getSeriesInfoFromCubePidCoord, getCodeSets | all table series below | inspected: data points report `scalarFactorCode` 0 for series in thousands; the member unit of measure (getCodeSets) carries the scale |
+| Table [14-10-0202](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410020201), Employment by industry, annual (SEPH) | largest and fast-growing industries, LQ, industry trends and benchmarks | inspected: 4-digit NAICS, all employees, industrial aggregate [00-91N] |
+| Table 14-10-0204, Average weekly earnings by industry, annual | industry trends | inspected |
+| Table 36-10-0711, GDP at basic prices by industry, provinces and territories | industry trends (provinces only) | inspected |
+| Tables 14-10-0464 (LFS annual, provinces and economic regions), 17-10-0005, 17-10-0155, 17-10-0148, 17-10-0152, 17-10-0137 (population), 11-10-0008 and 11-10-0009 (tax-filer income) | community-profile time series | inspected |
+| Canadian Business Counts, with employees (June and December releases; national and CMA/CSD tables, discovered in the live catalogue) | establishments, business map, local employee estimates, insights location | inspected: zero series are omitted and are inferred only where published totals reconcile |
+| Tables [37-10-0011](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3710001101) (enrolments by CIP primary grouping) and 37-10-0277 (by institution and detailed field) | talent pipeline | inspected: 37-10-0011 publishes the groupings directly for Canada, provinces and the territories combined |
+| Table 23-10-0253, Air passenger traffic at Canadian airports, annual | airport card and list | inspected: many airport-years suppressed |
+| Statistics Canada, [2021 cartographic boundary files](https://geo.statcan.gc.ca/geo_wa/rest/services/2021/Cartographic_boundary_files/MapServer) | all boundaries | inspected: about half of new connections return HTTP 500 without CORS headers; explicit field lists always fail; metropolitan areas and population centres are keyed by provincial part (CMAPUID, PCUID) |
+| Transport Canada on geo.ca: [Canadian airports with air navigation services](https://maps-cartes.services.geo.ca/server_serveur/rest/services/TC/canadian_airports_w_air_navigation_services_en/MapServer) and [National Highway System](https://maps-cartes.services.geo.ca/server_serveur/rest/services/TC/canada_national_highway_system_en/MapServer) | airport locations; highway layer | inspected: 93 airports with IATA/ICAO; dynamic layers supported |
+| Natural Resources Canada on geo.ca: [High-speed internet coverage](https://maps-cartes.services.geo.ca/server_serveur/rest/services/NRCan/High_Speed_Internet_haute_vitesse/MapServer) (Atlas of Canada, ISED data, 2018–2024) | broadband layer | inspected: 4 speed tiers × 7 years |
+| Natural Resources Canada, [CanVec web map service](https://maps.geogratis.gc.ca/wms/canvec_en) | railway lines (National Railway Network) | inspected |
+| Environment and Climate Change Canada, [climate normals](https://api.weather.gc.ca/collections/climate-normals) | climate summary | inspected: collection and records state 1981–2010 |
+| FOSSGIS [Valhalla](https://valhalla1.openstreetmap.de/) public server (OpenStreetMap) | 30- and 60-minute drive-time areas | inspected: contours capped at 60 minutes |
+| [Overpass API](https://overpass-api.de/) (OpenStreetMap) | university and college locations | inspected: answers in 1 to 60 s; returns 502 at times |
+| [Wikidata Query Service](https://query.wikidata.org/) | port locations (items that are ports or seaports in Canada) | inspected: subclass queries include marinas, so only direct instances are used |
+| [OpenFreeMap](https://openfreemap.org/) Positron style and tiles | basemap | inspected |
+
+## Methods and classifications
 
 | Source | Used for | Status |
 | --- | --- | --- |
-| Snyder, J. P., *Map Projections: A Working Manual*, USGS Professional Paper 1395, 1987 | §15 Lambert conformal conic (`geo.py`; spherical form in `site/app.js`); worked example pp. 296-297 is `tests/test_geo.py` | cited; worked example reproduced to 0.1 m |
-| Douglas, D. H. and Peucker, T. K., *Cartographica* 10(2), 1973 | line simplification of map layers (`logistics.dp`) | cited |
-| Jenks, G. F., "The data model concept in statistical mapping", *International Yearbook of Cartography* 7, 1967; Fisher, W. D., *JASA* 53, 1958 | natural-breaks classes of the choropleths (`site/app.js: jenks`), as the reference's `natural_break` legend | cited |
-| Delgado, M., Porter, M. E. and Stern, S., "Defining clusters of related industries", *Journal of Economic Geography* 16(1), 2016 | traded/local classification (`industry.traded_share`, `industry.traded`) | cited; traded 6-digit list from the tabulation below |
-| milocortes/InvESt_complexity (GitHub, commit fd4d430), `porter_transables_cluster_clases_NAICS_2017.md` | the 668 NAICS US 2017 codes in DPS traded clusters (`data/dps_traded_naics_us2017.txt`) | inspected 2026-10-22: 51 clusters; all codes are valid US 2017 codes |
-| US Census Bureau, `2-6 digit_2017_Codes.xlsx` | all 1,057 NAICS US 2017 6-digit codes (`data/naics_us2017_6digit.txt`) | inspected 2026-10-22 |
-| Krugman, P., *Geography and Trade*, 1991; Jensen, J. B. and Kletzer, L. G., *Brookings Trade Forum* 2005; Ellison, G. and Glaeser, E. L., *JPE* 105(5), 1997 | concentration-based traded/local tests, refused (DECISIONS) | cited |
+| Bruls, M., Huizing, K. and van Wijk, J. J., "Squarified treemaps", *Data Visualization 2000* (Springer) | treemap layout (`model.squarify`) | cited; area and tiling invariants tested |
+| Heckbert, P. S., "Nice numbers for graph labels", *Graphics Gems*, 1990 | axis ticks (`model.niceTicks`) | cited |
+| Jenks, G. F., *International Yearbook of Cartography* 7, 1967; Fisher, W. D., *JASA* 53, 1958 | natural-break map classes (`model.jenks`), as the reference's `natural_break` legend | cited |
+| Delgado, M., Porter, M. E. and Stern, S., "Defining clusters of related industries", *Journal of Economic Geography* 16(1), 2016 | traded/local classification | cited; traded six-digit list below |
+| milocortes/InvESt_complexity (GitHub, commit fd4d430), `porter_transables_cluster_clases_NAICS_2017.md` | the 668 NAICS US 2017 codes in traded clusters (`site/classification.json`) | inspected 2026-10-22 |
+| US Census Bureau, `2-6 digit_2017_Codes.xlsx` | all 1,057 NAICS US 2017 six-digit codes (`site/classification.json`) | inspected 2026-10-22 |
+| Statistics Canada, Variant of CIP Canada 2021 Version 1.0 – Primary groupings | institution-level grouping in the talent map (`site/classification.json`) | inspected 2026-10-22 |
+| Lucide icons v0.460.0 (ISC licence) | interface icons (`site/js/icons.js`) | inspected |
+| Snyder, J. P., *Map Projections: A Working Manual*, USGS Professional Paper 1395, 1987 | Lambert conformal conic in the historical `analysis/geo.py` | cited; worked example reproduced in `tests/test_geo.py` |
+| Douglas, D. H. and Peucker, T. K., *Cartographica* 10(2), 1973 | line simplification in the historical `analysis/logistics.py` | cited |
 
-## Data
+## Historical offline inputs
 
-### Live application services (inspected 2026-10-22)
-
-| Public source | Runtime use | Inspection |
-| --- | --- | --- |
-| [Statistics Canada developers](https://www.statcan.gc.ca/en/developers) and [Census Profile WDS guide](https://www12.statcan.gc.ca/wds-sdw/2021profile-profil2021-eng.cfm) | Profile data and geography membership | Official developer page read; live SDMX requests returned 200 with the GitHub Pages CORS origin. The guide page itself presented a browser security check on this network. |
-| [Census Profile SDMX endpoint](https://api.statcan.gc.ca/census-recensement/profile/sdmx/rest/dataflow/all/all/latest) | DF_PR, DF_CD, DF_CSD, DF_CMACA, DF_ER and DF_POPCNTR; published characteristic, gender, statistic and source-note dimensions | Dataflow metadata and sample data read. Dimension order is FREQ, REF_AREA, GENDER, CHARACTERISTIC, STATISTIC. |
-| [Statistics Canada Web Data Service](https://www.statcan.gc.ca/en/developers/wds) | Live catalogue, cube metadata and selected coordinates | Official method list read; getAllCubesListLite, getCubeMetadata and getDataFromCubePidCoordAndLatestNPeriods queried. CORS accepted. |
-| [Live table catalogue](https://www150.statcan.gc.ca/t1/wds/rest/getAllCubesListLite) | Discover current Business Counts releases and same-month five-year baseline | Read; national/province and CMA/CSD table families are matched separately. |
-| [Statistics Canada Census boundaries](https://geo.statcan.gc.ca/geo_wa/rest/services/2021/Cartographic_boundary_files/MapServer) | Selected boundary geometry via public ArcGIS form POST | Service/layer metadata and Winnipeg GeoJSON query read; GET query URLs returned application errors, form POST returned 200 with CORS. |
-| [OpenStreetMap](https://www.openstreetmap.org/copyright) and [Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API) | Live basemap and bounded facility queries | Network features are volunteered map data, not complete inventories. The map displays service errors rather than fabricated facilities. |
-| [ISED National Broadband Data](https://open.canada.ca/data/en/dataset/00a331db-121b-445d-b119-35dbbe3eedd9) | Official broadband map link | Catalogue read. Large bulk-download resources are not used by the live site. The interactive map was blocked by this machine's network; no live household aggregate is claimed. |
-
-### Historical offline inputs
-
-The following inputs document the original Python build. They are not downloaded or served by the live application. The live application queries Business Counts and PSIS through WDS, population estimates through 17-10-0009, and Labour Force Survey rates through 14-10-0287/0292.
-
-| Source | Used for | Status |
-| --- | --- | --- |
-| Statistics Canada, Survey of Employment, Payrolls and Hours, employment by industry, annual (14-10-0202) | largest and fastest-growing industries, LQ | inspected 2026-10-22: reproduces the reference's values; no rail (482) |
-| Statistics Canada, Census Profile 2021, SDMX API (api.statcan.gc.ca/census-recensement/profile/sdmx), dataflows DF_PR, DF_CD, DF_CSD; codelist CL_CHARACTERISTIC | community profile, market, workforce | inspected 2026-10-22: 2,631 characteristics; 165 used |
-| Statistics Canada, Labour Force Survey by province, territory and economic region, annual (14-10-0464) | participation, unemployment, employment series | inspected 2026-10-22 |
-| Statistics Canada, population estimates on July 1 (17-10-0005; census subdivisions 17-10-0155) | population series | inspected 2026-10-22 |
-| Statistics Canada, selected income characteristics of census families (11-10-0009) | median total income series | inspected 2026-10-22 |
-| Statistics Canada, Canadian Business Counts with employees, June 2016 to June 2026 (33-10-0040 … 33-10-1174); by census subdivision, June 2026 (33-10-1176) | establishment series; businesses by subdivision; traded weights | inspected 2026-10-22 |
-| Statistics Canada, Postsecondary enrolments by detailed field, institution and characteristics (37-10-0277) | talent pipeline | inspected 2026-10-22: 2009/10 to 2024/25; 25.8 GB, sliced once |
-| Statistics Canada, Variant of CIP Canada 2021 Version 1.0 – Primary groupings (statcan.gc.ca/en/media/4226) | grouping of fields of study | inspected 2026-10-22: series 30 split by subseries |
-| Statistics Canada, Open Database of Educational Facilities v2.1 (37-26-0001) | campus locations | inspected 2026-10-22 |
-| Statistics Canada, 2021 cartographic boundary files, ArcGIS REST (geo.statcan.gc.ca) | jurisdiction and subdivision boundaries | inspected 2026-10-22: some field lists fail server-side |
-| Statistics Canada, Standard Geographical Classification 2021, Appendix B | census subdivision type names | inspected 2026-10-22 |
-| Statistics Canada, Air passenger traffic at Canadian airports, annual (23-10-0253) | airport passengers by sector | inspected 2026-10-22: many airport-years suppressed |
-| Environment and Climate Change Canada, Canadian Climate Normals 1981–2010 (api.weather.gc.ca, collection climate-normals) | climate summary | inspected 2026-10-22: no Iqaluit station |
-| Natural Resources Canada, Atlas of Canada 1:1,000,000: Roads, Railways, Boundary Polygons (2017) | road and rail layers | inspected 2026-10-22 |
-| ISED, National Broadband Data, PHH Speeds (current, 2026-05-12) and Pseudo-Household Demographic Distribution 2021 | broadband availability | inspected 2026-10-22 |
-| OurAirports, `airports.csv` (public domain) | airports with scheduled service | inspected 2026-10-22 |
-| NGA, World Port Index (Pub. 150); Fisheries and Oceans Canada, Small Craft Harbours | ports | inspected 2026-10-22 |
-
-
-## Additional live services inspected 2026-10-22
-
-- SEPH [14-10-0202](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410020201): WDS metadata and annual series read for all employees. The industrial aggregate including unclassified businesses, code 00-91N, supplies each LQ denominator. Live Manitoba top-20 results matched the recorded reference fixture.
-- Annual LFS [14-10-0464](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1410046401), annual population [17-10-0005](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710000501), municipal population [17-10-0155](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1710015501), and census-family income [11-10-0009](https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1110000901): queried as selected WDS coordinates, without CSV downloads. Family income is labelled as family income, even where the reference calls it household income.
-- [CIP Canada 2021 primary-grouping variant](https://www.statcan.gc.ca/en/media/4226): official classification read into the shipped taxonomy rules; observational enrolments remain live WDS queries. Interdisciplinary series 30 is divided by its published subseries.
-- [ECCC climate-normals collection metadata](https://api.weather.gc.ca/collections/climate-normals?f=json): read 2026-10-22. It identifies 1981-2010, correcting the earlier 1991-2020 label. The live adapter queries station/month/normal elements, follows result pagination and reads its period from that metadata.
-- [OpenRailwayMap](https://www.openrailwaymap.org/): live railway overlay based on OpenStreetMap. OSM/Overpass also supplies bounded campus facilities; enrolment values are attached only after exact PSIS institution-name matching.
+`analysis/` and its tests document an earlier offline build that downloaded source files (SEPH 14-10-0202, Census Profile, LFS 14-10-0464, Business Counts, PSIS 37-10-0277, ODEF, NRCan Atlas layers, ISED broadband files, OurAirports, World Port Index). The website neither downloads nor serves them.

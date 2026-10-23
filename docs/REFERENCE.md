@@ -1,100 +1,78 @@
-# Reference dashboard, reverse engineered
+# Reference dashboard
 
-Source: advanceruralmanitoba.ca/why-rural-manitoba, inspected 2026-10-22 by rendering each embed in
-headless Edge and recording its network traffic over the Chrome DevTools Protocol. The page is a
-WordPress site; every exhibit is a Localintel ("ecdev.org") Angular embed loaded by
-`api.ecdev.org/includes/js/block-embed-loader.js`, parameterised by `location=ca-pr-46` (Manitoba).
+The reference is [Why Rural Manitoba](https://advanceruralmanitoba.ca/why-rural-manitoba/) by Advance Rural Manitoba. Each tool on that page is an embedded Localintel (ecdev.org) application parameterised by `location=ca-pr-46` (Manitoba). It was rendered in Edge on 2026-10-22 at 1440, 768 and 390 px wide, every control was exercised, and the embeds' API responses were recorded.
+
+A headless browser receives HTTP 406 from `rmed.ecdev.org/embed/*`; with a desktop user agent the embeds redirect to `app.ecdev.org` and render. Earlier notes that "the embeds failed" described that block, not an outage.
 
 ## Page
 
-Header "Why Manitoba?", then a tab bar: Logistics & Access, Work Force, Largest Industries, Fastest
-Growing Industries, Talent Pipeline, Community Profile. Then nine headed sections, eight of them with
-an embed:
+A title band ("Why Manitoba?"), then nine headed sections in this order. Each heading is uppercase and centred over a short dashed rule and a paragraph; the embed sits below at 1340 px wide.
 
 | Section heading | Embed | Here |
 | --- | --- | --- |
-| Logistics by Design | `tool-advantages-logistics` | §1 |
-| Ideal Demographics | `frameset-community-profile` | §2 |
-| Vast Resources | `gateway-community-explorer` | §3 |
-| Marketplace Vibrancy | `frameset-market-advantages` | §4 |
-| Skilled Workers | `frameset-workforce-advantages` | §5 |
-| Industry Insights | — (text) | |
-| Fast Growing Industries | `frame-fast-growing-industries` | §6 |
-| Diversity of Industry | `frame-largest-industries` | §7 |
-| Talent Pipeline | `tool-advantages-talent-pipeline` | §8 |
+| Logistics by Design | `tool-advantages-logistics` | Logistics and access |
+| Ideal Demographics | `frameset-community-profile` | Community profile |
+| Vast Resources | `gateway-community-explorer` | Community explorer |
+| Marketplace Vibrancy | `frameset-market-advantages` | Market |
+| Skilled Workers | `frameset-workforce-advantages` | Workforce |
+| Industry Insights | `gateway-industry-insights` | Industry insights |
+| Fast Growing Industries | `frame-fast-growing-industries` | Fast-growing industries |
+| Diversity of Industry | `frame-largest-industries` | Largest industries |
+| Talent Pipeline | `tool-advantages-talent-pipeline` | Talent pipeline |
 
-Theme (`reference/client/rmed/customStyle`): chart colours #7d622e, #473729; active tab #473729
-with white text. Sector palette (blockConfig `chart-gen2-largest-industries`): 11 #3A9E52, 21 #696969,
-22 #BFB028, 23 #BE8417, 31-33 #8769FF, 41/42 #AB2F62, 44-45 #FE5F4E, 48-49 #63C7B2, 51 #FFEC36,
-52 #13DABC, 53 #0D68BF, 54 #BEC0C3, 55 #BE473A, 56 #0DA38C, 61 #FEB11F, 62 #128bff, 71 #E54084,
-72 #4ED36E, 81 #564EFE.
+There are nine embeds. An earlier inventory listed eight because it missed `gateway-industry-insights`.
+
+## Visual language
+
+- Embed type: Instrument Sans. Titles 20 to 25 px at weight 650 with about −0.03 em tracking; body 12.5 to 13 px. Ink #0f1622, body #475467, muted #667085.
+- Cards: white, 1 px #eaecf0 border, 14 px radius; frames 16 px radius. Selected cards: dark outline or a #f4f2f0 tint.
+- Client theme (`reference/client/rmed/customStyle`): chart colours #7d622e and #473729.
+- Charts are monochrome brown. Bar lists use #473729 bars on a #f2f4f7 track, with a benchmark tick and dot for the comparison area. Treemaps shade from #473729 to #f1e9e2 by value; the largest-industries treemap groups tiles by sector under sector labels. The blockConfig still names `colorField: sectorId`, but the rendered treemap is brown.
+- Logistics tabs each carry their own accent: airport #4a5bd4, road #b4832b, port #12867b, rail #c0504a, broadband #9c3b84.
+- Market maps use one colour ramp per filter, natural-break classes, a legend with minimum and maximum, a "Total …" card and a 123 / % toggle.
+- Maps: Mapbox light basemap, dashed province outline, rounded white controls at the top right.
+
+At 390 px the framesets become drill-in lists, industry option cards become a drop-down, and logistics shows its network list.
 
 ## Embeds
 
-**§1 Logistics** (`tool-advantages-logistics`). Left: title, description, five stacked tabs
-(Airport, Major Road, Sea Port, Rail and Freight, Broadband Network). Right: map. Airport tab: a card
-for the selected airport (name, IATA, international and domestic connection counts from
-`reference/location/airport`, OAG), arcs to destinations (`reference/flightroutes/YWG`), and a
-drive-time polygon (`reference/drivetime/lat,lon`). Broadband: `map-broadband-simple`.
+**Logistics.** Left panel (eyebrow, title, description, five network cards); map on the right.
+- Airport: a card for the selected airport (name, IATA badge, international and domestic route counts), arcs to destinations, and drive-time polygons at 2, 4 and 8 hours. Route data are OAG (`reference/location/airport`, `reference/flightroutes/YWG`); drive times come from `reference/drivetime/lat,lon`.
+- Road: major locations with population, highway lines and drive times.
+- Sea port: ports (Churchill and Thunder Bay for Manitoba) and drive times.
+- Rail: North American rail lines (HIFLD and the Canadian National Railway Network) and the selected intermodal terminal.
+- Broadband: a census-subdivision choropleth of download speed (5 to 50+ Mbps).
 
-**§2 Community profile** (`frameset-community-profile`). Icon rail of six dashboards:
-- Economic: participation-rate KPI with sparkline (LFS 14-10-0461/0464), population KPI with bars
-  (17-10-0005), median household income KPI (11-10-0009), household income distribution against
-  Canada (Census), unemployment rate, total employment (LFS), total establishments (Business
-  Register), top employment sectors (Census).
-- Resident: population, median individual income (11-10-0008), median age, population map, age
-  distribution.
-- Household: median income, average size, number of households, income map, size distribution.
-- Dwelling: home ownership pie, construction period, dwelling type.
-- Workforce: education donuts, industry treemap, top occupations.
-- Livability: average owner and renter costs, mean commute time, climate normals (ECCC), commuting
-  mode.
+**Community profile.** An icon rail with six dashboards on fixed grids.
+- Economic: participation (LFS 14-10-0461/0464, 2011 to 2025), population (17-10-0005, bars), "median household income" (11-10-0009, which is the census-family table), household income in five bands against Canada, unemployment, total employment (LFS), establishments (Business Register, 2018 to 2026), top nine Census sectors.
+- Resident: population, median individual income (11-10-0008), median age, an age-range map, and age in ten-year bands against Canada.
+- Household: median income, average size, number of households, a household-income map, household type, and household size as 100 % bars.
+- Dwelling: owner and renter shares, construction period, dwelling type.
+- Workforce: resident industry treemap, top five occupations, four education bars on a 0 to 100 % axis (population aged 25 to 64).
+- Livability: median property value, median monthly rent, mean commuting time, climate summary (Winnipeg station, normals labelled 2020), mode of transport, place of work.
 
-**§3 Community explorer** (`gateway-community-explorer`). Search box, chips by municipal type (City,
-Local Government District, Municipality, Rural Municipality, Town, Village), a list of communities,
-and a boundary map; each community opens its own community profile.
+**Community explorer.** Search, chips by municipal type, a list of 137 client-selected communities with logos, and a boundary map with red dots. Each community opens an external page on the client's website.
 
-**§4 Market** (`frameset-market-advantages`). Icon rail: Local Consumers, Local Dwellings, Local
-Businesses. Each has accordion filters and a census-subdivision choropleth (natural breaks, six
-classes #FFFFB2 to #BD0026, # or % toggle) with "Total" and "Target" counts. The data come from
-`map-data/census-sum/ca/<client>/csd/1/<location>/<characteristics>`, which sums the selected Census
-Profile characteristics per census subdivision. Filters:
-- Consumers: individual income (12 bins), individual age, household income, household type.
-- Dwellings: construction period, structure type, tenure, number of bedrooms.
-- Businesses: industry and size.
+**Market.** Rail with Consumers, Dwellings and Businesses. Accordion filter cards: range sliders for ordered bins (individual income, age, household income, construction period, bedrooms) and toggle lists with All and None for categories (household type, structure type, tenure, industry). The open card alone defines the target. Data: `map-data/census-sum/ca/rmed/csd/1/ca-pr-46/<characteristics>` sums selected Census characteristics per census subdivision.
 
-**§5 Workforce** (`frameset-workforce-advantages`). Icon rail: Indicators (education donuts for
-postsecondary, bachelor's or higher, master's or higher, other above bachelor; a treemap of residents'
-industry of employment; an inverted bar of top occupations), and Catchment (a choropleth with
-education, occupation and industry filters).
+**Workforce.** Rail with Indicators (the workforce dashboard) and Catchment (education, occupation and industry maps with toggles). The catchment map did not render during this inspection; the filters did.
 
-**§6 Fast growing industries** and **§7 Largest industries** (`frame-*`). Left: title, description,
-three option cards (All, Traded, Local, each with a sentence). Right: Chart/List toggle. Data:
-`data/industryadvantagedata/<client>?locationId=…` returns `{startYear 2020, endYear 2025, largest:
-{all, traded, local}, fastest: {all, traded, local}}`, each a list of 20 four-digit NAICS industries
-with `code, title, tradedLocal, employmentCount, employmentLq`, plus `employmentChange` for fastest.
-"Fastest" ranks by absolute change. Largest is a treemap grouped by sector; fastest is a bubble chart
-(x = employment change, y = employment, colour = sector, sizeFactor 25) with zoom sliders. Source:
-"Statistics Canada - Business Register".
+**Industry insights.** A banner with "Search for an industry" and "Browse all industries". Both open a full-screen application with a rail: Industry selection, Trends (employment by industry, establishments, establishment LQ, GDP by industry, average weekly earnings), Benchmarks (financial performance; it showed "No data available") and Location (businesses by size class and a census-subdivision map).
 
-**§8 Talent pipeline** (`tool-advantages-talent-pipeline`). Left: a list of CIP primary groupings with
-student counts (All Programs 63.0K, Humanities 10.1K, …). Right: a map of institutions. Dataset
-`edgov-institution-programs`, source "Statistics Canada - PSIS".
+**Fast-growing and largest industries.** Left: title, description and three option cards (All, Traded, Local). Right: a chart card. Largest: Treemap, Bars or List. Fast-growing: Chart or List, with bubbles at x = employment change 2020 to 2025, y = employment 2025, area ∝ jobs, coloured Traded (dark) or Local (light). Lists show rank, industry, NAICS, five-year change, jobs and LQ. Data: `data/industryadvantagedata/rmed?locationId=ca-pr-46` gives 20 industries per set with `code, title, tradedLocal, employmentCount, employmentLq` and `employmentChange`. Source label: "Statistics Canada - Business Register"; the values are SEPH payroll employment.
 
-## Open replacements
+**Talent pipeline.** Left: CIP primary groupings with student counts. Right: a map of institutions sized by students and a "Students in reach" card. Dataset `edgov-institution-programs` (year 2024: all programs 63,027; Humanities 10,143).
 
-| Reference input | Here |
+## Reference defects and undocumented definitions
+
+| Exhibit | Observation |
 | --- | --- |
-| OAG connections and routes | Statistics Canada passengers by sector, table 23-10-0253 |
-| Drive-time isochrones | not reproduced |
-| Census Profile (`census-sum`) | Census Profile SDMX API (`api.statcan.gc.ca/census-recensement/profile/sdmx`), dataflows DF_PR, DF_CD, DF_CSD |
-| Boundaries (vector tiles) | StatCan 2021 cartographic boundary files, ArcGIS REST, simplified |
-| Institution locations | Open Database of Educational Facilities v2.1 |
-| Climate normals | ECCC Canadian Climate Normals 1991–2020 |
+| Median household income | Uses 11-10-0009, median total income of census families, under a household label. |
+| Age distribution, "80 and older" | 2.0 % for Manitoba, which equals 85 and over; the Census sum of 80–84 and 85+ is 4.2 %. |
+| Mean commuting time | 22.8 minutes from "Census Profile", which publishes duration bands only; the method is not stated. |
+| Climate | Winnipeg normals labelled 2020 (1991–2020); the public ECCC normals service serves 1981–2010. |
+| Largest and fast-growing industries | Values for NAICS 4821, 5511 and 3231 that SEPH does not publish for Manitoba, so suppressed cells are filled by an unpublished estimate. LQs are about 1.093 times the standard SEPH LQ, and four tested denominators fail to reproduce them. |
+| Establishments | Neither the total nor the classified subtotal of any June or December Business Counts release reproduces the series. |
+| Talent total | 63,027 labelled 2024 matches no published Manitoba total in 37-10-0011 for 2015 to 2024. |
 
-
-## Runtime implementation follow-up, 2026-10-22
-
-The later live client retains these recovered definitions and chart types. Independent live requests matched the recorded Manitoba top-20 industry codes and employment, annual participation, family income, education numerators and Census industry distribution. This establishes those comparisons, not universal visual parity or an independent verification of every proprietary reference response.
-
-The ECCC collection used by the original climate module identifies itself as **1981-2010**, not 1991-2020: https://api.weather.gc.ca/collections/climate-normals?f=json . The live client reads that period from collection metadata and labels the selected station. The 1991-2020 mentions above record the earlier intended source and must not be read as the actual period returned by this API.
+Recorded responses and captures are kept with the project's working evidence, outside this repository.

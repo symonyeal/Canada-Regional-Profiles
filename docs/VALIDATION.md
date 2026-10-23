@@ -1,40 +1,84 @@
 # Validation
 
-The runtime website and the historical offline pipeline have separate checks. Historical build results below are inherited records, not evidence that the live client reproduces every reference value.
+What was checked, how, and the result. Runtime checks of the website are separate from the historical offline pipeline's records. Evidence files (browser reports, captures, recorded reference responses) are kept with the project's working files, outside this repository.
 
-## Runtime client, 2026-10-22
+## Gate
 
-- `node --test tests/live.test.js`: 19 passing tests. These cover SDMX dimension order, suppression, complete-component sums, midpoint bounds, LQ, release pairing, geography IDs, cross-border metros, CSV quoting, request retry caching, sparse zero reconciliation, decimal precision, marginal filter counts and natural-break classes.
-- `python -m pytest -q -m "not slow"`: 11 passed, 6 deselected. `ruff check .` passed; `pip check` reported no broken requirements. The historical slow build was not run: it requires downloaded observations and is not used by deployment.
-- Live Edge requests were compared with `tests/fixtures/reference_mb.json`: latest largest-industry top-20 codes and counts, annual participation, family income, the four education numerators and all resident-industry sector counts matched. The evidence is in the working folder's `canada-regional-evidence/reference-live-comparison.json`. This checks those Manitoba predicates, not all ranks, LQs, years, classifications or jurisdictions.
-- Browser smoke checks exercised all nine tool routes plus the full-profile browser, across Canada, Ontario, Manitoba, Winnipeg, Yukon and Northwest Territories. Ontario's market map returned its municipal coverage; the shared municipal URL survived reload. Mobile viewport checks found no horizontal overflow. External services were queried from Edge, including WDS POST and Census SDMX CORS requests.
-- An independent review found incomplete PSIS sums and a needless Business Counts dependency in SEPH mode. Groups now require all components, using the same rule for institution markers. Field-group changes clear map program selection. Employer-location charts use location units.
-- Focused Edge acceptance checks passed for the live Yukon climate charts/station selection, SEPH with catalogue requests blocked, talent grouping/program reset, workforce gender changes, catchment bin persistence, employer-location growth units, deliberate Census failure followed by successful retry, rapid province changes, Winnipeg selection/reload and a 390-pixel viewport. Deliberately blocking map boundaries preserved the catchment values, filters and downloads. Evidence: `final-browser-results.json` records the earlier run through climate/talent/workforce; `remaining-browser-results.json` records the successful remaining checks. Earlier failed attempts are retained rather than overwritten as successes.
-
-Runtime observations are not saved under `site/`. Browser evidence and screenshots are retained outside the repository in the project work folder. Source outages, complete geographic coverage, OSM name matches and exact reference visual parity are not certified by these checks.
-
-## Historical offline reference comparison (Manitoba, `tests/test_build.py`, marked slow)
-
-| Reference exhibit | Reference value (recorded 2026-10-22) | Rebuild | Status |
-| --- | --- | --- | --- |
-| Largest industries, all, top 20 | codes and `employmentCount` | SEPH 2025 | identical codes, order and values |
-| Fastest growing, all, top 20 | `employmentChange` | SEPH 2025 − 2020 | identical for 19; 4821 not in SEPH |
-| Education donuts | 59.3%, 28.8%, 5.5%, 2.9% (counts 400,915 / 194,545 / 36,920 / 19,495) | Census 25–64 | identical counts |
-| Residents' industry treemap | 20 sector counts | Census Profile 2261 group | identical |
-| Labour force participation | 66.8 (2024), 66.6 (2025) | LFS 14-10-0464 | identical |
-| Median household income KPI | 92,980 (2022), 97,040 (2023) | 11-10-0009, all families | identical |
-| Talent: all programs | 63.0K | PSIS 2022/23: 63,162 | total matches; groups within 4%, not identical |
-| Location quotients | e.g. 1.41 (6111) | 1.29 | constant factor ≈ 1.09, not reproduced |
-| Traded/local labels | 55 industries | DPS mapping | 92.7% agree |
-
-## Certificates
-
-| Claim | Check | Status |
+| Check | Command | Result (2026-10-23) |
 | --- | --- | --- |
-| LCC inverse and forward are Snyder's | worked example pp. 296-297 to 1e-6° and 0.1 m (`tests/test_geo.py`) | passes |
-| Point-in-polygon follows the even-odd rule | square with hole (`tests/test_geo.py`) | passes |
-| Census groups partition their parents | `profile.certify_groups`: children sum to the parent within random rounding, every build | holds for all 13 |
-| Broadband: division and hexagon sums equal the household total | assertion in `logistics.broadband` | holds for all 13 |
-| Airport passengers attach to the right airport | `tests/test_airports.py` | passes |
-| Campus assignment prefers the more specific institution | `tests/test_talent.py` | passes |
-| Site renders without console errors | headless Edge, YT, NU, BC, MB, MB/4607062, ON, QC, NL, 2026-10-22 | no errors; screenshots inspected |
+| JavaScript unit and behaviour tests | `node --test tests/*.test.js` | 32 passed, 0 failed |
+| Python unit checks (historical analysis) | `python -m pytest -q -m "not slow"` | 11 passed, 6 deselected |
+| Lint | `python -m ruff check .` | passed |
+| Dependencies | `python -m pip check` | no broken requirements |
+| Browser workflows | `node tests/browser/workflows.mjs <url> <report>` | 13 checks; see below |
+| Coverage sweep | `node tests/browser/sweep.mjs <url> <report>` | 21 geographies × 9 tools; see below |
+
+The new tests were checked against the defects they target: restoring the omitted agglomeration schemas and the DGUID-only boundary query made exactly the three targeted tests fail.
+
+## Browser workflows (local build, 2026-10-23)
+
+| Workflow | Result |
+| --- | --- |
+| A shared URL reconstructs geography, section and industry view | pass |
+| Option cards and view toggles update the exhibit and the URL | pass |
+| Geography changes add history entries; Back and Forward restore them | pass |
+| Four quick province changes end on the last one, with no stale text | pass |
+| Keyboard combobox selects a municipality; reload keeps it | pass |
+| Malformed parameters fall back to Canada and valid defaults | pass |
+| Provincial benchmark for a municipality | pass |
+| Chart list, data table and CSV give the same leading values | pass |
+| Census outage: Census cards fail, payroll industries render, Retry recovers | pass after a fix (Retry had re-awaited the failed request) |
+| Boundary outage: market card, legend and 239-row table remain | pass |
+| Visible keyboard focus | pass |
+| Nunavut: published industries with a suppression count (290 of 309 suppressed) | pass |
+| Census division: industry panel explains the level and offers the province | pass |
+
+The first run passed 9 of 13; three failures were defects in the checks and one was the Retry defect. Both runs are kept.
+
+## Coverage sweep (local build, 2026-10-23)
+
+Canada, the 13 provinces and territories, and seven local samples: a municipality (Winnipeg), a census division (Division No. 11), a cross-border metropolitan area (Ottawa – Gatineau), an economic region, a population centre (Brandon), a small northern community (Iqaluit) and a duplicate name (Richmond, British Columbia). Every tool was mounted and its state recorded after 25 s.
+
+- First run: all nine tools rendered for Canada and all 13 jurisdictions except the explorer in British Columbia and Ontario, where a boundary failure replaced the community list. Local samples showed establishments as an error where Business Counts publish CMA and CSD values.
+- Fixes: the list no longer depends on boundaries; establishments use the CMA/CSD tables; unpublished combinations are shown as such; boundary retries race four connections.
+- Second and third runs of the affected geographies: all tools rendered. Census division, economic region and population centre industry panels state that the level is not published, as intended. Institution locations depend on the public Overpass server, which was slow or returned errors in some runs; the panel says so and the enrolment figures are unaffected.
+
+Sampled local checks cover one geography of each level, not every municipality.
+
+## Manitoba against the reference (2026-10-23)
+
+The site's own modules computed live values, compared field by field with reference responses recorded on 2026-10-22. Periods match unless stated.
+
+| Exhibit | Result |
+| --- | --- |
+| Largest industries, all (SEPH 2025) | 20/20 values and ranks exact |
+| Fast-growing industries, all (2020–2025) | 19/20 changes exact; 4821 is not published by SEPH, so six later ranks shift by one |
+| Traded and local sets | Values exact where both publish; ranks differ where classifications disagree (51/55 labels agree) or the reference fills suppressed industries (4821, 5511, 3231) |
+| Location quotients | 0/57 equal; reference ≈ 1.093 × standard LQ; four denominators tested |
+| LFS participation and unemployment, 2011–2025 | 30/30 within display rounding |
+| LFS employment, 2011–2025 | 15/15 exact (after the unit fix) |
+| Median family and individual income, 2012–2023 | 24/24 exact; earlier years are outside the requested window |
+| Population, July 1 | 11 years exact; 2022–2025 differ because Statistics Canada revised the estimates after the reference retrieved them |
+| Establishments 2018–2026 | 0/9 equal; neither total nor classified subtotal of either release month reproduces the reference |
+| Census distributions and KPIs (income bands, sectors, industry treemap, occupations, education, construction, tenure, commuting, place of work, households, median age, rent, dwelling value) | 98 of 100 exact or within display rounding; the two differences are the reference's "80 and older" band (85+ only) for Manitoba and Canada |
+| Market card, individual income $30K–$70K | 433,775 (provincial total) vs 433,675 (reference sum of census subdivisions) |
+| Talent total | 37-10-0011 publishes no Manitoba year equal to the reference's 63,027; groupings rank in the same order |
+
+## Responsive and accessibility checks
+
+Rendered at 1440, 768 and 390 px for Manitoba with every tool mounted: no horizontal page overflow at any width. Tables scroll within their containers. Charts and maps redraw when their containers resize. Focus outlines are 2 px solid. Controls are native buttons, inputs and selects; range sliders are two native range inputs with value text; every chart has a data table in its menu; tooltips also open on keyboard focus. Motion runs only when reduced motion is not requested. A 1440 px window at 200 % zoom is a 720 px layout; rendered at 720 px with every tool mounted, the page had no horizontal overflow. Contrast of chart labels on filled marks is chosen by luminance. A full WCAG audit was not run.
+
+## Performance
+
+Manitoba economic dashboard, time until every card has left its loading state, three runs each:
+
+| Client | Cold | Warm (return after another province) |
+| --- | --- | --- |
+| Previous client (GitHub Pages) | 16.4–18.9 s | 0.31 s |
+| This client (local static server) | 4.1–4.4 s | 0.26–0.43 s |
+
+The main previous delay was the full Census profile (about 3 MB and 9.6 s per area, twice). Census requests now list the 172 characteristics used.
+
+## Historical offline pipeline
+
+`tests/test_build.py` (marked slow) checked the earlier offline build against the reference using downloaded inputs. It was not run: its inputs are not part of the website and the code it tests did not change.

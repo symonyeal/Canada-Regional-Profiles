@@ -20,10 +20,15 @@ not break. Codex reads the same file through [AGENTS.md](AGENTS.md).
 
 ## The live model is written once
 
-The website uses `site/api.js` for live Census SDMX/WDS requests, `site/model.js` for calculation,
-`site/maps.js` for spatial services and `site/charts.js` for charts and accessible data tables.
-The section modules consume those interfaces. `site/app.js` owns geography, URLs and request
-lifetimes. Never relabel provincial observations as municipal values.
+The website is `site/index.html`, `site/style.css` and ES modules in `site/js/`: `api.js` (requests,
+retries, Census SDMX and WDS adapters), `model.js` (pure calculation), `census.js` (characteristic
+identifiers per exhibit), `state.js` (URL state), `geo.js` (boundaries, maps, spatial services),
+`ui.js` and `charts.js` (components and exhibits, each with a data table and CSV), and one module
+per tool in `site/js/tools/`. `app.js` owns geography, history and lazy mounting. Docs/REFERENCE.md
+is the visual and behavioural specification. Never relabel provincial observations as local values.
+
+Browser checks live in `tests/browser/` (`workflows.mjs`, `sweep.mjs`); they need `npm install`
+and a Chromium-based browser and are run locally, not in CI.
 
 `analysis/` is the historical offline implementation. Its size-class formula and classification
 are comparison references; the live site does not run its fetch/build pipeline. Do not regenerate
@@ -44,7 +49,7 @@ python -m ruff check .
 python -m pip check
 ```
 
-Run browser checks for runtime-data or interaction changes, including municipal selection,
+Run `tests/browser/workflows.mjs` and `sweep.mjs` for runtime-data or interaction changes, covering municipal selection,
 shared URLs, missing data and source failure. Historical `-m slow` build checks require the old
 download collection and apply only when changing that offline pipeline. A behavioural change
 states its measured effect, jurisdiction and revision; do not claim exact reference parity
