@@ -94,3 +94,18 @@ test('series published in thousands are scaled by their unit of measure',async()
     assert.equal((await units([{memberUomCode:239}])).scale,1);assert.equal((await units([{}])).scale,1);}
   finally {globalThis.fetch=realFetch;}
 });
+test('batched release series are joined by product, not by response order',async()=>{
+  clearCache();
+  const tables=[{productId:101,cubeTitleEn:'Canadian Business Counts, with employees, June 2025',releaseTime:'2025-08-01'},
+    {productId:102,cubeTitleEn:'Canadian Business Counts, with employees, June 2026',releaseTime:'2026-08-01'}];
+  globalThis.fetch=async(url,opts)=>{
+    if(url.endsWith('getAllCubesListLite'))return reply(200,tables);
+    if(url.endsWith('getCubeMetadata'))return reply(200,[{status:'SUCCESS',object:{dimension:[{member:[{memberId:7,memberNameEn:'Manitoba',classificationCode:'46'}]}]}}]);
+    const body=JSON.parse(opts.body),rev=body.slice().reverse();
+    if(url.endsWith('getSeriesInfoFromCubePidCoord'))return reply(200,rev.map(b=>({status:'SUCCESS',object:{productId:Number(b.productId),SeriesTitleEn:'Manitoba;Total'}})));
+    return reply(200,rev.map(b=>({status:'SUCCESS',object:{productId:Number(b.productId),vectorDataPoint:[{value:b.productId==='101'?41000:42000}]}})));
+  };
+  try {const {establishments}=await import('../site/js/api.js');const d=await establishments({id:'2021A000246',type:'PR'});
+    assert.deepEqual(d.values.map(v=>[v.year,v.value]),[[2025,41000],[2026,42000]]);}
+  finally {globalThis.fetch=realFetch;}
+});

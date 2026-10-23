@@ -6,14 +6,14 @@ What was checked, how, and the result. Runtime checks of the website are separat
 
 | Check | Command | Result (2026-10-23) |
 | --- | --- | --- |
-| JavaScript unit and behaviour tests | `node --test tests/*.test.js` | 32 passed, 0 failed |
+| JavaScript unit and behaviour tests | `node --test tests/*.test.js` | 33 passed, 0 failed |
 | Python unit checks (historical analysis) | `python -m pytest -q -m "not slow"` | 11 passed, 6 deselected |
 | Lint | `python -m ruff check .` | passed |
 | Dependencies | `python -m pip check` | no broken requirements |
 | Browser workflows | `node tests/browser/workflows.mjs <url> <report>` | 13 checks; see below |
 | Coverage sweep | `node tests/browser/sweep.mjs <url> <report>` | 21 geographies × 9 tools; see below |
 
-The new tests were checked against the defects they target: restoring the omitted agglomeration schemas and the DGUID-only boundary query made exactly the three targeted tests fail.
+The new tests were checked against the defects they target: restoring the omitted agglomeration schemas and the DGUID-only boundary query made exactly the three targeted tests fail, and restoring the positional join of batched WDS responses made the batch-order test fail.
 
 ## Browser workflows (local build, 2026-10-23)
 
@@ -44,6 +44,13 @@ Canada, the 13 provinces and territories, and seven local samples: a municipalit
 - Second and third runs of the affected geographies: all tools rendered. Census division, economic region and population centre industry panels state that the level is not published, as intended. Institution locations depend on the public Overpass server, which was slow or returned errors in some runs; the panel says so and the enrolment figures are unaffected.
 
 Sampled local checks cover one geography of each level, not every municipality.
+
+## Deployed site (46d63cf, 2026-10-23)
+
+- GitHub Actions `checks` and `pages` succeeded for the commit; the public URL served the new page and its modules under the project path, and the previous `app.js` returned 404.
+- Browser workflows against https://symonyeal.github.io/Canada-Regional-Profiles/: 13 of 13 passed.
+- Sweep of the same 21 geographies: every tool rendered. Industry panels for the census division, economic region and population centre stated that the level is not published. In this run the boundary service refused all retries for Alberta and Newfoundland and Labrador; their market and explorer maps showed the boundary note while cards, lists and tables remained. Institution locations waited on or failed at the public Overpass server in most provinces; enrolments were unaffected.
+- The sweep exposed one defect: establishments joined batched WDS responses by position, so Iqaluit showed no value. Responses are now joined by product (Iqaluit: 323 locations, June 2026), with a regression test.
 
 ## Manitoba against the reference (2026-10-23)
 

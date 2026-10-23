@@ -28,7 +28,7 @@ export function explorer(el,app) {
       if(!m)return;await m.ready;
       let fc;
       try {fc=await subdivisions(pr);}
-      catch(e){if(alive()){note.hidden=false;note.textContent=`Boundaries unavailable: ${e.message} The community list and profiles still work.`;}return;}
+      catch(e){if(alive()){note.hidden=false;note.textContent=`Boundaries unavailable: ${e.message} The community list and profiles still work; Refresh data tries again.`;}return;}
       if(!alive())return;
       data.features=fc;for(const f of fc.features){const c=centroid(f);if(c)data.points.set(f.properties.DGUID,c);}
       const b=bbox(fc);mapEl._bounds=b;fit(m.map,b,false);

@@ -133,7 +133,7 @@ export function mapPanel(container,{unit='p',onunit,onopen,label:fixedLabel}={})
     await m.ready;
     let fc;
     try {fc=await model.shapes;}
-    catch(e){if(model===last&&!wrap.querySelector('.map-note'))wrap.append(h('p',{class:'map-note'},`Boundaries unavailable: ${e.message} The card, legend and data table still use the published values.`));return list;}
+    catch(e){if(model===last&&!wrap.querySelector('.map-note'))wrap.append(h('p',{class:'map-note'},`Boundaries unavailable: ${e.message} The card, legend and data table still use the published values; Refresh data tries again.`));return list;}
     if(model!==last)return list;
     wrap.querySelector('.map-note')?.remove();
     const features={type:'FeatureCollection',features:fc.features.map(ft=>({type:'Feature',geometry:ft.geometry,properties:{dguid:ft.properties.DGUID,

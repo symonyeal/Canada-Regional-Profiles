@@ -236,7 +236,9 @@ export async function establishments(geo) {
     request(`${WDS}/getSeriesInfoFromCubePidCoord`,{body:recent.map(t=>({productId:String(t.productId),coordinate:key}))}),
     request(`${WDS}/getDataFromCubePidCoordAndLatestNPeriods`,{body:recent.map(t=>({productId:String(t.productId),coordinate:key,latestN:1}))})]);
   // Member IDs are reused across releases; keep a release only when its series title names the same geography.
-  const values=recent.map((t,i)=>{const title=info[i]?.object?.SeriesTitleEn??'',p=data[i]?.object?.vectorDataPoint?.[0];
+  // Batch responses are not guaranteed to follow request order; join them by product.
+  const by=list=>new Map((list??[]).map(r=>[String(r?.object?.productId),r]));const infoBy=by(info),dataBy=by(data);
+  const values=recent.map(t=>{const title=infoBy.get(String(t.productId))?.object?.SeriesTitleEn??'',p=dataBy.get(String(t.productId))?.object?.vectorDataPoint?.[0];
     return {year:t.year,value:title.startsWith(g.memberNameEn)&&p?numeric(p.value):null,title:t.cubeTitleEn,pid:t.productId};});
   return {values,geoName:g.memberNameEn,latest};
 }
