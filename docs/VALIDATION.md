@@ -50,7 +50,7 @@ Sampled local checks cover one geography of each level, not every municipality.
 - GitHub Actions `checks` and `pages` succeeded for the commit; the public URL served the new page and its modules under the project path, and the previous `app.js` returned 404.
 - Browser workflows against https://symonyeal.github.io/Canada-Regional-Profiles/: 13 of 13 passed.
 - Sweep of the same 21 geographies: every tool rendered. Industry panels for the census division, economic region and population centre stated that the level is not published. In this run the boundary service refused all retries for Alberta and Newfoundland and Labrador; their market and explorer maps showed the boundary note while cards, lists and tables remained. Institution locations waited on or failed at the public Overpass server in most provinces; enrolments were unaffected.
-- The sweep exposed one defect: establishments joined batched WDS responses by position, so Iqaluit showed no value. Responses are now joined by product (Iqaluit: 323 locations, June 2026), with a regression test.
+- The sweep exposed one defect: establishments joined batched WDS responses by position, so Iqaluit showed no value. Responses are now joined by product (Iqaluit: 323 locations, June 2026), with a regression test. After deploying that fix (2ff30cc), Iqaluit, Alberta and Newfoundland and Labrador were swept again: every tool rendered, including both provinces' boundaries.
 
 ## Manitoba against the reference (2026-10-23)
 
@@ -83,6 +83,7 @@ Manitoba economic dashboard, time until every card has left its loading state, t
 | --- | --- | --- |
 | Previous client (GitHub Pages) | 16.4–18.9 s | 0.31 s |
 | This client (local static server) | 4.1–4.4 s | 0.26–0.43 s |
+| This client (GitHub Pages, 2ff30cc) | 4.2–4.9 s | 0.35–0.50 s |
 
 The main previous delay was the full Census profile (about 3 MB and 9.6 s per area, twice). Census requests now list the 172 characteristics used.
 
