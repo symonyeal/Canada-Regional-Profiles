@@ -2,7 +2,8 @@
 // Geography changes push a history entry; view and filter changes replace the current one.
 import {PT,CANADA,TYPES,provinceOf,matchesProvince,int} from './model.js';
 import {parse,serialize,withGeography,SECTIONS,KEYS} from './state.js';
-import {geographies,census,clearCache,journal} from './api.js';
+import {geographies,census,journal} from './api.js';
+import {refreshData} from './refresh.js';
 import {h,dialog,dataTable} from './ui.js';
 import {logistics} from './tools/logistics.js';
 import {profile} from './tools/profile.js';
@@ -121,7 +122,7 @@ function setupBar() {
   });
   $('copy-link').onclick=async()=>{try{await navigator.clipboard.writeText(location.href);$('geo-status').textContent='Link copied. It reopens this geography and these views.';}
     catch{$('geo-status').textContent='Copy the address bar to share this view.';}};
-  $('refresh').onclick=()=>{clearCache();lists.clear();$('geo-status').textContent=`Data cleared at ${new Date().toLocaleTimeString('en-CA')}; querying the sources again.`;
+  $('refresh').onclick=()=>{refreshData();lists.clear();$('geo-status').textContent=`Data cleared at ${new Date().toLocaleTimeString('en-CA')}; querying the sources again.`;
     for(const [,tool] of mounted)tool.update(new Set(['geo','refresh']));};
   $('open-sources').onclick=sources;
 }
@@ -147,10 +148,10 @@ function sources() {
   dialog('Sources and requests',h('div',{},
     h('p',{class:'side-text'},'Each exhibit queries these public services when it is shown. Retrieval time is not the observation period; every exhibit names its own reference period.'),
     h('ul',{class:'side-text'},[['Statistics Canada Census Profile 2021 (SDMX)','https://api.statcan.gc.ca/census-recensement/profile/sdmx/rest/dataflow/all/all/latest'],
-      ['Statistics Canada Web Data Service (tables)','https://www.statcan.gc.ca/en/developers/wds'],['Statistics Canada 2021 cartographic boundaries','https://geo.statcan.gc.ca/geo_wa/rest/services/2021/Cartographic_boundary_files/MapServer'],
+      ['Statistics Canada Web Data Service (tables)','https://www.statcan.gc.ca/en/developers/wds'],['Statistics Canada 2021 cartographic boundaries (simplified copy served with this page)','https://geo.statcan.gc.ca/geo_wa/rest/services/2021/Cartographic_boundary_files/MapServer'],
       ['ECCC climate normals','https://api.weather.gc.ca/collections/climate-normals'],['Transport Canada: airports and National Highway System','https://maps-cartes.services.geo.ca/server_serveur/rest/services/TC'],
       ['NRCan: high-speed internet coverage; CanVec railways','https://maps-cartes.services.geo.ca/server_serveur/rest/services/NRCan/High_Speed_Internet_haute_vitesse/MapServer'],
-      ['FOSSGIS Valhalla drive times (OpenStreetMap)','https://valhalla1.openstreetmap.de/'],['OpenStreetMap Overpass','https://overpass-api.de/'],['Wikidata Query Service','https://query.wikidata.org/'],
+      ['FOSSGIS Valhalla drive times (OpenStreetMap)','https://valhalla1.openstreetmap.de/'],['Wikidata Query Service','https://query.wikidata.org/'],
       ['OpenFreeMap basemap','https://openfreemap.org/']].map(([t,u])=>h('li',{},h('a',{href:u,target:'_blank',rel:'noopener'},t)))),
     h('h4',{style:{margin:'16px 0 8px'}},`Requests in this tab (${journal.length})`),
     dataTable({headers:['Endpoint','Status','ms','Time (UTC)','Attempt'],rows,numeric:new Set([2,4])})));

@@ -127,6 +127,14 @@ export function bubbles(points,{xLabel,yLabel,height=470,xFmt=compact,yFmt=compa
     const g=svg('g',{'clip-path':`url(#clip-${w|0})`});
     for(const p of pts.slice().sort((a,b)=>(b.size??0)-(a.size??0))){const c=svg('circle',{cx:X(p.x),cy:Y(p.y),r:rad(p),fill:p.fill,stroke:p.stroke??'#3b2e23','stroke-width':1.2,'fill-opacity':.92,tabindex:0,'aria-label':p.label});
       tipOn(c,p.html);g.append(c);}
+    // Direct labels for the six points furthest right, beside each bubble; a label that would overlap one already
+    // placed (or leave the plot) is skipped, and the tooltip and list still name every point.
+    const placed=[];
+    for(const p of pts.filter(p=>p.short&&p.x>=xt[0]&&p.x<=xt.at(-1)&&p.y>=yt[0]&&p.y<=yt.at(-1)).sort((a,b)=>b.x-a.x).slice(0,6)){
+      const r=rad(p),w=p.short.length*6.3,right=X(p.x)+r+4+w<=L+pw,x=right?X(p.x)+r+4:X(p.x)-r-4-w,y=Y(p.y)-7,box=[x,y,x+w,y+14];
+      if(x<L||y<T||placed.some(b=>b[0]<box[2]&&box[0]<b[2]&&b[1]<box[3]&&box[1]<b[3]))continue;
+      placed.push(box);g.append(svg('text',{x:right?x:x+w,y:y+11,'text-anchor':right?'start':'end',class:'bubble-label','aria-hidden':'true'},p.short));
+    }
     s.append(g);
     // Drag a rectangle to zoom into the plotted range.
     let start=null;const band=svg('rect',{fill:'rgba(71,55,41,.08)',stroke:BROWN,'stroke-dasharray':'4 3',visibility:'hidden'});s.append(band);
@@ -162,7 +170,7 @@ export function lines({x,series,fmt=compact,height=260,markers=true}) {
 // Monthly climate normals: precipitation columns (left axis) with daily high and low lines (right axis).
 export function climate({precip,high,low,height=430}) {
   const months=['J','F','M','A','M','J','J','A','S','O','N','D'],names=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const el=h('div',{class:'chart-svg',style:{height:`${height}px`},role:'img','aria-label':names.map((m,i)=>`${m}: precipitation ${precip[i]??'n/a'} mm, high ${high[i]??'n/a'} °C, low ${low[i]??'n/a'} °C`).join('; ')});
+  const el=h('div',{class:'chart-svg climate',style:{height:`${height}px`},role:'img','aria-label':names.map((m,i)=>`${m}: precipitation ${precip[i]??'n/a'} mm, high ${high[i]??'n/a'} °C, low ${low[i]??'n/a'} °C`).join('; ')});
   return responsive(el,(w,H)=>{
     const pv=precip.filter(Number.isFinite),tv=[...high,...low].filter(Number.isFinite);if(!pv.length&&!tv.length){el.replaceChildren();return;}
     const pt=niceTicks(0,Math.max(...pv,1),4),tt=niceTicks(Math.min(...tv,0),Math.max(...tv,1),4),L=40,R=40,T=10,B=26,pw=w-L-R,ph=H-T-B,gw=pw/12;

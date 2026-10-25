@@ -7,7 +7,7 @@ import {spark,barList,legend,columns,stacked,treemap,climate,shareBars,BROWN,GOL
 import {lifetime,slot,sharedPair,censusMeta,populationSeries,lfsSeries,incomeSeries,tableMeta} from './common.js';
 import {filterData,parseSelection,serializeSelection,mapPanel,shapes,scopeOf} from './choropleth.js';
 import {FILTERS} from '../census.js';
-import {boundaryOf,centroid,boundaries} from '../geo.js';
+import {boundaryOf,centroid} from '../geo.js';
 
 const DASHBOARDS=[['economic','Economic','economic'],['resident','Resident','resident'],['household','Household','household'],
   ['dwelling','Dwelling','dwelling'],['workforce','Workforce','workforce'],['livability','Livability','livability']];
@@ -152,7 +152,7 @@ export function workforceCards(body,ctx) {
   slot(a,async el=>{const {p}=await base,rows=shares(p,INDUSTRY);
     el.replaceChildren(chartCard({title:'Residents’ industry of employment',subtitle:'Labour force aged 15+ by industry sector, Census 2021',
       meta:{...censusMeta(place,{universe:'Labour force aged 15+'}),table:()=>({headers:['Sector',place.name],rows:rows.map(r=>[r.label,r.count]),numeric:new Set([1]),format:v=>int(v)})}},
-      h('div',{class:'body'},treemap(rows.filter(r=>r.count>0).map(r=>({label:r.label,value:r.count,text:int(r.count)})),{height:600}))));},{alive:ctx.alive,context:'Industry of employment'});
+      h('div',{class:'body'},treemap(rows.filter(r=>r.count>0).map(r=>({label:r.label,value:r.count,text:int(r.count)})),{height:'fill'}))));},{alive:ctx.alive,context:'Industry of employment'});
   slot(s,async el=>{const {p}=await base,rows=shares(p,OCCUPATION).sort((x,y)=>(y.count??-1)-(x.count??-1)).slice(0,5);
     el.replaceChildren(chartCard({title:'Top occupations',subtitle:'Labour force aged 15+ by occupation group (NOC 2021)',
       meta:{...censusMeta(place,{universe:'Labour force aged 15+'}),table:()=>({headers:['Occupation group',place.name],rows:shares(p,OCCUPATION).map(r=>[r.label,r.count]),numeric:new Set([1]),format:v=>int(v)})}},
@@ -198,15 +198,18 @@ function climateCard(target,ctx) {
     let point=null,anchor=place.name;
     try {
       if(place.type==='PR'){const cmas=(await app.placeList('CMACA')).filter(g=>String(g.province).split('_').includes(pr)).sort((x,y)=>(y.population??0)-(x.population??0));
-        if(cmas[0]){anchor=cmas[0].name;const fc=await boundaries('CMACA',`DGUID='${cmas[0].id}'`,{offset:'.01'});point=centroid(fc.features[0]);}}
+        if(cmas[0]){anchor=cmas[0].name;const fc=await boundaryOf(cmas[0]);point=centroid(fc.features[0]);}}
       else {const fc=await boundaryOf(place);point=centroid(fc.features[0]);}
     } catch {}
     const dist=s=>point?Math.hypot((s.coord[0]-point[0])*Math.cos(point[1]*Math.PI/180),s.coord[1]-point[1])*111.2:null;
     complete.sort((x,y)=>(dist(x)??0)-(dist(y)??0)||x.name.localeCompare(y.name));
     const chosen=complete.find(s=>s.id===app.state.t.stn)??complete[0];
-    const d=await request(`${base}?${new URLSearchParams({f:'json',limit:'500',STN_ID:chosen.id})}`);if(!ctx.alive())return;
-    const series=id=>Array.from({length:12},(_,i)=>d.features.find(f=>f.properties.NORMAL_ID===id&&f.properties.MONTH===i+1)?.properties.VALUE??null);
-    const precip=series(56),high=series(5),low=series(8),km=dist(chosen);
+    // One request per normal: a station publishes up to about 1,400 normals, so an unfiltered page can miss these three.
+    const [precip,high,low]=await Promise.all(['56','5','8'].map(async id=>{
+      const d=await request(`${base}?${new URLSearchParams({f:'json',limit:'20',STN_ID:chosen.id,NORMAL_ID:id})}`);
+      return Array.from({length:12},(_,i)=>d.features.find(f=>f.properties.MONTH===i+1)?.properties.VALUE??null);}));
+    if(!ctx.alive())return;
+    const km=dist(chosen);
     const select=h('select',{class:'station-select','aria-label':'Climate station',onchange:e=>{app.set('stn',e.target.value);climateCard(target,ctx);}},
       complete.slice(0,60).map(s=>{const o=new Option(`${s.name}${dist(s)!=null?` · ${Math.round(dist(s))} km`:''}`,s.id);o.selected=s.id===chosen.id;return o;}));
     const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];

@@ -105,7 +105,7 @@ function draw(kind,view,rows,d,place) {
   if(kind==='largest'&&view==='bars')return barList(rows.map(r=>({label:r.name,value:r.value,text:`${int(r.value)} ${d.estimate?'est.':'jobs'}`})));
   if(kind==='largest')return treemap(rows.map(r=>({label:r.name,value:r.value,text:int(r.value),group:sectorOf(r.code),groupLabel:SECTORS[sectorOf(r.code)]??sectorOf(r.code),r})),
     {grouped:true,height:'fill',tooltip:it=>tip(it.r,d)});
-  return bubbles(rows.map(r=>({x:r.absolute,y:r.value,size:r.value,label:`${r.name}: ${signed(r.absolute)} since ${d.prior}, ${int(r.value)} in ${d.year}`,
+  return bubbles(rows.map(r=>({x:r.absolute,y:r.value,size:r.value,short:r.name.length>30?`${r.name.slice(0,28).trimEnd()}…`:r.name,label:`${r.name}: ${signed(r.absolute)} since ${d.prior}, ${int(r.value)} in ${d.year}`,
     fill:r.traded?BROWN:'#f4ebe4',stroke:'#3b2e23',html:tip(r,d)})),{xLabel:`Employment growth (${d.prior} – ${d.year})`,yLabel:`Total employment (${d.year})`,height:'fill'});
 }
 

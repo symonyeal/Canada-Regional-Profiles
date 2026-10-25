@@ -2,10 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {squarify,niceTicks,geographyType,compact,ramp,luminance,tradedShare} from '../site/js/model.js';
 import {parse,serialize,withGeography} from '../site/js/state.js';
-import {boundaryWhere} from '../site/js/geo.js';
-import {parseSelection,serializeSelection} from '../site/js/tools/choropleth.js';
+import {matcher,topology} from '../site/js/geo.js';
+import {parseSelection,serializeSelection,shapes,areas} from '../site/js/tools/choropleth.js';
 import {request,clearCache,units,SourceError} from '../site/js/api.js';
 import {FILTERS,PROFILE_IDS,HH_INCOME5} from '../site/js/census.js';
+import {refreshData} from '../site/js/refresh.js';
 
 test('squarified tiles cover the rectangle with areas proportional to the values',()=>{
   const v=[50,20,12,9,5,3,1],W=600,H=400,r=squarify(v,0,0,W,H),total=v.reduce((a,b)=>a+b,0);
@@ -26,12 +27,21 @@ test('every Census 2021 DGUID schema used by the profile maps to its geography l
   assert.equal(geographyType('2021S050535505'),'CMACA');assert.equal(geographyType('2021S05004650'),'ER');assert.equal(geographyType('2021S05100011'),'POPCNTR');
   assert.equal(geographyType('2021Z9999999'),null);
 });
-test('boundary layers keyed by provincial part are queried by unit code, others by DGUID',()=>{
-  assert.equal(boundaryWhere({id:'2021S0503602',type:'CMACA'}),"CMAUID='602'");
-  assert.equal(boundaryWhere({id:'2021S050535505',type:'CMACA'}),"CMAPUID='35505'");
-  assert.equal(boundaryWhere({id:'2021S05100011',type:'POPCNTR'}),"PCUID='0011'");
-  assert.equal(boundaryWhere({id:'2021A00054611040',type:'CSD'}),"DGUID='2021A00054611040'");
-  assert.equal(boundaryWhere({id:'2021A000011124',type:'PR'}),'1=1');
+test('boundary features keyed by provincial part match by unit code, others by DGUID',()=>{
+  assert.ok(matcher({id:'2021S0503602',type:'CMACA'})({CMAUID:'602',CMAPUID:'24602'}));
+  assert.ok(matcher({id:'2021S050535505',type:'CMACA'})({CMAUID:'505',CMAPUID:'35505'}));
+  assert.ok(!matcher({id:'2021S050535505',type:'CMACA'})({CMAUID:'505',CMAPUID:'24505'}));
+  assert.ok(matcher({id:'2021S05100011',type:'POPCNTR'})({PCUID:'0011',PCPUID:'350011'}));
+  assert.ok(matcher({id:'2021A00054611040',type:'CSD'})({DGUID:'2021A00054611040'}));
+});
+test('TopoJSON decoding joins arcs, reverses ~i references and applies the transform',()=>{
+  // Two unit squares sharing the edge x = 1 (arc 0); the right square uses it reversed.
+  const t={type:'Topology',transform:{scale:[2,1],translate:[10,0]},arcs:[[[1,0],[0,1]],[[1,1],[-1,0],[0,-1],[1,0]],[[1,0],[1,0],[0,1],[-1,0]]],
+    objects:{areas:{type:'GeometryCollection',geometries:[{type:'Polygon',arcs:[[0,1]],properties:{name:'L'}},{type:'Polygon',arcs:[[2,~0]],properties:{name:'R'}},{type:null,properties:{name:'empty'}}]}}};
+  const fc=topology(t);
+  assert.equal(fc.features.length,2);
+  assert.deepEqual(fc.features[0].geometry.coordinates[0],[[12,0],[12,1],[10,1],[10,0],[12,0]]);
+  assert.deepEqual(fc.features[1].geometry.coordinates[0],[[12,0],[14,0],[14,1],[12,1],[12,0]]);
 });
 test('shared URLs round-trip; malformed values fall back; a new geography drops area selections',()=>{
   const s=parse('?geo=2021S0504610&lg=rail&lgf=YWG&li=traded&cp=household&mkr=2-5&bench=PT','#largest');
@@ -108,4 +118,29 @@ test('batched release series are joined by product, not by response order',async
   try {const {establishments}=await import('../site/js/api.js');const d=await establishments({id:'2021A000246',type:'PR'});
     assert.deepEqual(d.values.map(v=>[v.year,v.value]),[[2025,41000],[2026,42000]]);}
   finally {globalThis.fetch=realFetch;}
+});
+
+test('Refresh re-queries the census areas behind maps; static boundary files are decoded once',async()=>{
+  const sdmx={data:{structure:{dimensions:{series:[{id:'FREQ',values:[{id:'A'}]},{id:'REF_AREA',values:[{id:'2021A00054601001',name:'Area'}]},{id:'GENDER',values:[{id:'1'}]},
+    {id:'CHARACTERISTIC',values:[{id:'1',name:'Population'}]},{id:'STATISTIC',values:[{id:'1'}]}],observation:[{id:'TIME_PERIOD',values:[{id:'2021'}]}]},attributes:{series:[],observation:[]}},
+    dataSets:[{series:{'0:0:0:0:0':{attributes:[],observations:{'0':[100]}}}}]}};
+  const topo={type:'Topology',transform:{scale:[1,1],translate:[0,0]},arcs:[[[0,0],[1,0],[0,1],[-1,0],[0,-1]]],
+    objects:{areas:{type:'GeometryCollection',geometries:[{type:'Polygon',arcs:[[0]],properties:{DGUID:'2021A00054601001',name:'Area'}}]}}};
+  refreshData();const n={census:0,file:0};
+  globalThis.fetch=async url=>{if(String(url).includes('boundaries/')){n.file++;return reply(200,topo);}n.census++;return reply(200,sdmx);};
+  try {
+    await areas('46');await shapes('46');await areas('46');await shapes('46');
+    assert.deepEqual(n,{census:1,file:1});
+    refreshData();await areas('46');await shapes('46');
+    assert.deepEqual(n,{census:2,file:1});
+  } finally {globalThis.fetch=realFetch;refreshData();}
+});
+test('a read with no answer after the hedge delay is sent again; the first answer wins and the other is aborted',async()=>{
+  let n=0,aborted=0;
+  globalThis.fetch=(url,init)=>{n++;if(n===1)return new Promise((_,reject)=>init.signal.addEventListener('abort',()=>{aborted++;reject(new DOMException('aborted','AbortError'));}));
+    return Promise.resolve(reply(200,{copy:n}));};
+  try {
+    assert.deepEqual(await request('https://example.test/hedged',{hedge:20}),{copy:2});
+    assert.equal(n,2);assert.equal(aborted,1);
+  } finally {globalThis.fetch=realFetch;}
 });

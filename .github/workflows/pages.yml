@@ -1,6 +1,6 @@
 name: pages
 
-# Publishes the runtime API client in site/. No observation download or data build is performed.
+# Publishes site/: the runtime API client and the committed boundary files. No observation download or data build is performed.
 on:
   push:
     branches: [main]

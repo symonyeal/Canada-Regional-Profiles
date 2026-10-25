@@ -1,36 +1,51 @@
 // Spatial services and the shared map. All observations still come from the tools; this module draws them.
-import {request,SourceError} from './api.js';
+import {request,memoRequest,SourceError} from './api.js';
 import {h,icon} from './ui.js';
 import {CANADA} from './model.js';
 
-export const BOUNDARIES='https://geo.statcan.gc.ca/geo_wa/rest/services/2021/Cartographic_boundary_files/MapServer';
 export const GEOCA='https://maps-cartes.services.geo.ca/server_serveur/rest/services';
-const LAYERS={PR:0,ER:2,CD:4,CMACA:6,POPCNTR:7,CSD:9};
 const STYLE='https://tiles.openfreemap.org/styles/positron';
 
-// StatCan cartographic boundaries. The service returns HTTP 500 at random and for explicit field lists,
-// so every query asks for all fields. Connections fail independently (about half of new ones), so retries race
-// four parallel copies; six rounds leave well under a 1 in 100,000 chance of failing when connections are independent. Pages of 1000 features until exhausted.
-export async function boundaries(type,where,{offset='.004'}={}) {
-  const features=[];
-  for(let start=0;start<20000;start+=1000) {
-    const d=await request(`${BOUNDARIES}/${LAYERS[type]}/query`,{attempts:6,backoff:150,race:4,limit:2,timeout:90000,body:new URLSearchParams({where,outFields:'*',returnGeometry:'true',
-      outSR:'4326',maxAllowableOffset:offset,geometryPrecision:offset==='.002'?'4':'3',resultOffset:String(start),resultRecordCount:'1000',orderByFields:'OBJECTID',f:'geojson'})});
-    if(!Array.isArray(d.features)) throw new SourceError('malformed','The boundary service returned no features.');
-    features.push(...d.features.filter(f=>f.geometry?.coordinates?.length));if(d.features.length<1000)break;
-  }
-  return {type:'FeatureCollection',features};
+// 2021 Census cartographic boundaries, built from Statistics Canada's boundary service by tools/boundaries into
+// site/boundaries/: <layer>-<province>.json for csd, cd, er, cma and pc, and pr.json for Canada.
+// Geometry only; every observation drawn on them is requested at runtime.
+const FILES={CSD:'csd',CD:'cd',ER:'er',CMACA:'cma',POPCNTR:'pc'};
+const decoded=new Map();
+const file=name=>memoRequest(decoded,name,()=>request(`boundaries/${name}.json`,{cache:'default',hedge:0}).then(topology));
+
+// TopoJSON to GeoJSON (Bostock, TopoJSON specification 1.0): arcs are delta-encoded integer positions on the
+// transform's grid; reference ~i is arc i reversed, and consecutive arcs of a ring share their joining position.
+export function topology(t) {
+  const {scale:[kx,ky],translate:[x0,y0]}=t.transform;
+  const arcs=t.arcs.map(a=>{let x=0,y=0;return a.map(([dx,dy])=>[(x+=dx)*kx+x0,(y+=dy)*ky+y0]);});
+  const ring=refs=>{const r=[];for(const i of refs){const a=i<0?arcs[~i].slice().reverse():arcs[i];r.push(...(r.length?a.slice(1):a));}return r;};
+  return {type:'FeatureCollection',features:t.objects.areas.geometries.filter(g=>g.type).map(g=>({type:'Feature',properties:g.properties,
+    geometry:g.type==='Polygon'?{type:'Polygon',coordinates:g.arcs.map(ring)}:{type:'MultiPolygon',coordinates:g.arcs.map(p=>p.map(ring))}}))};
 }
 // The boundary layers key metropolitan areas and population centres by provincial part; the Census Profile keys
-// the whole area. Whole areas are selected by their unit code (CMAUID, PCUID), provincial parts by CMAPUID.
-export function boundaryWhere(geo) {
-  if(geo.id===CANADA.id) return '1=1';
+// the whole area. Whole areas match their unit code (CMAUID, PCUID), provincial parts CMAPUID, the rest DGUID.
+export function matcher(geo) {
   const code=geo.id.slice(9);
-  return geo.type==='CMACA'?(code.length===3?`CMAUID='${code}'`:`CMAPUID='${code}'`):geo.type==='POPCNTR'?`PCUID='${code}'`:`DGUID='${geo.id}'`;
+  return geo.type==='CMACA'?(code.length===3?p=>p.CMAUID===code:p=>p.CMAPUID===code):geo.type==='POPCNTR'?p=>p.PCUID===code:p=>p.DGUID===geo.id;
 }
-export const boundaryOf=geo=>boundaries(geo.id===CANADA.id?'PR':geo.type,boundaryWhere(geo),{offset:geo.id===CANADA.id?'.03':geo.type==='PR'?'.01':'.002'});
-export const subdivisions=province=>boundaries('CSD',`PRUID='${province}'`,{offset:'.008'});
-export const provinces=()=>boundaries('PR','1=1',{offset:'.03'});
+// Provinces whose files hold a geography: its own code, or every province a metropolitan area or population centre spans.
+const provincesOf=geo=>['CSD','CD','ER'].includes(geo.type)?[geo.id.slice(9,11)]:String(geo.province||geo.id.slice(9,11)).split('_');
+export async function boundaryOf(geo) {
+  if(geo.id===CANADA.id) return provinces();
+  const fcs=geo.type==='PR'?[await provinces()]:await Promise.all(provincesOf(geo).map(pr=>file(`${FILES[geo.type]}-${pr}`)));
+  const match=matcher(geo),features=fcs.flatMap(fc=>fc.features.filter(f=>match(f.properties)));
+  if(!features.length) throw new SourceError('empty','No boundary is published for this geography.');
+  return {type:'FeatureCollection',features};
+}
+export const subdivisions=province=>file(`csd-${province}`);
+export const provinces=()=>file('pr');
+// Metropolitan areas and agglomerations (provincial parts) of a province, or of Canada.
+export async function metroAreas(province) {
+  // A territory without one has no file (HTTP 404, read as unsupported).
+  const fcs=await Promise.all((province?[province]:['10','11','12','13','24','35','46','47','48','59','60','61','62'])
+    .map(pr=>file(`cma-${pr}`).catch(e=>{if(e.kind==='unsupported')return {features:[]};throw e;})));
+  return {type:'FeatureCollection',features:fcs.flatMap(fc=>fc.features)};
+}
 
 // Federal ArcGIS map services on geo.ca (Transport Canada, NRCan). Paged GeoJSON queries.
 export async function arcgis(service,params,max=8000) {
@@ -48,15 +63,15 @@ export async function isochrone(lon,lat,minutes) {
   const json=JSON.stringify({locations:[{lat,lon}],costing:'auto',contours:minutes.map(time=>({time})),polygons:true,denoise:.5,generalize:120});
   return request(`https://valhalla1.openstreetmap.de/isochrone?json=${encodeURIComponent(json)}`,{attempts:2,timeout:30000});
 }
-export async function overpass(query) {
-  const d=await request('https://overpass-api.de/api/interpreter',{body:new URLSearchParams({data:query}),attempts:2,timeout:90000});
-  if(d.remark&&/runtime error|timeout/i.test(d.remark)) throw new SourceError('timeout','OpenStreetMap query timed out on the public Overpass server.');
-  return d;
-}
 export async function wikidata(sparql) {
   const d=await request(`https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(sparql)}`,{accept:'application/sparql-results+json',attempts:2});
   return d.results.bindings.map(b=>Object.fromEntries(Object.entries(b).map(([k,v])=>[k,v.value])));
 }
+
+// Whether point pt = [lon, lat] lies in some feature of fc (even–odd ray casting; holes excluded).
+export const contains=(pt,fc)=>fc.features.some(f=>{const polys=f.geometry.type==='MultiPolygon'?f.geometry.coordinates:[f.geometry.coordinates];
+  return polys.some(rings=>{const hit=r=>{let c=false;for(let i=0,j=r.length-1;i<r.length;j=i++){const [a,b]=r[i],[x,y]=r[j];if((b>pt[1])!==(y>pt[1])&&pt[0]<(x-a)*(pt[1]-b)/(y-b)+a)c=!c;}return c;};
+    return hit(rings[0])&&!rings.slice(1).some(hit);});});
 
 export function bbox(fc) {
   let a=[180,90,-180,-90];
@@ -85,6 +100,9 @@ async function baseStyle() {
       if(/^water/.test(l.id)&&l.type==='fill')l.paint={...l.paint,'fill-color':'#cfe3f1'};
       if(/^waterway/.test(l.id)&&l.type==='line')l.paint={...l.paint,'line-color':'#cfe3f1'};
       if(/^landcover|^landuse|^park/.test(l.id)&&l.type==='fill')l.paint={...l.paint,'fill-opacity':.35};
+      // Labels in Latin script only: the style's second line of non-Latin names made the map fetch glyph ranges
+      // for a dozen scripts (about 1 MB) on first view.
+      if(l.type==='symbol'&&/"name/.test(JSON.stringify(l.layout?.['text-field']??'')))l.layout={...l.layout,'text-field':['coalesce',['get','name:latin'],['get','name']]};
     }
     return st;
   });

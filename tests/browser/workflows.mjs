@@ -96,7 +96,7 @@ await check('a Census outage fails only Census cards; payroll industries still r
   return {recovered:true};
 });
 await check('a boundary outage keeps the market card, legend and table',async page=>{
-  await page.route('**/geo.statcan.gc.ca/**',r=>r.abort());
+  await page.route('**/boundaries/**',r=>r.abort());
   await page.goto(`${base}?geo=2021A000246#market`);await section(page,'market');
   await until(page,()=>/Boundaries unavailable/.test(document.querySelector('#market .map-note')?.textContent??''),undefined,90000);
   const kpi=await page.locator('#market .map-kpi b').textContent();

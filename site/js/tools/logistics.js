@@ -2,7 +2,7 @@
 import {airTraffic,geographies,table,request} from '../api.js';
 import {CANADA,PT,int,pct,compact,matchesProvince} from '../model.js';
 import {h,icon,showTip,hideTip,esc,dialog,dataTable} from '../ui.js';
-import {createMap,boundaryOf,provinces,boundaries,arcgis,isochrone,wikidata,bbox,centroid,setLayer,removeLayer,raster,marker,fit,GEOCA} from '../geo.js';
+import {createMap,boundaryOf,provinces,metroAreas,arcgis,isochrone,wikidata,contains,bbox,centroid,setLayer,removeLayer,raster,marker,fit,GEOCA} from '../geo.js';
 import {lifetime} from './common.js';
 
 const NETS=[
@@ -14,10 +14,6 @@ const NETS=[
 ];
 const SPEEDS=[['25Mbps','25 Mbps','#67b77d'],['50/10Mbps','50/10 Mbps','#fee985'],['100Mbps','100 Mbps','#feb46a'],['Gigabit','Gigabit','#f26f71']];
 const fold=s=>s.normalize('NFKD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/, [^,]+$/,'').replace(/[^a-z0-9]/g,'');
-const inside=(pt,fc)=>fc.features.some(f=>{const polys=f.geometry.type==='MultiPolygon'?f.geometry.coordinates:[f.geometry.coordinates];
-  return polys.some(rings=>{const hit=r=>{let c=false;for(let i=0,j=r.length-1;i<r.length;j=i++){const [a,b]=r[i],[x,y]=r[j];if((b>pt[1])!==(y>pt[1])&&pt[0]<(x-a)*(pt[1]-b)/(y-b)+a)c=!c;}return c;};
-    return hit(rings[0])&&!rings.slice(1).some(hit);});});
-
 export function logistics(el,app) {
   const life=lifetime(el),side=h('div',{class:'side'}),mapEl=h('div',{class:'map',role:'region','aria-label':'Logistics map'});
   const card=h('div',{class:'map-card',hidden:true}),pill=h('div',{class:'map-pill',hidden:true}),legendEl=h('div',{class:'map-legend',hidden:true}),note=h('p',{class:'map-note',hidden:true});
@@ -103,7 +99,7 @@ export function logistics(el,app) {
       const layers=JSON.stringify([{id:0,source:{type:'mapLayer',mapLayerId:0},drawingInfo:{renderer:{type:'simple',symbol:{type:'esriSLS',style:'esriSLSSolid',color:[180,131,43,255],width:1.8}}}}]);
       raster(m.map,'nhs',`${GEOCA}/TC/canada_national_highway_system_en/MapServer/export?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=256,256&format=png32&transparent=true&dynamicLayers=${encodeURIComponent(layers)}&f=image`,{attribution:'Transport Canada'});
       const all=(await geographies('CMACA')).filter(g=>matchesProvince(g,pr)).sort((a,b)=>(b.population??0)-(a.population??0)).slice(0,30);
-      const fc=await boundaries('CMACA',pr?`PRUID='${pr}'`:'1=1',{offset:'.02'});if(!alive())return;
+      const fc=await metroAreas(pr);if(!alive())return;
       const pos=new Map(fc.features.map(f=>[f.properties.CMAUID,centroid(f)]).filter(([,c])=>c));
       const items=all.filter(g=>pos.has(g.id.slice(9))).map(g=>({id:g.id,name:g.name,g,coord:pos.get(g.id.slice(9)),figure:compact(g.population)}));
       const pick=it=>{app.set('lgf',it.id);select(it);};
@@ -121,7 +117,7 @@ export function logistics(el,app) {
       const rows=await wikidata(`SELECT ?p ?pLabel ?coord WHERE { VALUES ?t {wd:Q44782 wd:Q15310171 wd:Q2023913} ?p wdt:P31 ?t; wdt:P17 wd:Q16; wdt:P625 ?coord. SERVICE wikibase:label { bd:serviceParam wikibase:language "en". } }`);
       const shape=await provShape;if(!alive())return;
       const seen=new Set(),items=rows.map(r=>{const m=/Point\(([-\d.]+) ([-\d.]+)\)/.exec(r.coord);return m&&{id:r.p.split('/').pop(),name:r.pLabel,coord:[+m[1],+m[2]],url:r.p};})
-        .filter(x=>x&&!seen.has(x.id)&&seen.add(x.id)&&!/^Q\d+$/.test(x.name)).filter(x=>!shape||inside(x.coord,shape)).sort((a,b)=>a.name.localeCompare(b.name));
+        .filter(x=>x&&!seen.has(x.id)&&seen.add(x.id)&&!/^Q\d+$/.test(x.name)).filter(x=>!shape||contains(x.coord,shape)).sort((a,b)=>a.name.localeCompare(b.name));
       if(!items.length){showCard(ctx,{title:'No ports recorded',noteText:`Wikidata records no port or seaport with coordinates in ${pr?PT.find(p=>p[0]===pr)[2]:'Canada'}.`});return;}
       const pick=it=>{app.set('lgf',it.id);select(it);};
       const select=it=>{list(items,it.id,pick);clearMarkers();

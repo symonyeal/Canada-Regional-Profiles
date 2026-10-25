@@ -1,15 +1,20 @@
 // Talent pipeline: postsecondary enrolments by CIP primary grouping (37-10-0011, as published) and by institution
-// (37-10-0277). Institution counts are whole-institution totals, attached to a mapped facility only on an exact name
-// match; a grouping is shown for an institution only when every one of its CIP components is published.
+// (37-10-0277). Institution counts are whole-institution totals, placed at Wikidata institution locations only on a
+// name or alias match; a grouping is shown for an institution only when every one of its CIP components is published.
 import {psisGroups,psis,psisInstitutions,request,table} from '../api.js';
 import {CANADA,PT,int,compact} from '../model.js';
 import {h,exhibitMenu,failure,loading,esc,showTip,hideTip} from '../ui.js';
 import {spark} from '../charts.js';
-import {createMap,boundaryOf,overpass,bbox,setLayer,fit} from '../geo.js';
+import {createMap,boundaryOf,wikidata,contains,bbox,setLayer,fit} from '../geo.js';
 import {lifetime} from './common.js';
 
 const fold=s=>s.normalize('NFKD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/, [^,]+$/,'').replace(/^the /,'').replace(/[^a-z0-9]/g,'');
 const schoolYear=p=>p?.refPer2?`${p.refPer.slice(0,4)}/${p.refPer2.slice(2,4)}`:p?.refPer?`${p.refPer.slice(0,4)}/${String(Number(p.refPer.slice(2,4))+1).padStart(2,'0')}`:'';
+// Higher-education institutions in Canada with coordinates, open ones only, with their English and French aliases.
+const INSTITUTIONS=`SELECT ?i ?iLabel ?coord (GROUP_CONCAT(DISTINCT ?alt; separator="|") AS ?alts) WHERE {
+  ?i wdt:P31/wdt:P279* wd:Q38723; wdt:P17 wd:Q16; wdt:P625 ?coord. FILTER NOT EXISTS { ?i wdt:P576 ?end }
+  OPTIONAL { ?i skos:altLabel ?alt FILTER(LANG(?alt) IN ("en","fr")) }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en,fr". } } GROUP BY ?i ?iLabel ?coord`;
 const select=(label,key,value,options,app,render)=>h('label',{class:'station-row'},`${label} `,h('select',{onchange:e=>{app.set(key,e.target.value);render();}},
   options.map(([v,l])=>{const o=new Option(l,v);o.selected=v===value;return o;})));
 
@@ -54,7 +59,7 @@ export function talent(el,app) {
     mapInstitutions({place,pr,chosen,alive,latest});
   }
 
-  // Institutions: 37-10-0277 totals for the chosen grouping (complete components only), placed at OpenStreetMap facilities.
+  // Institutions: 37-10-0277 totals for the chosen grouping (complete components only), placed at Wikidata locations.
   async function mapInstitutions({place,pr,chosen,alive}) {
     const t=app.state.t;let inst,counts;
     try {
@@ -65,15 +70,16 @@ export function talent(el,app) {
       counts=ids.length?await psisInstitutions(inst.metadata,inst.institutions,ids,{kind:Number(t.tpk),registration:Number(t.tpr)},year):new Map();
     } catch(e) {if(alive()){note.hidden=false;note.textContent=`Institution enrolments unavailable: ${e.message}`;}return;}
     if(!alive())return;
-    note.hidden=false;note.textContent='Loading institution locations from OpenStreetMap (the public server can take up to a minute)…';
-    let osm;
-    try {osm=await overpass(`[out:json][timeout:60];area["ISO3166-2"="CA-${PT.find(p=>p[0]===pr)[1]}"]->.a;nwr["amenity"~"^(university|college)$"]["name"](area.a);out center 400;`);}
+    note.hidden=false;note.textContent='Loading institution locations from Wikidata…';
+    let rows,shape;
+    try {[rows,shape]=await Promise.all([wikidata(INSTITUTIONS),boundaryOf({id:`2021A0002${pr}`,type:'PR'})]);}
     catch(e){if(alive())note.textContent=`Institution locations unavailable: ${e.message} Enrolment figures are unaffected.`;return;}
     if(!alive())return;
+    // An institution matches on its label or any English or French alias, after folding case, accents and punctuation.
     const byName=new Map(inst.institutions.map(i=>[fold(i.memberNameEn),i])),seen=new Set(),feats=[];
-    for(const x of osm.elements??[]){const lat=x.lat??x.center?.lat,lon=x.lon??x.center?.lon;if(!Number.isFinite(lat))continue;
-      const i=byName.get(fold(x.tags.name)),first=i&&!seen.has(i.memberId);if(first)seen.add(i.memberId);
-      feats.push({type:'Feature',geometry:{type:'Point',coordinates:[lon,lat]},properties:{name:x.tags.name,value:first?counts.get(i.memberId)??null:null,matched:!!i,first:!!first}});}
+    for(const x of rows){const m=/Point\(([-\d.]+) ([-\d.]+)\)/.exec(x.coord);if(!m)continue;const pt=[+m[1],+m[2]];if(!contains(pt,shape))continue;
+      const i=[x.iLabel,...(x.alts?x.alts.split('|'):[])].map(n=>byName.get(fold(n))).find(Boolean),first=i&&!seen.has(i.memberId);if(first)seen.add(i.memberId);
+      feats.push({type:'Feature',geometry:{type:'Point',coordinates:pt},properties:{name:x.iLabel,value:first?counts.get(i.memberId)??null:null,matched:!!i,first:!!first}});}
     const max=Math.max(1,...feats.map(f=>f.properties.value??0));
     for(const f of feats)f.properties.r=f.properties.value==null?4:6+26*Math.sqrt(f.properties.value/max);
     setLayer(m.map,'schools',{type:'FeatureCollection',features:feats},[{id:'schools',type:'circle',paint:{'circle-radius':['get','r'],
@@ -83,7 +89,7 @@ export function talent(el,app) {
         showTip(e.originalEvent,`<b>${esc(p.name)}</b><br>${p.value!=null&&p.value!=='null'?`${int(+p.value)} enrolments, whole institution`:p.first===true||p.first==='true'?'Grouping not published for this institution':p.matched===true||p.matched==='true'?'Further location of a matched institution':'No exact PSIS name match'}`);});
       m.map.on('mouseleave','schools',()=>{m.map.getCanvas().style.cursor='';hideTip();});
     }
-    note.textContent=`${feats.length} facilities from OpenStreetMap; ${seen.size} of ${inst.institutions.length} PSIS institutions matched by exact name. Circles show whole-institution enrolments${chosen.id?` in ${chosen.name}`:''}, not campus counts.`;
+    note.textContent=`${feats.length} locations from Wikidata; ${seen.size} of ${inst.institutions.length} PSIS institutions matched by name or alias. Circles show whole-institution enrolments${chosen.id?` in ${chosen.name}`:''}, not campus counts.`;
   }
   return {update(changed){if(['geo','refresh','tp','tpk','tpr'].some(k=>changed.has(k)))render();},destroy:()=>m?.destroy()};
 }

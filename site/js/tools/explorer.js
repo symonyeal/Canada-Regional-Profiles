@@ -32,7 +32,7 @@ export function explorer(el,app) {
       if(!alive())return;
       data.features=fc;for(const f of fc.features){const c=centroid(f);if(c)data.points.set(f.properties.DGUID,c);}
       const b=bbox(fc);mapEl._bounds=b;fit(m.map,b,false);
-      setLayer(m.map,'csd',{type:'FeatureCollection',features:fc.features.map(f=>({type:'Feature',geometry:f.geometry,properties:{id:f.properties.DGUID,name:f.properties.CSDNAME}}))},
+      setLayer(m.map,'csd',{type:'FeatureCollection',features:fc.features.map(f=>({type:'Feature',geometry:f.geometry,properties:{id:f.properties.DGUID,name:f.properties.name}}))},
         [{id:'csd-fill',type:'fill',paint:{'fill-color':'#bf1003','fill-opacity':['case',['boolean',['feature-state','hover'],false],.25,0]}},
          {id:'csd-line',type:'line',paint:{'line-color':['case',['boolean',['feature-state','selected'],false],'#000','#a8a8a8'],'line-width':['case',['boolean',['feature-state','selected'],false],2.2,.5]}}],
         m.map.getStyle().layers.find(l=>l.type==='symbol')?.id,{promoteId:'id'});
