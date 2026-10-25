@@ -93,9 +93,13 @@ export function treemap(items,{grouped=false,height=560,tooltip=it=>`<b>${esc(it
   const data=items.filter(i=>i.value>0).sort((a,b)=>b.value-a.value);
   return responsive(el,(w,H)=>{
     el.replaceChildren();const gap=4;
-    const tile=(it,r,color)=>{if(r.w<2||r.h<2)return;const t=h('div',{class:'tile',role:'listitem',tabindex:0,'aria-label':`${it.label}: ${it.text}`,
-      style:{left:`${r.x+gap/2}px`,top:`${r.y+gap/2}px`,width:`${r.w-gap}px`,height:`${r.h-gap}px`,background:color,color:luminance(color)>.3?INK:'#fff'}},
-      r.w>44&&r.h>30?[h('span',{class:'tile-label'},it.label),h('span',{class:'tile-value'},it.text)]:null);tipOn(t,tooltip(it));el.append(t);};
+    // Text only where it fits (padding 18 px plus 14.4 px per line and a 2 px gap); a tile without text drops its padding,
+    // which under border-box would otherwise enlarge it past its rectangle.
+    const tile=(it,r,color)=>{if(r.w<2||r.h<2)return;const W=r.w-gap,H=r.h-gap,
+      text=W<44||H<33?null:[h('span',{class:'tile-label'},it.label),H<49?null:h('span',{class:'tile-value'},it.text)];
+      const t=h('div',{class:'tile',role:'listitem',tabindex:0,'aria-label':`${it.label}: ${it.text}`,
+      style:{left:`${r.x+gap/2}px`,top:`${r.y+gap/2}px`,width:`${W}px`,height:`${H}px`,background:color,color:luminance(color)>.3?INK:'#fff',...text?{}:{padding:'0'}}},
+      text);tipOn(t,tooltip(it));el.append(t);};
     if(!grouped){const colors=ramp(BROWNS,Math.max(2,data.length));squarify(data.map(d=>d.value),0,0,w,H).forEach((r,i)=>tile(data[i],r,colors[i]));return;}
     const groups=[...data.reduce((m,d)=>m.set(d.group,[...(m.get(d.group)??[]),d]),new Map())].map(([g,list])=>({g,list,label:list[0].groupLabel,value:list.reduce((s,d)=>s+d.value,0)}))
       .sort((a,b)=>b.value-a.value),colors=ramp(BROWNS.slice(0,6),Math.max(2,groups.length));

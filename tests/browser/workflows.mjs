@@ -148,6 +148,17 @@ await check('at 768 px the explorer map ends above the community list',async pag
   if(map[1]>list[0]+1)throw Error(`map bottom ${map[1]} below list top ${list[0]}`);
   return {map,list};
 });
+for(const width of [1440,768,390])await check(`at ${width} px the workforce treemap tiles stay inside the chart and fit their text`,async page=>{
+  await page.setViewportSize({width,height:900});
+  await page.goto(`${base}?geo=2021A000246#workforce`);await section(page,'workforce');
+  await until(page,()=>document.querySelector('#workforce .treemap .tile'),undefined,60000);
+  const bad=await page.evaluate(()=>{const tm=document.querySelector('#workforce .treemap'),b=tm.getBoundingClientRect();
+    const text=t=>[...t.children].map(c=>c.getBoundingClientRect()),clash=([l,v],r)=>v&&(v.top<l.bottom-.5||v.bottom>r.bottom+.5||l.height<l.scrollHeight);
+    return [...tm.querySelectorAll('.tile')].map(t=>({t,r:t.getBoundingClientRect()})).filter(({t,r})=>r.left<b.left-.5||r.top<b.top-.5||r.right>b.right+.5||r.bottom>b.bottom+.5||t.scrollHeight>t.clientHeight+1||clash(text(t),r)||(t.children[0]&&t.children[0].clientHeight<t.children[0].scrollHeight))
+      .map(({t,r})=>`${t.getAttribute('aria-label')} [${[r.left-b.left,r.top-b.top,r.width,r.height].map(Math.round)}] scroll ${t.scrollHeight}/${t.clientHeight}`);});
+  if(bad.length)throw Error(`${bad.length} tiles: ${bad.slice(0,3).join('; ')}`);
+  return {tiles:await page.locator('#workforce .treemap .tile').count()};
+});
 fs.writeFileSync(out,JSON.stringify({base,at:new Date().toISOString(),results},null,1));
 console.log(`${results.filter(r=>r.pass).length}/${results.length} passed`);
 await browser.close();
