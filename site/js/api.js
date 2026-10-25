@@ -80,13 +80,17 @@ function hedged(run,hedge) {
     go();t=setTimeout(()=>{if(live>0)go();},hedge);
   });
 }
-const HEDGE=url=>/statcan\.gc\.ca\//.test(url)?6000:0;
+const STATCAN=/statcan\.gc\.ca\//;
+const HEDGE=url=>STATCAN.test(url)?6000:0;
+// Statistics Canada's WDS has refused every connection for about 15 s after heavy use (2026-10-25); seven attempts
+// wait 20 to 28 s in all before failing. Other hosts keep four attempts.
+const ATTEMPTS=url=>STATCAN.test(url)?7:4;
 
 // A request with bounded retries; transient failures only. body: JSON (POST JSON) or URLSearchParams (POST form).
-// Waits between attempts double from `backoff` with full jitter, to ride out bursts of refused connections.
+// Waits between attempts double from `backoff` with full jitter, each at most 8 s, to ride out bursts of refused connections.
 // race > 1 sends that many parallel copies on each retry and keeps the first answer: for a server whose
 // connections fail independently, new connections are what a retry needs.
-export function request(url,{body,accept='application/json',attempts=4,timeout=45000,parse='json',backoff=400,race=1,limit,cache:mode,hedge=HEDGE(url)}={}) {
+export function request(url,{body,accept='application/json',attempts=ATTEMPTS(url),timeout=45000,parse='json',backoff=400,race=1,limit,cache:mode,hedge=HEDGE(url)}={}) {
   const form=body instanceof URLSearchParams,key=`${url}|${form?body.toString():JSON.stringify(body??null)}|${accept}`;
   return memoRequest(cache,key,async()=>{
     let error;
@@ -101,7 +105,7 @@ export function request(url,{body,accept='application/json',attempts=4,timeout=4
         error=e instanceof AggregateError?e.errors.find(x=>x.kind!=='network')??e.errors[0]:e;
         if(!(error instanceof SourceError))error=new SourceError('network',MESSAGES.network,url);
         if(!error.transient) break;
-        if(attempt<attempts) await pause(error.wait??backoff*2**(attempt-1)*(1+Math.random()));
+        if(attempt<attempts) await pause(error.wait??Math.min(8000,backoff*2**(attempt-1)*(1+Math.random())));
       }
     }
     throw error;

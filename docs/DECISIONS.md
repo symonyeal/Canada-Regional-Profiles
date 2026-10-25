@@ -38,6 +38,8 @@ Transient failures (network, timeout, HTTP 5xx, 429) are retried a bounded numbe
 
 The StatCan boundary server returns HTTP 500 without CORS headers for about half of new connections and for any explicit field list; a browser reports both as a network failure. Until 2026-10-25 the page queried it with four parallel copies per retry; boundaries are now served with the page (see above).
 
+Statistics Canada's Web Data Service has also refused every connection for about 15 s after heavy use (observed 2026-10-25, with resets and responses lacking CORS headers). Requests to Statistics Canada hosts therefore make seven attempts, waiting 20 to 28 s in all, and other hosts four. A successful request costs nothing extra; a failing one shows its error about 20 s later than before.
+
 Census requests list the 172 characteristics the exhibits use: about 100 KB and 1 to 1.6 s per area instead of 3 MB and about 9.6 s for the full profile. WDS data points report a scalar factor of 0 for series published in thousands; the member's unit of measure supplies the scale. The earlier client showed annual LFS employment as 736.2 instead of 736,200.
 
 ## Definitions

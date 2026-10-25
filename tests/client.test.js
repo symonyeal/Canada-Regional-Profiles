@@ -85,6 +85,13 @@ test('retries race parallel copies and settle on the first success',async()=>{
   try {const d=await request('https://example.test/flaky',{attempts:3,race:3,backoff:1});assert.ok(d.ok>=3);}
   finally {globalThis.fetch=realFetch;}
 });
+test('Statistics Canada reads ride out a burst of six refused connections',async()=>{
+  // Observed 2026-10-25: every WDS connection reset or refused for about 15 s, then normal service.
+  clearCache();let n=0;
+  globalThis.fetch=async()=>{n++;if(n<=6)throw new TypeError('Failed to fetch');return reply(200,{ok:n});};
+  try {assert.deepEqual(await request('https://www150.statcan.gc.ca/t1/wds/rest/getCodeSets',{backoff:1}),{ok:7});}
+  finally {globalThis.fetch=realFetch;}
+});
 test('permanent failures are not retried and keep their kind; failed requests can be retried later',async()=>{
   clearCache();let n=0;
   globalThis.fetch=async()=>{n++;return reply(404,{});};
