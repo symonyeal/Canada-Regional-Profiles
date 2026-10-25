@@ -131,6 +131,15 @@ await check('explorer on Canada (no map) fills the selected community panel',asy
   await until(page,()=>document.querySelector('#explorer .selected-panel dl'));
   return {panel:(await page.locator('#explorer .selected-panel').textContent()).slice(0,120)};
 });
+await check('a 15 s burst of reset WDS connections delays the industries but does not fail them',async page=>{
+  // Replays the outage observed on 2026-10-25: every WDS connection reset for about 15 s, then normal service.
+  const t0=Date.now();let reset=0;
+  await page.route(/www150\.statcan\.gc\.ca\/t1\/wds/,r=>Date.now()-t0<15000?(reset++,r.abort('connectionreset')):r.continue());
+  await page.goto(`${base}?geo=2021A000262#largest`);
+  await until(page,()=>document.querySelector('#largest .tile')||document.querySelector('#largest .state.failure'),undefined,90000);
+  const failed=await page.locator('#largest .state.failure').count();if(failed)throw Error(`industries failed after ${reset} resets`);
+  return {reset,tiles:await page.locator('#largest .tile').count(),ms:Date.now()-t0};
+});
 await check('at 768 px the explorer map ends above the community list',async page=>{
   await page.setViewportSize({width:768,height:900});
   await page.goto(`${base}?geo=2021A000246#explorer`);await section(page,'explorer');
