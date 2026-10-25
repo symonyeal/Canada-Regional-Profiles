@@ -3,7 +3,8 @@ import {establishments,request} from '../api.js';
 import {CANADA,PT,int,pct,compact,fmt,ramp} from '../model.js';
 import {KPI,AGE10,HH_INCOME5,HH_TYPE,HH_SIZE,TENURE,CONSTRUCTION,DWELLING,COMMUTE_MODE,PLACE_OF_WORK,COMMUTE_TIME,EDUCATION,OCCUPATION,INDUSTRY} from '../census.js';
 import {h,rail,kpiCard,chartCard,rangeSlider} from '../ui.js';
-import {spark,barList,legend,columns,stacked,treemap,climate,shareBars,BROWN,GOLD,BROWNS} from '../charts.js';
+import {spark,barList,legend,columns,stacked,treemap,climate,shareBars} from '../charts.js';
+import {PRIMARY,COMPARE,SEQUENTIAL} from '../palette.js';
 import {lifetime,slot,sharedPair,censusMeta,populationSeries,lfsSeries,incomeSeries,tableMeta} from './common.js';
 import {filterData,parseSelection,serializeSelection,mapPanel,shapes,scopeOf} from './choropleth.js';
 import {FILTERS} from '../census.js';
@@ -41,7 +42,7 @@ function shareCard(target,{title,subtitle,group,ctx,base,size='md'}) {
     t.replaceChildren(chartCard({title,subtitle,meta:{...censusMeta(ctx.place,{universe:subtitle}),table:()=>({headers:['Category',ctx.place.name,...(b?[ctx.bench.name]:[])],
       rows:rows.map((r,i)=>[r.label,r.value,...(b?[bench[i].value]:[])]),numeric:new Set([1,2]),format:v=>pct(v)})}},
       h('div',{class:'body'},barList(rows.map((r,i)=>({label:r.label,value:r.value,text:pct(r.value),bench:bench?.[i].value,benchText:bench?pct(bench[i].value):null})),{benchName:ctx.bench.name,size})),
-      legend([[ctx.place.name,BROWN],...(b?[[ctx.bench.name,'#8b6f3e','tick']]:[])])));
+      legend([[ctx.place.name,PRIMARY],...(b?[[ctx.bench.name,COMPARE,'tick']]:[])])));
   },{alive:ctx.alive,context:title});
 }
 function seriesKpi(target,{title,ctx,load,fallback,kind='area',format,universe}) {
@@ -77,8 +78,8 @@ const DASH={
     slot(d,async t=>{const {p,b}=await base,sel=shares(p,HH_INCOME5),ben=b?shares(b,HH_INCOME5):null;
       t.replaceChildren(chartCard({title:'Household income distribution',subtitle:`Share of households by 2020 total income, ${place.name}${b?` vs ${ctx.bench.name}`:''}`,
         meta:{...censusMeta(place,{universe:'Private households, 2020 total income'}),table:()=>({headers:['Income band',place.name,...(b?[ctx.bench.name]:[])],rows:sel.map((r,i)=>[r.label,r.value,...(b?[ben[i].value]:[])]),numeric:new Set([1,2]),format:v=>pct(v)})}},
-        h('div',{class:'body'},columns({categories:sel.map(r=>r.label),series:[{name:place.name,values:sel.map(r=>r.value),color:BROWN},...(b?[{name:ctx.bench.name,values:ben.map(r=>r.value),color:GOLD}]:[])],
-          fmt:v=>pct(v),axisFmt:v=>`${v}%`,height:420})),legend([[place.name,BROWN],...(b?[[ctx.bench.name,GOLD]]:[])])));},{alive:ctx.alive,context:'Household income distribution'});
+        h('div',{class:'body'},columns({categories:sel.map(r=>r.label),series:[{name:place.name,values:sel.map(r=>r.value),color:PRIMARY},...(b?[{name:ctx.bench.name,values:ben.map(r=>r.value),color:COMPARE}]:[])],
+          fmt:v=>pct(v),axisFmt:v=>`${v}%`,height:420})),legend([[place.name,PRIMARY],...(b?[[ctx.bench.name,COMPARE]]:[])])));},{alive:ctx.alive,context:'Household income distribution'});
     seriesKpi(e,{title:'Unemployment rate',ctx,load:()=>lfsSeries(place,/^Unemployment rate$/),format:v=>pct(v),universe:'Labour force aged 15+, annual LFS average',
       fallback:async()=>({value:(await base).p.value(KPI.unemployment),sub:`${place.name} · Census 2021`})});
     seriesKpi(f,{title:'Total employment',ctx,load:()=>lfsSeries(place,/^Employment$/),format:v=>compact(v),universe:'Employed persons aged 15+, annual LFS average',
@@ -112,7 +113,7 @@ const DASH={
         meta:{...censusMeta(place,{universe:'Private households'}),table:()=>({headers:['Household type',place.name],rows:rows.map(r=>[r.label,r.count]),numeric:new Set([1]),format:v=>int(v)})}},
         h('div',{class:'body'},barList(rows.map(r=>({label:r.label,value:r.count,text:int(r.count)})),{size:'sm'}))));},{alive:ctx.alive,context:'Household type'});
     slot(t,async el=>{const {p,b}=await base,cats=HH_SIZE.groups.map(g=>g[0]),row=q=>({label:q.area?.name??'',values:HH_SIZE.groups.map(([,ids])=>q.sum(ids))});
-      const colors=ramp(BROWNS,5);
+      const colors=ramp(SEQUENTIAL,5);
       el.replaceChildren(chartCard({title:'Household size distribution',subtitle:'Share of households by number of persons',
         meta:{...censusMeta(place,{universe:'Private households'}),table:()=>({headers:['Size',place.name,...(b?[ctx.bench.name]:[])],rows:cats.map((c,i)=>[c,p.sum(HH_SIZE.groups[i][1]),...(b?[b.sum(HH_SIZE.groups[i][1])]:[])]),numeric:new Set([1,2]),format:v=>int(v)})}},
         h('div',{class:'body'},stacked([{...row(p),label:place.name},...(b?[{...row(b),label:ctx.bench.name}]:[])],cats,colors)),legend(cats.map((c,i)=>[c,colors[i]]))));},{alive:ctx.alive,context:'Household size'});
@@ -120,15 +121,15 @@ const DASH={
   },
   dwelling(body,ctx) {
     const {place,base}=ctx,[a,b,s]=['a','b','s'].map(n=>cell(body,n));
-    slot(a,async el=>{const {p,b}=await base,cats=TENURE.groups.map(g=>g[0]),row=(q,label)=>({label,values:TENURE.groups.map(([,ids])=>q.sum(ids))}),colors=[BROWN,GOLD,'#c9bdb2'];
+    slot(a,async el=>{const {p,b}=await base,cats=TENURE.groups.map(g=>g[0]),row=(q,label)=>({label,values:TENURE.groups.map(([,ids])=>q.sum(ids))}),colors=[PRIMARY,COMPARE,'#bfd1bf'];
       el.replaceChildren(chartCard({title:'Home ownership',subtitle:'Owner and renter share of private households',
         meta:{...censusMeta(place,{universe:'Private households'}),table:()=>({headers:['Tenure',place.name,...(b?[ctx.bench.name]:[])],rows:cats.map((c,i)=>[c,p.sum(TENURE.groups[i][1]),...(b?[b.sum(TENURE.groups[i][1])]:[])]),numeric:new Set([1,2]),format:v=>int(v)})}},
         h('div',{class:'body'},stacked([row(p,place.name),...(b?[row(b,ctx.bench.name)]:[])],cats,colors)),legend(cats.map((c,i)=>[c,colors[i]]))));},{alive:ctx.alive,context:'Home ownership'});
     slot(b,async el=>{const {p,b:q}=await base,sel=shares(p,CONSTRUCTION),ben=q?shares(q,CONSTRUCTION):null;
       el.replaceChildren(chartCard({title:'Dwelling construction period',subtitle:'Share of occupied private dwellings by period built',
         meta:{...censusMeta(place,{universe:'Occupied private dwellings'}),table:()=>({headers:['Period',place.name,...(q?[ctx.bench.name]:[])],rows:sel.map((r,i)=>[r.label,r.value,...(q?[ben[i].value]:[])]),numeric:new Set([1,2]),format:v=>pct(v)})}},
-        h('div',{class:'body'},columns({categories:sel.map(r=>r.label),series:[{name:place.name,values:sel.map(r=>r.value),color:BROWN},...(q?[{name:ctx.bench.name,values:ben.map(r=>r.value),color:GOLD}]:[])],fmt:v=>pct(v),axisFmt:v=>`${v}%`,height:330,rotate:true})),
-        legend([[place.name,BROWN],...(q?[[ctx.bench.name,GOLD]]:[])])));},{alive:ctx.alive,context:'Construction period'});
+        h('div',{class:'body'},columns({categories:sel.map(r=>r.label),series:[{name:place.name,values:sel.map(r=>r.value),color:PRIMARY},...(q?[{name:ctx.bench.name,values:ben.map(r=>r.value),color:COMPARE}]:[])],fmt:v=>pct(v),axisFmt:v=>`${v}%`,height:330,rotate:true})),
+        legend([[place.name,PRIMARY],...(q?[[ctx.bench.name,COMPARE]]:[])])));},{alive:ctx.alive,context:'Construction period'});
     shareCard(s,{title:'Dwelling type',subtitle:`Share of occupied private dwellings, ${place.name}${ctx.bench.id!==place.id?` vs ${ctx.bench.name}`:''}`,group:DWELLING,ctx,base,size:'sm'});
   },
   workforce(body,ctx) {workforceCards(body,ctx);},
@@ -218,6 +219,6 @@ function climateCard(target,ctx) {
         geo:`Station ${chosen.name} (ECCC station ${chosen.id}); not an average for ${place.name}`,period:`${chosen.period} normals`,
         table:()=>({headers:['Month','Precipitation (mm)','Daily high (°C)','Daily low (°C)'],rows:monthNames.map((m,i)=>[m,precip[i],high[i],low[i]]),numeric:new Set([1,2,3]),format:v=>String(v)})}},
       h('div',{class:'body'},h('label',{class:'station-row'},'Station ',select),climate({precip,high,low,height:330})),
-      legend([['Monthly precipitation (mm)','#aab9ef'],['Low (°C)','#d0632a'],['High (°C)','#e8b04b']])));
+      legend([['Monthly precipitation (mm)','#b4cbd1'],['Low (°C)','#326b7a'],['High (°C)','#a35334']])));
   },{alive:ctx.alive,context:'Climate summary'});
 }

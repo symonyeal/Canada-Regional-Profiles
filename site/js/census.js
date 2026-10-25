@@ -1,5 +1,6 @@
 // Census Profile 2021 characteristic identifiers (codelist CL_CHARACTERISTIC) behind each exhibit.
 // These are classification identifiers and bin edges, not observations. Groups sum published components only.
+import {MAP_SCALE} from './palette.js';
 
 const ids=(a,b)=>Array.from({length:b-a+1},(_,i)=>String(a+i));
 const money=v=>v==null?'+':`$${v.toLocaleString('en-CA')}`;
@@ -37,43 +38,43 @@ export const INDUSTRY={total:'2261',groups:ids(2262,2281).map(id=>[null,[id]])};
 // lo/hi are the bin edges used for the interval label.
 export const FILTERS={
   consumers:{title:'Local consumers',unit:'Consumers',icon:'household',description:'People counted in the selected Census bins. The map shows each census subdivision’s count or share; the card shows the selected area’s own published total.',maps:{
-    income:{label:'by Individual income',icon:'dollar',kind:'range',total:'150',ramp:['#FFFFB2','#FECC5C','#FD8D3C','#F03B20','#BD0026'],default:[3,6],
+    income:{label:'by Individual income',icon:'dollar',kind:'range',total:'150',ramp:MAP_SCALE,default:[3,6],
       bins:[...ids(151,160),'162','163'].map((id,i)=>({id,lo:[0,1e4,2e4,3e4,4e4,5e4,6e4,7e4,8e4,9e4,1e5,1.5e5][i],hi:[1e4,2e4,3e4,4e4,5e4,6e4,7e4,8e4,9e4,1e5,1.5e5,null][i]})),
       text:(a,b)=>b.hi==null?`${money(a.lo)} and over`:`${money(a.lo)} - ${money(b.hi)}`,ends:['$0','$150,000+'],universe:'Population aged 15+ with total income, 2020'},
-    age:{label:'by Individual age',icon:'user',kind:'range',total:'8',ramp:['#FFFFCC','#A1DAB4','#41B6C4','#2C7FB8','#253494'],default:[2,11],
+    age:{label:'by Individual age',icon:'user',kind:'range',total:'8',ramp:MAP_SCALE,default:[2,11],
       bins:[...ids(10,12),...ids(14,23),...ids(25,29)].map((id,i)=>({id,lo:i*5,hi:i===17?null:i*5+4})),
       text:(a,b)=>b.hi==null?`${a.lo}+`:`${a.lo} - ${b.hi}`,ends:['0','85+'],universe:'Total population, 2021'},
-    hhincome:{label:'by Household income',icon:'home',kind:'range',total:'246',ramp:['#FFFFB2','#FECC5C','#FD8D3C','#F03B20','#BD0026'],default:[4,10],
+    hhincome:{label:'by Household income',icon:'home',kind:'range',total:'246',ramp:MAP_SCALE,default:[4,10],
       bins:[...ids(247,261),...ids(263,266)].map((id,i)=>({id,lo:[0,5e3,1e4,1.5e4,2e4,2.5e4,3e4,3.5e4,4e4,4.5e4,5e4,6e4,7e4,8e4,9e4,1e5,1.25e5,1.5e5,2e5][i],
         hi:[5e3,1e4,1.5e4,2e4,2.5e4,3e4,3.5e4,4e4,4.5e4,5e4,6e4,7e4,8e4,9e4,1e5,1.25e5,1.5e5,2e5,null][i]})),
       text:(a,b)=>b.hi==null?`${money(a.lo)} and over`:`${money(a.lo)} - ${money(b.hi)}`,ends:['$0','$200,000+'],unit:'Households',universe:'Private households, 2020 income'},
-    hhtype:{label:'by Household type',icon:'household',kind:'toggle',total:'100',ramp:['#F7FCB9','#ADDD8E','#41AB5D','#006837'],default:[0],
+    hhtype:{label:'by Household type',icon:'household',kind:'toggle',total:'100',ramp:MAP_SCALE,default:[0],
       bins:HH_TYPE.groups.map(([name,[id]])=>({id,name})),unit:'Households',universe:'Private households, 2021'},
   }},
   dwellings:{title:'Local dwellings',unit:'Dwellings',icon:'dwelling',description:'Occupied private dwellings counted in the selected Census bins.',maps:{
-    period:{label:'by Construction period',icon:'clock',kind:'range',total:'1426',ramp:['#FFF5EB','#FDBE85','#FD8D3C','#E6550D','#A63603'],default:[3,6],
+    period:{label:'by Construction period',icon:'clock',kind:'range',total:'1426',ramp:MAP_SCALE,default:[3,6],
       bins:CONSTRUCTION.groups.map(([name,[id]],i)=>({id,name,lo:[null,1961,1981,1991,2001,2006,2011,2016][i],hi:[1960,1980,1990,2000,2005,2010,2015,2021][i]})),
       text:(a,b)=>a.lo==null?`1960 or before - ${b.hi}`:`${a.lo} - ${b.hi}`,ends:['< 1960','2021'],universe:'Occupied private dwellings, 2021'},
-    structure:{label:'by Structure type',icon:'building',kind:'toggle',total:'41',ramp:['#F2F0F7','#BCBDDC','#807DBA','#54278F'],default:[0],
+    structure:{label:'by Structure type',icon:'building',kind:'toggle',total:'41',ramp:MAP_SCALE,default:[0],
       bins:DWELLING.groups.map(([name,[id]])=>({id,name})),universe:'Occupied private dwellings, 2021'},
-    tenure:{label:'by Tenure',icon:'key',kind:'toggle',total:'1400',ramp:['#EFF3FF','#9ECAE1','#4292C6','#08519C'],default:[1],
+    tenure:{label:'by Tenure',icon:'key',kind:'toggle',total:'1400',ramp:MAP_SCALE,default:[1],
       bins:TENURE.groups.map(([name,[id]])=>({id,name})),unit:'Households',universe:'Private households, 2021'},
-    bedrooms:{label:'by No. of bedrooms',icon:'bed',kind:'range',total:'1407',ramp:['#FEEBE2','#FBB4B9','#F768A1','#AE017E'],default:[2,3],
+    bedrooms:{label:'by No. of bedrooms',icon:'bed',kind:'range',total:'1407',ramp:MAP_SCALE,default:[2,3],
       bins:ids(1408,1412).map((id,i)=>({id,lo:i,hi:i===4?null:i})),text:(a,b)=>b.hi==null?`${a.lo}+ bedrooms`:a.lo===b.hi?`${a.lo} bedroom${a.lo===1?'':'s'}`:`${a.lo} - ${b.hi} bedrooms`,
       ends:['0','4+'],universe:'Occupied private dwellings, 2021'},
   }},
   businesses:{title:'Local businesses',unit:'Businesses',icon:'store',description:'Employer business locations in the selected industries, from the latest Canadian Business Counts release.',maps:{
-    industry:{label:'by Industry',icon:'store',kind:'toggle',source:'business',ramp:['#FFFFB2','#FECC5C','#FD8D3C','#F03B20','#BD0026'],default:[0],bins:null,universe:'Employer locations with employees'},
+    industry:{label:'by Industry',icon:'store',kind:'toggle',source:'business',ramp:MAP_SCALE,default:[0],bins:null,universe:'Employer locations with employees'},
   }},
   workforce:{title:'Workforce',unit:'Workers',icon:'workforce',description:'Three independent maps. Pick one, then switch its groups on or off.',maps:{
-    education:{label:'by Education',icon:'graduation',kind:'toggle',total:'2014',ramp:['#F7FBFF','#9ECAE1','#4292C6','#08306B'],default:[1],
+    education:{label:'by Education',icon:'graduation',kind:'toggle',total:'2014',ramp:MAP_SCALE,default:[1],
       bins:[['No certificate, diploma or degree','2015'],['High school diploma or equivalent','2016'],['Apprenticeship or trades certificate','2019'],
         ['College, CEGEP or other non-university diploma','2022'],['University certificate below bachelor level','2023'],['Bachelor’s degree','2025'],
         ['University certificate above bachelor level','2026'],['Medicine, dentistry, veterinary or optometry','2027'],['Master’s degree','2028'],['Earned doctorate','2029']].map(([name,id])=>({id,name})),
       unit:'People',universe:'Population aged 25 to 64, 2021'},
-    occupation:{label:'by Occupation',icon:'briefcase',kind:'toggle',total:'2248',ramp:['#FFF7EC','#FDBB84','#EF6548','#990000'],default:[1],
+    occupation:{label:'by Occupation',icon:'briefcase',kind:'toggle',total:'2248',ramp:MAP_SCALE,default:[1],
       bins:ids(2249,2258).map(id=>({id,name:null})),unit:'Workers',universe:'Labour force aged 15+, 2021'},
-    industry:{label:'by Industry',icon:'factory',kind:'toggle',total:'2261',ramp:['#F7F4F9','#C994C7','#DD3497','#7A0177'],default:[15],
+    industry:{label:'by Industry',icon:'factory',kind:'toggle',total:'2261',ramp:MAP_SCALE,default:[15],
       bins:ids(2262,2281).map(id=>({id,name:null})),unit:'Workers',universe:'Labour force aged 15+, 2021'},
   }},
 };
