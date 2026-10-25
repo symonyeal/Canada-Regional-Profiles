@@ -1,5 +1,13 @@
 # Decisions
 
+## 2026-10-25: atlas design
+
+The owner requested a complete visual upgrade. The interface now uses ivory backgrounds, forest green marks, copper comparisons, DM Serif Display headings and DM Sans controls and data labels. Numbered, left-aligned section headings and a separate geography panel establish a consistent hierarchy across the nine tools. Selected options use borders and labels as well as colour.
+
+Chart colours are declared in `site/js/palette.js`; CSS holds the matching interface tokens. Maps share a sequential green scale; benchmark marks use copper. Treemap and stacked-bar text chooses black or white from the fill's relative luminance, with a threshold of 0.179. The masthead outline is derived from the committed 2021 provincial boundaries in a Lambert azimuthal equal-area projection centred on Canada; it contains no observations. The existing SVG charts, MapLibre maps, public data adapters, tables and CSV exports remain in use.
+
+This design intentionally departs from the reference's typography, brown palette and centred uppercase headings. The reference remains the record of the original tool behaviour and data definitions.
+
 ## 2026-10-25: speed and reliability pass
 
 A profiler recorded each section's time to settle, its requests, bytes and failures, for Manitoba, Quebec and Montréal. Computation was not the cost: natural breaks over 1,282 subdivisions took 12 ms, decoding the subdivision list 21 ms and parsing the 5 MB table catalogue 9 ms, so no client code moved to Rust or WebAssembly. A V8 profile on 2026-10-25 confirmed it: with every tool mounted, site modules used 0.3 to 0.5 s of a 35 s load, against 1.3 to 2.7 s of map rendering, and the largest site cost is the browser's own JSON parser. A WebAssembly kernel would have to copy its results back into JavaScript objects. Rust stays where it pays: the offline boundary builder. Time went to the network: boundary requests refused by the server, Statistics Canada connections that hung for 20 to 35 s, 33 Census requests for one Quebec map, and an Overpass query that waited 90 s and then failed.

@@ -24,6 +24,8 @@ There are nine embeds. An earlier inventory listed eight because it missed `gate
 
 ## Visual language
 
+The list below records the original reference. The visual redesign requested on 2026-10-25 replaces its typography, brown palette and centred headings with the atlas design recorded in [Decisions](DECISIONS.md). Tool order and data definitions still follow this document.
+
 - Embed type: Instrument Sans. Titles 20 to 25 px at weight 650 with about −0.03 em tracking; body 12.5 to 13 px. Ink #0f1622, body #475467, muted #667085.
 - Cards: white, 1 px #eaecf0 border, 14 px radius; frames 16 px radius. Selected cards: dark outline or a #f4f2f0 tint.
 - Client theme (`reference/client/rmed/customStyle`): chart colours #7d622e and #473729.

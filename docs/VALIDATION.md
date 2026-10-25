@@ -4,6 +4,15 @@ What was checked, how, and the result. Runtime checks of the website are separat
 
 ## Gate
 
+### Atlas design (2026-10-25)
+
+- Required checks: 37 JavaScript tests, 9 Rust tests and 11 Python tests passed; 6 slow Python tests deselected. Ruff and the dependency check passed.
+- Browser workflows: 19 of 19 passed on the redesigned client, including shared URLs, history, keyboard selection, benchmark changes, CSV agreement and recovery from source failures.
+- Responsive review: all nine sections at 1440, 768 and 390 px, all six community dashboards at those widths, the industry trends overlay at those widths, and the geography controls with Newfoundland and Labrador at 320 px. No horizontal page overflow or page errors in the final review. The industry exhibit grid now permits its content to shrink when the viewport narrows; the industry overlay gives charts their full height and lets the panel scroll.
+- Contrast: black or white text on 256 interpolated treemap fills had a minimum ratio of 4.61:1; forest green and copper against white measured 8.57:1 and 5.46:1. This is a palette check, not a complete accessibility audit.
+- Coverage sweep: Canada and all 13 provinces and territories rendered all nine tools without failure panels or JavaScript errors.
+- Reference appearance: intentionally changed at the owner's request; no claim of visual identity with the reference.
+
 | Check | Command | Result (2026-10-25) |
 | --- | --- | --- |
 | JavaScript unit and behaviour tests | `node --test tests/*.test.js` | 37 passed, 0 failed |

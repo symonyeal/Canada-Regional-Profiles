@@ -6,11 +6,11 @@ import {createMap,boundaryOf,provinces,metroAreas,arcgis,isochrone,wikidata,cont
 import {lifetime} from './common.js';
 
 const NETS=[
-  {key:'air',label:'Airport network',sub:'Airports and passenger traffic',icon:'plane',color:'#4a5bd4'},
-  {key:'road',label:'Major road network',sub:'National Highway System and drive times',icon:'city',color:'#b4832b'},
-  {key:'port',label:'Sea port network',sub:'Ports and marine terminals',icon:'anchor',color:'#12867b'},
-  {key:'rail',label:'Rail and freight network',sub:'National Railway Network',icon:'train',color:'#c0504a'},
-  {key:'bb',label:'Broadband network',sub:'High-speed internet coverage',icon:'wifi',color:'#9c3b84'},
+  {key:'air',label:'Airport network',sub:'Airports and passenger traffic',icon:'plane',color:'#326b7a'},
+  {key:'road',label:'Major road network',sub:'National Highway System and drive times',icon:'city',color:'#8a652c'},
+  {key:'port',label:'Sea port network',sub:'Ports and marine terminals',icon:'anchor',color:'#286f59'},
+  {key:'rail',label:'Rail and freight network',sub:'National Railway Network',icon:'train',color:'#a35334'},
+  {key:'bb',label:'Broadband network',sub:'High-speed internet coverage',icon:'wifi',color:'#77536c'},
 ];
 const SPEEDS=[['25Mbps','25 Mbps','#67b77d'],['50/10Mbps','50/10 Mbps','#fee985'],['100Mbps','100 Mbps','#feb46a'],['Gigabit','Gigabit','#f26f71']];
 const fold=s=>s.normalize('NFKD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/, [^,]+$/,'').replace(/[^a-z0-9]/g,'');

@@ -130,17 +130,20 @@ function setupBar() {
 // ---------- sections ----------
 function build() {
   const main=$('main'),links=$('section-links');
-  for(const key of SECTIONS){
+  for(const [i,key] of SECTIONS.entries()){
     const t=TOOLS[key],mount=h('div',{class:'tool',id:`${key}-tool`});
     main.append(h('section',{class:'tool-section',id:key,'aria-labelledby':`${key}-h`},
-      h('div',{class:'wrap'},h('div',{class:'section-head'},h('h2',{id:`${key}-h`},t.title),h('span',{class:'dashes','aria-hidden':'true'}),h('p',{},t.text)),mount)));
-    links.append(h('li',{},h('a',{href:`#${key}`,onclick:()=>{state={...state,section:key};}},t.nav)));
+      h('div',{class:'wrap'},h('div',{class:'section-head'},
+        h('div',{class:'section-title'},h('span',{class:'section-number','aria-hidden':'true'},String(i+1).padStart(2,'0')),h('h2',{id:`${key}-h`},t.title)),h('p',{},t.text)),mount)));
+    links.append(h('li',{},h('a',{href:`#${key}`,onclick:()=>{state={...state,section:key};}},h('span',{class:'nav-number','aria-hidden':'true'},String(i+1).padStart(2,'0')),t.nav)));
   }
   const io=new IntersectionObserver(entries=>{for(const e of entries)if(e.isIntersecting&&!mounted.has(e.target.dataset.key)){
     const key=e.target.dataset.key,tool=TOOLS[key].make(e.target,app);mounted.set(key,tool);tool.update(new Set(['geo']));io.unobserve(e.target);}},{rootMargin:'700px 0px'});
   for(const key of SECTIONS){const el=$(`${key}-tool`);el.dataset.key=key;io.observe(el);}
-  const spy=new IntersectionObserver(entries=>{for(const e of entries)if(e.isIntersecting)
-    links.querySelectorAll('a').forEach(a=>a.setAttribute('aria-current',String(a.getAttribute('href')===`#${e.target.id}`)));},{rootMargin:'-45% 0px -50% 0px'});
+  const spy=new IntersectionObserver(entries=>{
+    const key=document.querySelector('.hero').getBoundingClientRect().bottom>64?'logistics':entries.filter(e=>e.isIntersecting).at(-1)?.target.id;
+    if(key)links.querySelectorAll('a').forEach(a=>a.setAttribute('aria-current',String(a.getAttribute('href')===`#${key}`)));
+  },{rootMargin:'-45% 0px -50% 0px'});
   for(const key of SECTIONS)spy.observe($(key));
 }
 function sources() {

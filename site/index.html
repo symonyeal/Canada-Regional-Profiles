@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Canada Regional Profiles</title>
 <meta name="description" content="Logistics, demographics, markets, workforce, industries and postsecondary enrolments for Canada, its provinces and territories and local Census geographies, queried live from public sources.">
-<meta name="theme-color" content="#473729">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23473729'/%3E%3Cpath d='M9 22V10h5.5a3.5 3.5 0 010 7H9m6 0l4 5M19 10v12' stroke='white' stroke-width='2.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#173f35">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23173f35'/%3E%3Cpath d='M9 22V10h5.5a3.5 3.5 0 010 7H9m6 0l4 5M19 10v12' stroke='white' stroke-width='2.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Montserrat:wght@700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" crossorigin="anonymous">
 <link rel="stylesheet" href="style.css">
 <script defer src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js" crossorigin="anonymous"></script>
@@ -18,7 +18,7 @@
 <a class="skip" href="#main">Skip to the profile</a>
 <header class="topbar">
   <div class="wrap topbar-inner">
-    <a class="brand" href="./"><span class="brand-mark" aria-hidden="true">CRP</span>Canada Regional Profiles</a>
+    <a class="brand" href="./"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2Z M9 3v16 M15 5v16"/></svg></span><span>Canada <span class="brand-light">Regional Profiles</span></span></a>
     <nav class="topbar-links" aria-label="Project">
       <button type="button" class="link-btn" id="open-sources">Sources and requests</button>
       <a href="https://github.com/symonyeal/Canada-Regional-Profiles">Source code</a>
@@ -27,9 +27,20 @@
 </header>
 <section class="hero" aria-labelledby="place-name">
   <div class="wrap">
-    <p class="eyebrow">Regional profile</p>
-    <h1 id="place-name">Canada</h1>
-    <p class="place-meta" id="place-meta">Country · Census 2021 geography</p>
+    <div class="hero-lead">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="eyebrow-line" aria-hidden="true"></span>Regional atlas / Canada</p>
+        <h1 id="place-name">Canada</h1>
+        <p class="place-meta" id="place-meta">Country · Census 2021 geography</p>
+        <p class="hero-description">Demographics, infrastructure and industry<br>for Canadian communities.</p>
+      </div>
+      <figure class="atlas" aria-label="Map of Canada's provinces and territories, 2021 Census boundaries">
+        <img src="assets/canada.svg" width="460" height="280" alt="Outline of Canada with provincial and territorial boundaries">
+        <figcaption>13 provinces &amp; territories <span aria-hidden="true">·</span> 2021 Census geography</figcaption>
+      </figure>
+    </div>
+    <div class="geo-panel">
+    <div class="geo-panel-head"><span class="eyebrow">Choose your geography</span><span>Applies to all nine sections</span></div>
     <form class="geo-bar" id="geo-bar" role="search" aria-label="Choose a geography" onsubmit="return false">
       <label class="field"><span>Province or territory</span><select id="province"></select></label>
       <label class="field"><span>Local geography</span><select id="level">
@@ -48,6 +59,8 @@
       </div>
     </form>
     <p class="geo-status" id="geo-status" role="status" aria-live="polite"></p>
+    </div>
+    <div class="atlas-note"><span>Public data, requested at source</span><span>Census 2021 · Each exhibit states its reference period</span></div>
   </div>
 </section>
 <nav class="section-nav" aria-label="Tools">

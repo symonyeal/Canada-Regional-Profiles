@@ -4,6 +4,8 @@ The page reproduces the nine tools of the [reference](REFERENCE.md) in its order
 
 ## Feature matrix
 
+The 2026-10-25 visual redesign intentionally changes the page styling: ivory and green surfaces, copper comparisons, serif headings, a geography panel and numbered navigation. The following matrix records functional and data coverage against the original reference; it does not claim visual identity. See [Decisions](DECISIONS.md).
+
 | Tool and feature | Reference | This site | Status | Check (Manitoba unless stated) |
 | --- | --- | --- | --- | --- |
 | Page | Title band, nine headed sections | Same order; title band carries geography selection, comparison area, copy link and refresh; sticky section links | reproduced | Rendered at 1440, 768 and 390 px; no horizontal page overflow |

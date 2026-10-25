@@ -101,9 +101,9 @@ async function baseStyle() {
   styleJSON??=request(STYLE,{attempts:3}).then(s=>{
     const st=structuredClone(s);
     for(const l of st.layers){
-      if(l.id==='background')l.paint={'background-color':'#f8f8f7'};
-      if(/^water/.test(l.id)&&l.type==='fill')l.paint={...l.paint,'fill-color':'#cfe3f1'};
-      if(/^waterway/.test(l.id)&&l.type==='line')l.paint={...l.paint,'line-color':'#cfe3f1'};
+      if(l.id==='background')l.paint={'background-color':'#f3f5ee'};
+      if(/^water/.test(l.id)&&l.type==='fill')l.paint={...l.paint,'fill-color':'#dce8e4'};
+      if(/^waterway/.test(l.id)&&l.type==='line')l.paint={...l.paint,'line-color':'#dce8e4'};
       if(/^landcover|^landuse|^park/.test(l.id)&&l.type==='fill')l.paint={...l.paint,'fill-opacity':.35};
       // Labels in Latin script only: the style's second line of non-Latin names made the map fetch glyph ranges
       // for a dozen scripts (about 1 MB) on first view.
@@ -116,7 +116,7 @@ async function baseStyle() {
 // Creates a MapLibre map inside el. Returns {map, ready, destroy}. The basemap failing leaves overlays usable on a plain background.
 export function createMap(el,{bounds,controls=true}={}) {
   if(!window.maplibregl){el.append(h('div',{class:'state failure'},'The map library could not load. Tables and exports remain available.'));return null;}
-  const map=new maplibregl.Map({container:el,style:{version:8,sources:{},layers:[{id:'background',type:'background',paint:{'background-color':'#f8f8f7'}}],glyphs:'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf'},
+  const map=new maplibregl.Map({container:el,style:{version:8,sources:{},layers:[{id:'background',type:'background',paint:{'background-color':'#f3f5ee'}}],glyphs:'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf'},
     center:[-96,60],zoom:2.4,attributionControl:{compact:true},cooperativeGestures:false,dragRotate:false,pitchWithRotate:false,maxPitch:0});
   map.touchZoomRotate.disableRotation();map.scrollZoom.disable();
   const ready=new Promise(resolve=>map.once('load',resolve)).then(async()=>{

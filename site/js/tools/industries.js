@@ -3,7 +3,8 @@
 import {seph,catalog,tablePair,businessSlice,request,table,SourceError} from '../api.js';
 import {CANADA,PT,estimate,rankIndustries,tradedShare,sectorOf,SECTORS,int,signed,compact,fmt} from '../model.js';
 import {h,optionCard,segmented,chartCard,dataTable,empty,failure,loading,esc,exhibitMenu} from '../ui.js';
-import {treemap,barList,bubbles,legend,BROWN} from '../charts.js';
+import {treemap,barList,bubbles,legend} from '../charts.js';
+import {PRIMARY,FILL} from '../palette.js';
 import {lifetime} from './common.js';
 
 let rules;
@@ -81,7 +82,7 @@ function industryTool(kind) {
         rows:rows.map((r,i)=>[i+1,r.name,r.code,...(kind==='growing'?[r.absolute]:[]),r.value,...(d.prior?[r.previous]:[]),r.lq==null?null:Math.round(r.lq*100)/100,r.traded==null?null:r.traded?'Traded':'Local']),
         numeric:new Set([0,3,4,5,6]),format:(v,i)=>typeof v==='number'?(i>=5&&String(v).includes('.')?v.toFixed(2):fmt(v)):v})};
       card.replaceChildren(h('header',{class:'card-head'},h('div',{},h('h4',{},setLabel),h('p',{class:'card-sub'},sub),
-          kind==='growing'&&view==='chart'?legend([['Traded',BROWN,'dot'],['Local','#f4ebe4','dot']]):null),
+          kind==='growing'&&view==='chart'?legend([['Traded',PRIMARY,'dot'],['Local',FILL,'dot']]):null),
         h('div',{class:'exhibit-tools'},segmented(views,view,v=>{app.set(viewKey,v);render();},'Display'),exhibitMenu({title:`${title}: ${setLabel}`,...meta}))),
         h('div',{class:'body'},rows.length?draw(kind,view,rows,d,place):h('div',{class:'state empty'},`No ${setLabel.toLowerCase()} with published values for ${place.name}.`)),
         d.suppressed?h('p',{class:'card-sub',style:{marginTop:'8px'}},`${d.suppressed} of ${d.count} industries are suppressed or not published for ${place.name}; rankings use published values only.`):null);
@@ -106,7 +107,7 @@ function draw(kind,view,rows,d,place) {
   if(kind==='largest')return treemap(rows.map(r=>({label:r.name,value:r.value,text:int(r.value),group:sectorOf(r.code),groupLabel:SECTORS[sectorOf(r.code)]??sectorOf(r.code),r})),
     {grouped:true,height:'fill',tooltip:it=>tip(it.r,d)});
   return bubbles(rows.map(r=>({x:r.absolute,y:r.value,size:r.value,short:r.name.length>30?`${r.name.slice(0,28).trimEnd()}…`:r.name,label:`${r.name}: ${signed(r.absolute)} since ${d.prior}, ${int(r.value)} in ${d.year}`,
-    fill:r.traded?BROWN:'#f4ebe4',stroke:'#3b2e23',html:tip(r,d)})),{xLabel:`Employment growth (${d.prior} – ${d.year})`,yLabel:`Total employment (${d.year})`,height:'fill'});
+    fill:r.traded?PRIMARY:FILL,stroke:PRIMARY,html:tip(r,d)})),{xLabel:`Employment growth (${d.prior} – ${d.year})`,yLabel:`Total employment (${d.year})`,height:'fill'});
 }
 
 export const largest=industryTool('largest');
