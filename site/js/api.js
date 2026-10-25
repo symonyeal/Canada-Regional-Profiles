@@ -34,7 +34,7 @@ export function clearCache() {cache.clear();}
 const lanes=new Map();
 async function lane(url,fn,limit) {
   const host=new URL(url,globalThis.location?.href??'http://localhost/').host;
-  limit??=host.includes('overpass')||host.includes('valhalla')?1:host.includes('wikidata')?2:6;
+  limit??=host.includes('valhalla')?1:host.includes('wikidata')?2:6;
   const s=lanes.get(host)??lanes.set(host,{active:0,queue:[]}).get(host);
   if(s.active>=limit) await new Promise(r=>s.queue.push(r));
   s.active++;
@@ -43,11 +43,11 @@ async function lane(url,fn,limit) {
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 
 // One HTTP exchange, classified. Resolves with parsed data or throws a SourceError.
-async function exchange(url,{body,accept,timeout,parse,attempt,signal}) {
+async function exchange(url,{body,accept,timeout,parse,attempt,signal,cache='no-store'}) {
   const form=body instanceof URLSearchParams,start=performance.now();
   let r;
   try {
-    r=await fetch(url,{method:body?'POST':'GET',cache:'no-store',signal:signal?AbortSignal.any([signal,AbortSignal.timeout(timeout)]):AbortSignal.timeout(timeout),
+    r=await fetch(url,{method:body?'POST':'GET',cache,signal:signal?AbortSignal.any([signal,AbortSignal.timeout(timeout)]):AbortSignal.timeout(timeout),
       headers:{Accept:accept,...(body&&!form?{'Content-Type':'application/json'}:{})},body:form?body:body?JSON.stringify(body):undefined});
   } catch(e) {
     const err=e?.name==='TimeoutError'?new SourceError('timeout',MESSAGES.timeout,url):e?.name==='AbortError'?new SourceError('network','Superseded by a parallel attempt.',url):new SourceError('network',MESSAGES.network,url);
@@ -66,25 +66,42 @@ async function exchange(url,{body,accept,timeout,parse,attempt,signal}) {
   return data;
 }
 
+// Hedged exchange (Dean and Barroso 2013, "The tail at scale"): when the first copy has not answered after
+// `hedge` ms, a second copy is sent and the first answer kept. Statistics Canada's services answer most reads
+// in about a second but leave some connections hanging for 20 to 35 s. The exchange fails when every copy sent
+// has failed; a first copy failing before the delay is not hedged (the retry loop handles it).
+function hedged(run,hedge) {
+  if(!hedge) return run();
+  const stop=new AbortController();
+  return new Promise((resolve,reject)=>{
+    let live=0,failure=null,t=null;
+    const go=()=>{live++;run(stop.signal).then(v=>{clearTimeout(t);stop.abort();resolve(v);},
+      e=>{failure??=e;if(--live===0){clearTimeout(t);reject(failure);}});};
+    go();t=setTimeout(()=>{if(live>0)go();},hedge);
+  });
+}
+const HEDGE=url=>/statcan\.gc\.ca\//.test(url)?6000:0;
+
 // A request with bounded retries; transient failures only. body: JSON (POST JSON) or URLSearchParams (POST form).
+// Waits between attempts double from `backoff` with full jitter, to ride out bursts of refused connections.
 // race > 1 sends that many parallel copies on each retry and keeps the first answer: for a server whose
 // connections fail independently, new connections are what a retry needs.
-export function request(url,{body,accept='application/json',attempts=3,timeout=45000,parse='json',backoff=350,race=1,limit}={}) {
+export function request(url,{body,accept='application/json',attempts=4,timeout=45000,parse='json',backoff=400,race=1,limit,cache:mode,hedge=HEDGE(url)}={}) {
   const form=body instanceof URLSearchParams,key=`${url}|${form?body.toString():JSON.stringify(body??null)}|${accept}`;
   return memoRequest(cache,key,async()=>{
     let error;
     for(let attempt=1;attempt<=attempts;attempt++) {
-      const n=attempt>1?race:1;
+      const n=attempt>1?race:1,opts={body,accept,timeout,parse,attempt,cache:mode};
       try {
-        if(n===1) return await lane(url,()=>exchange(url,{body,accept,timeout,parse,attempt}),limit);
+        if(n===1) return await hedged(signal=>lane(url,()=>exchange(url,{...opts,signal}),limit==null?undefined:limit+1),hedge);
         const stop=new AbortController();
-        const result=await Promise.any(Array.from({length:n},()=>lane(url,()=>exchange(url,{body,accept,timeout,parse,attempt,signal:stop.signal}),limit==null?undefined:limit+n)));
+        const result=await Promise.any(Array.from({length:n},()=>lane(url,()=>exchange(url,{...opts,signal:stop.signal}),limit==null?undefined:limit+n)));
         stop.abort();return result;
       } catch(e) {
         error=e instanceof AggregateError?e.errors.find(x=>x.kind!=='network')??e.errors[0]:e;
         if(!(error instanceof SourceError))error=new SourceError('network',MESSAGES.network,url);
         if(!error.transient) break;
-        if(attempt<attempts) await pause(error.wait??backoff*attempt+Math.random()*backoff);
+        if(attempt<attempts) await pause(error.wait??backoff*2**(attempt-1)*(1+Math.random()));
       }
     }
     throw error;
@@ -120,9 +137,10 @@ export async function census(geo=CANADA,{full=false}={}) {
   const url=`${CENSUS}/data/${flow(geo.type)}/A5.${geo.id}.1.${full?'':PROFILE_IDS.join('+')}.1`;
   const p=new Profile(decodeSDMX(await request(url,{accept:SDMX})));p.url=url;return p;
 }
-// Selected characteristics for many areas of one type, 40 areas per request.
+// Selected characteristics for many areas of one type, 120 areas per request: a request costs about 2 s plus 6 ms
+// per area (measured 2026-10-24: 40 areas 2.3 s, 120 areas 2.5 s, 240 areas 3.8 s), and URLs stay near 2 kB.
 export async function censusMany(type,ids,chars) {
-  const chunks=[];for(let i=0;i<ids.length;i+=40)chunks.push(ids.slice(i,i+40));
+  const chunks=[];for(let i=0;i<ids.length;i+=120)chunks.push(ids.slice(i,i+120));
   const out=new Map(ids.map(id=>[id,[]]));
   await Promise.all(chunks.map(async c=>{
     let rows;

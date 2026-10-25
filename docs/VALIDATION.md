@@ -4,16 +4,34 @@ What was checked, how, and the result. Runtime checks of the website are separat
 
 ## Gate
 
-| Check | Command | Result (2026-10-23) |
+| Check | Command | Result (2026-10-25) |
 | --- | --- | --- |
-| JavaScript unit and behaviour tests | `node --test tests/*.test.js` | 33 passed, 0 failed |
+| JavaScript unit and behaviour tests | `node --test tests/*.test.js` | 36 passed, 0 failed |
+| Boundary builder tests | `cargo test --release --manifest-path tools/boundaries/Cargo.toml` | 9 passed, 0 failed |
 | Python unit checks (historical analysis) | `python -m pytest -q -m "not slow"` | 11 passed, 6 deselected |
 | Lint | `python -m ruff check .` | passed |
 | Dependencies | `python -m pip check` | no broken requirements |
-| Browser workflows | `node tests/browser/workflows.mjs <url> <report>` | 13 checks; see below |
-| Coverage sweep | `node tests/browser/sweep.mjs <url> <report>` | 21 geographies × 9 tools; see below |
+| Browser workflows | `node tests/browser/workflows.mjs <url> <report>` | 13 of 13 passed (local) |
+| Coverage sweep | `node tests/browser/sweep.mjs <url> <report>` | 21 geographies × 9 tools: every tool rendered (local) |
 
 The new tests were checked against the defects they target: restoring the omitted agglomeration schemas and the DGUID-only boundary query made exactly the three targeted tests fail, and restoring the positional join of batched WDS responses made the batch-order test fail.
+
+## Speed and reliability pass (local build, 2026-10-25)
+
+Each section of the page was mounted in turn and timed until it had no loading indicator and no new data request for 1.5 s (Edge, 1440 px, local static server, public sources). Before: 2026-10-24, the previous client.
+
+| Geography | Before | After |
+| --- | --- | --- |
+| Manitoba | 22.6 s, 191 requests, 6 failed; institution locations failed | 21.7 s, 119 requests, 0 failed; 18 institution locations, 9 of 12 institutions matched |
+| Quebec | 43.9 s with 48 failed requests; 159 s on a second run (Overpass wait of 90 s) | 41.6 s, 140 requests |
+| Montréal | 46.3 s, 232 requests, 43 failed (37 in logistics; the airport source was unreachable) | 44.5 s, 206 requests |
+
+After the change, "failed" requests are hedge copies cancelled once the other copy answered. The remaining time is Statistics Canada's: the Quebec explorer and market maps wait on 11 Census requests of 120 subdivisions, each 5 to 8 s when sent together, and the market map fills after 20 to 35 s.
+
+- Boundary files: divisions and provinces are within 0.001 % of the summed area of their subdivisions. Each province outline contains its Wikidata institutions (489 of 492; the other three lie offshore or outside every outline). The first build lost Manitoba's outline; the builder now stops on a difference over 1 %.
+- Screens at 1440 px: market (Quebec, Nunavut), explorer and talent (Manitoba), logistics (Montréal), and the economic, household, dwelling and livability dashboards for Manitoba; at 390 px: the economic and livability dashboards, market and fast-growing industries for Manitoba. No clipped cards and no horizontal overflow. The climate chart was empty for Winnipeg because a 500-row request omitted its series; it now draws.
+- Workflows 13 of 13 and the 21-geography sweep passed. Census division, economic region and population centre industry panels state that the level is not published, as intended.
+- Not measured: the deployed build (recorded below once published) and a 768 px pass.
 
 ## Browser workflows (local build, 2026-10-23)
 
@@ -45,7 +63,7 @@ Canada, the 13 provinces and territories, and seven local samples: a municipalit
 
 Sampled local checks cover one geography of each level, not every municipality.
 
-## Deployed site (46d63cf, 2026-10-23)
+## Deployed site checks (46d63cf; fix verification at 2ff30cc, 2026-10-23)
 
 - GitHub Actions `checks` and `pages` succeeded for the commit; the public URL served the new page and its modules under the project path, and the previous `app.js` returned 404.
 - Browser workflows against https://symonyeal.github.io/Canada-Regional-Profiles/: 13 of 13 passed.

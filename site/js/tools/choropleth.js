@@ -137,7 +137,7 @@ export function mapPanel(container,{unit='p',onunit,onopen,label:fixedLabel}={})
     if(model!==last)return list;
     wrap.querySelector('.map-note')?.remove();
     const features={type:'FeatureCollection',features:fc.features.map(ft=>({type:'Feature',geometry:ft.geometry,properties:{dguid:ft.properties.DGUID,
-      name:rows.get(ft.properties.DGUID)?.name??ft.properties.CSDNAME??ft.properties.PRENAME??'',color:colorOf(rows.get(ft.properties.DGUID)?.value)}}))};
+      name:rows.get(ft.properties.DGUID)?.name??ft.properties.name??'',color:colorOf(rows.get(ft.properties.DGUID)?.value)}}))};
     setLayer(m.map,'areas',features,[{id:'areas-fill',type:'fill',paint:{'fill-color':['get','color'],'fill-opacity':.85}},
       {id:'areas-line',type:'line',paint:{'line-color':'#ffffff','line-width':.6}}],m.map.getStyle().layers.find(l=>l.type==='symbol')?.id);
     if(!bound){bound=true;

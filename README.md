@@ -4,7 +4,7 @@
 
 Logistics, demographics, markets, workforce, industries and postsecondary enrolments for Canada, each province and territory, and local Census geographies. Choose a place once; every tool on the page follows it, and the address bar keeps the selection and views for sharing.
 
-The page asks public services for its data when it is opened. It ships no downloaded observations, needs no account or server, and holds results only in the open tab; **Refresh data** asks the sources again.
+The page asks public services for its data when it is opened. It ships no downloaded observations, needs no account or server, and holds results only in the open tab; **Refresh data** asks the sources again. Boundaries are the exception: a simplified copy of Statistics Canada's 2021 cartographic boundary files is served with the page, because the boundary service refuses about half of its connections.
 
 ## Tools
 
@@ -28,7 +28,7 @@ Every chart has a menu with its data table, a CSV download, and its source, geog
 - Payroll industries use the Survey of Employment, Payrolls and Hours (table 14-10-0202) for Canada and provinces. Suppressed industries stay missing and are counted under the exhibit. Metropolitan areas and municipalities show Business Register employee estimates, labelled as estimates. Other levels say that no industry source is published.
 - Traded and local industries follow a mapped US cluster classification and are approximate.
 - Enrolments describe institutions and provinces, not the residents of a municipality. Institution figures are whole-institution counts.
-- Maps of facilities use Transport Canada, Natural Resources Canada, OpenStreetMap and Wikidata. These are not complete inventories, and each map says what it shows.
+- Maps of facilities use Transport Canada, Natural Resources Canada, OpenStreetMap (drive times) and Wikidata (ports, universities and colleges). These are not complete inventories, and each map says what it shows.
 - The page is modelled on Advance Rural Manitoba's [Why Rural Manitoba](https://advanceruralmanitoba.ca/why-rural-manitoba/). Scheduled flight routes, drive times beyond an hour and household broadband shares are not public, so the page shows passengers, one-hour drive times and coverage areas instead.
 
 Details: [reference](docs/REFERENCE.md), [coverage and comparison](docs/COVERAGE.md), [sources](docs/SOURCES.md), [decisions](docs/DECISIONS.md), [validation](docs/VALIDATION.md).
@@ -47,6 +47,7 @@ Checks (Node 22 or later):
 
 ```text
 node --test tests/*.test.js
+cargo test --release --manifest-path tools/boundaries/Cargo.toml
 npm install
 node tests/browser/workflows.mjs http://localhost:8765/ workflows.json
 node tests/browser/sweep.mjs http://localhost:8765/ sweep.json
@@ -55,6 +56,16 @@ node tests/browser/sweep.mjs http://localhost:8765/ sweep.json
 The browser checks use `playwright-core` with an installed Chromium-based browser; set `BROWSER` to its path if it is not Edge at the default Windows location.
 
 GitHub Actions publishes `site/` to GitHub Pages on changes to main.
+
+## Boundary files
+
+`site/boundaries/` holds census subdivisions and divisions per province or territory, provinces for Canada, and economic regions, metropolitan-area parts and population-centre parts per province, as quantized TopoJSON (7.2 MB compressed in all; each Nunavut file up to 0.8 MB, every other file 0.41 MB or less). `tools/boundaries` builds them (Rust, cargo):
+
+```text
+cargo run --release --manifest-path tools/boundaries/Cargo.toml -- <cache-dir> site/boundaries
+```
+
+It pages through the 2021 cartographic boundary service into `<cache-dir>` (resumable; about 150 MB), joins neighbouring subdivisions into shared arcs, forms divisions and provinces as their unions, removes islands and holes under 0.5 km² (25 km² on the Canada map) and simplifies each arc once (Visvalingam–Whyatt), so neighbours keep identical borders. It stops if a division or province differs in area from the sum of its subdivisions by more than 1 %. From a full cache it runs in about 80 s.
 
 ## Historical analysis
 

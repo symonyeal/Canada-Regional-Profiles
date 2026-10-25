@@ -131,6 +131,8 @@ p{margin:0}
 
 /* ---------- rail and dashboards ---------- */
 .with-rail{grid-template-columns:92px minmax(0,1fr)}
+/* Dashboards keep the reference's 765 px frame as a minimum and grow rather than clip their cards. */
+.frame.with-rail{height:auto;min-height:var(--frame-h)}
 .rail{background:var(--rail);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:12px 0;gap:4px;overflow:auto}
 .rail-item{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px;border:0;background:none;color:var(--muted);font-size:11.5px;font-weight:500;border-left:3px solid transparent}
 .rail-item:hover{color:var(--ink);background:#f4f4f4}
@@ -143,12 +145,12 @@ p{margin:0}
 .map-cell .map-wrap{border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
 .station-row{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--body);margin-bottom:6px}
 .station-row select{height:32px;border:1px solid var(--line-2);border-radius:8px;padding:0 8px;background:#fff;font-size:12.5px;max-width:100%}
-.dash.economic{grid-template-columns:1fr 1fr 1.08fr 1.82fr;grid-template-rows:148px 1fr 1fr 1fr;grid-template-areas:"a b c s" "d d e s" "d d f s" "d d g s"}
-.dash.resident{grid-template-columns:1fr 1fr 1fr 1.82fr;grid-template-rows:148px 1fr;grid-template-areas:"a b c s" "m m m s"}
-.dash.household{grid-template-columns:1fr 1fr 1fr 1.82fr;grid-template-rows:148px 1.65fr 1fr;grid-template-areas:"a b c s" "m m m s" "m m m t"}
-.dash.dwelling{grid-template-columns:1.72fr 1fr;grid-template-rows:268px 1fr;grid-template-areas:"a s" "b s"}
-.dash.workforce{grid-template-columns:1.72fr 1fr;grid-template-rows:1fr 1fr;grid-template-areas:"a s" "a t"}
-.dash.livability{grid-template-columns:1fr 1fr 1fr 1.82fr;grid-template-rows:128px 1.35fr 1fr;grid-template-areas:"a b c s" "d d d s" "d d d t"}
+.dash.economic{grid-template-columns:1fr 1fr 1.08fr 1.82fr;grid-template-rows:minmax(148px,auto) repeat(3,minmax(min-content,1fr));grid-template-areas:"a b c s" "d d e s" "d d f s" "d d g s"}
+.dash.resident{grid-template-columns:1fr 1fr 1fr 1.82fr;grid-template-rows:minmax(148px,auto) minmax(min-content,1fr);grid-template-areas:"a b c s" "m m m s"}
+.dash.household{grid-template-columns:1fr 1fr 1fr 1.82fr;grid-template-rows:minmax(148px,auto) minmax(min-content,1.65fr) minmax(min-content,1fr);grid-template-areas:"a b c s" "m m m s" "m m m t"}
+.dash.dwelling{grid-template-columns:1.72fr 1fr;grid-template-rows:minmax(268px,auto) minmax(min-content,1fr);grid-template-areas:"a s" "b s"}
+.dash.workforce{grid-template-columns:1.72fr 1fr;grid-template-rows:repeat(2,minmax(min-content,1fr));grid-template-areas:"a s" "a t"}
+.dash.livability{grid-template-columns:1fr 1fr 1fr 1.82fr;grid-template-rows:minmax(128px,auto) minmax(min-content,1.35fr) minmax(min-content,1fr);grid-template-areas:"a b c s" "d d d s" "d d d t"}
 .dash [data-area=a]{grid-area:a}.dash [data-area=b]{grid-area:b}.dash [data-area=c]{grid-area:c}.dash [data-area=d]{grid-area:d}.dash [data-area=e]{grid-area:e}
 .dash [data-area=f]{grid-area:f}.dash [data-area=g]{grid-area:g}.dash [data-area=s]{grid-area:s}.dash [data-area=t]{grid-area:t}.dash [data-area=m]{grid-area:m}
 
@@ -178,18 +180,19 @@ p{margin:0}
 .bar-list{display:flex;flex-direction:column;gap:14px;padding-top:6px}
 .bar-list.sm{gap:9px}
 .bar-row{outline-offset:3px}
-.bar-head{display:flex;justify-content:space-between;gap:12px;font-size:12.5px;color:var(--ink);margin-bottom:5px}
+.bar-head{display:flex;justify-content:space-between;gap:12px;font-size:12.5px;color:var(--ink);margin-bottom:8px}
 .bar-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bar-value{font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}
 .bar-track{position:relative;height:20px;border-radius:5px;background:var(--track)}
 .bar-list.sm .bar-track{height:16px}
 .bar-fill{position:absolute;inset:0 auto 0 0;border-radius:5px;background:var(--brown)}
-.bench-tick{position:absolute;top:-6px;bottom:-6px;width:2px;margin-left:-1px;background:#8b6f3e}
+.bench-tick{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:#8b6f3e}
 .bench-tick::before{content:'';position:absolute;top:-3px;left:-2px;width:6px;height:6px;border-radius:50%;background:#8b6f3e}
 .chart-svg{position:relative;width:100%}
 .chart-svg svg{display:block;overflow:visible}
 .axis{font:11px var(--ui);fill:var(--muted)}
 .axis-title{font:500 12px var(--ui);fill:var(--body)}
+.bubble-label{font:500 11px var(--ui);fill:var(--ink);paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round;pointer-events:none}
 .stacked{display:flex;flex-direction:column;gap:14px;padding-top:8px}
 .stack-label{font-size:12.5px;font-weight:600;color:var(--ink);margin-bottom:5px}
 .stack-bar{display:flex;height:26px;border-radius:5px;overflow:hidden;background:var(--track);gap:2px}
@@ -447,6 +450,10 @@ th[aria-sort=descending] .sort-mark::after{content:'▼';font-size:8px}
 .map-tools .kebab{margin:0;width:36px;height:36px}
 .chart-card .body{display:flex;flex-direction:column}
 .chart-card .body>.treemap{flex:1;min-height:300px}
+/* Bar lists spread their rows over the card's height, as the reference does, instead of leaving the bottom empty. */
+.chart-card .body>.bar-list{flex:1;justify-content:space-around}
+/* The climate chart starts at its set height and takes any height the dashboard row adds. */
+.chart-card .body>.chart-svg.climate{flex:1 0 auto}
 .card.unpublished h4{font:650 13px var(--ui);color:var(--body)}.card.unpublished .card-sub{margin-top:6px;font-size:12.5px}
 .speed-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
 .speed-chips .chip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:12.5px;font-weight:600}

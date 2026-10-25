@@ -32,7 +32,7 @@ The page reproduces the nine tools of the [reference](REFERENCE.md) in its order
 | **Largest industries** | Option cards; treemap, bars, list | Same; treemap grouped by sector | reproduced | All: 20/20 values and ranks exact |
 | LQ | About 1.093 × standard | Standard SEPH LQ: area share of the industrial aggregate over Canada's share | differs | 0/57 equal; four denominators tested |
 | Traded/local | Localintel classification | Mapped Delgado–Porter–Stern clusters (approximate) | replacement | 51/55 labels agree |
-| **Talent pipeline** | Groupings with counts, institution map, students in reach | Groupings as published (37-10-0011), filters for institution type and registration, trend; institutions from OpenStreetMap with exact-name matching | reproduced, replacement for locations | Ranking of groupings matches; totals differ in period |
+| **Talent pipeline** | Groupings with counts, institution map, students in reach | Groupings as published (37-10-0011), filters for institution type and registration, trend; institutions from Wikidata, matched on name or alias | reproduced, replacement for locations | Ranking of groupings matches; totals differ in period |
 | Local geographies | Province client | Canada, provinces, territories, CSDs, CDs, CMAs/CAs (including provincial parts), economic regions, population centres | extended | Sweep in [VALIDATION.md](VALIDATION.md) |
 
 ## Data availability by level
@@ -57,7 +57,7 @@ When a source does not publish a level, the card says so and, for industries, of
 | Drive-time areas beyond one hour | FOSSGIS Valhalla (60-minute cap), OSRM demo (no isochrones) | 30 and 60 minutes only |
 | Broadband household aggregates | ISED service (token required), NRCan Atlas coverage service | Coverage areas only |
 | Ports and terminals | Wikidata, OpenStreetMap; no federal port or terminal service with CORS | Ports from Wikidata; terminals not mapped |
-| Institution locations | ODEF is a download only; OpenStreetMap via Overpass (slow at times) | Exact-name matches; whole-institution counts, never campus allocations |
+| Institution locations | ODEF is a download only; OpenStreetMap via Overpass failed or timed out (2026-10-24) | Wikidata items matched on English or French name or alias; whole-institution counts, never campus allocations |
 | Talent totals | 37-10-0011, 37-10-0277 | Groupings published directly; reference total (63,027) matches no published year |
 | Rail industry 4821 and other suppressed SEPH cells | SEPH 14-10-0202 | Not shown; reference fills them by estimate |
 | LQ factor | Four denominators tested | Unexplained; standard LQ shown |
