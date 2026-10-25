@@ -68,8 +68,13 @@ export async function wikidata(sparql) {
   return d.results.bindings.map(b=>Object.fromEntries(Object.entries(b).map(([k,v])=>[k,v.value])));
 }
 
-// Whether point pt = [lon, lat] lies in some feature of fc (even–odd ray casting; holes excluded).
-export const contains=(pt,fc)=>fc.features.some(f=>{const polys=f.geometry.type==='MultiPolygon'?f.geometry.coordinates:[f.geometry.coordinates];
+// Whether point pt = [lon, lat] lies in some feature of fc (even–odd ray casting; holes excluded). A feature's
+// bounding box, computed once, rejects most points before the O(vertices) ray cast.
+const boxes=new WeakMap();
+export const contains=(pt,fc)=>fc.features.some(f=>{
+  if(!boxes.has(f))boxes.set(f,bbox({features:[f]}));const b=boxes.get(f);
+  if(!b||pt[0]<b[0][0]||pt[0]>b[1][0]||pt[1]<b[0][1]||pt[1]>b[1][1])return false;
+  const polys=f.geometry.type==='MultiPolygon'?f.geometry.coordinates:[f.geometry.coordinates];
   return polys.some(rings=>{const hit=r=>{let c=false;for(let i=0,j=r.length-1;i<r.length;j=i++){const [a,b]=r[i],[x,y]=r[j];if((b>pt[1])!==(y>pt[1])&&pt[0]<(x-a)*(pt[1]-b)/(y-b)+a)c=!c;}return c;};
     return hit(rings[0])&&!rings.slice(1).some(hit);});});
 

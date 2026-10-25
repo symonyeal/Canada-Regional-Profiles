@@ -11,7 +11,7 @@ What was checked, how, and the result. Runtime checks of the website are separat
 | Python unit checks (historical analysis) | `python -m pytest -q -m "not slow"` | 11 passed, 6 deselected |
 | Lint | `python -m ruff check .` | passed |
 | Dependencies | `python -m pip check` | no broken requirements |
-| Browser workflows | `node tests/browser/workflows.mjs <url> <report>` | 13 of 13 passed (local) |
+| Browser workflows | `node tests/browser/workflows.mjs <url> <report>` | 15 of 15 passed (local); 13 of 13 on the deployed site before the two new checks |
 | Coverage sweep | `node tests/browser/sweep.mjs <url> <report>` | 21 geographies × 9 tools: every tool rendered (local) |
 
 The new tests were checked against the defects they target: restoring the omitted agglomeration schemas and the DGUID-only boundary query made exactly the three targeted tests fail, and restoring the positional join of batched WDS responses made the batch-order test fail.
@@ -32,7 +32,15 @@ After the change, "failed" requests are hedge copies cancelled once the other co
 - Screens at 1440 px: market (Quebec, Nunavut), explorer and talent (Manitoba), logistics (Montréal), and the economic, household, dwelling and livability dashboards for Manitoba; at 390 px: the economic and livability dashboards, market and fast-growing industries for Manitoba. No clipped cards and no horizontal overflow. The climate chart was empty for Winnipeg because a 500-row request omitted its series; it now draws.
 - Workflows 13 of 13 and the 21-geography sweep passed. Census division, economic region and population centre industry panels state that the level is not published, as intended.
 - Deployed (2b53530): GitHub Actions `checks` (with the cargo tests) and `pages` succeeded; the Pages URL served the boundary files, gzip-encoded (Nunavut subdivisions 2.9 MB, 0.83 MB transferred). Workflows 13 of 13. Manitoba settled in 16.5 s (119 requests, 0 failed; 18 institution locations); Quebec in 24.5 s (138 requests; the 5 failed were cancelled hedge copies; 137 institution locations, 65 of 94 institutions matched).
-- Not measured: a 768 px pass, and a deployed sweep of all 21 geographies.
+- Not measured at the time: a 768 px pass, and a deployed sweep of all 21 geographies. Both were run in the debug pass below.
+
+## Debug pass (deployed c68abbf and local fixes, 2026-10-25)
+
+- Deployed files: all 22 page files under `site/` (boundaries excluded) are byte-identical to the committed blobs, and so is every eighth boundary file.
+- Deployed workflows: 13 of 13. Deployed sweep, 21 geographies × 9 tools: every tool rendered except five panels in British Columbia, Alberta and Division No. 11 that reported "could not be reached" for `www150.statcan.gc.ca`; Ottawa–Gatineau was still loading three panels at 25 s. Three re-runs for British Columbia and two for Ottawa–Gatineau on the same deployment had 0 failed requests and no failure panels; the cause is not shown and the retry policy was not changed.
+- 390, 768 and 1440 px (Manitoba, Nunavut, Winnipeg; deployed): no horizontal overflow and no page errors. At 820 px and below the Explorer map was 420 px tall in a 380 px grid row and covered the first 40 px of the community list; fixed, checked at 768 and 390 px, and added as a workflow.
+- Explorer on Canada: selecting a community left its panel at "Loading Census 2021 indicators…", because the stale-response guard compared with an id set only when the province map was drawn. Fixed and added as a workflow.
+- Main-thread CPU (local, every tool mounted, V8 profile): Quebec 35.0 s wall, of which site modules 0.54 s, MapLibre 2.7 s and idle (network) 30.6 s; Ontario 0.49 s, 2.5 s and 30.3 s; Canada 0.28 s, 1.3 s and 31.8 s. The largest site costs were JSON parsing in `exchange` (65–99 ms) and point-in-polygon tests (60–69 ms). A bounding-box test before the ray cast reduced the latter to 28 ms in Quebec and Ontario.
 
 ## Browser workflows (local build, 2026-10-23)
 
