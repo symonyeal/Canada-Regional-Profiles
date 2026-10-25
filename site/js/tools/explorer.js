@@ -70,21 +70,23 @@ export function explorer(el,app) {
   }
   search.addEventListener('input',()=>{app.set('exq',search.value.trim());shown=PAGE;drawList();drawDots();});
 
+  // selected: the last community chosen, with or without a map; an older selection's indicators never draw.
   let selected=null;
   async function select(id,user) {
     const g=data.all.find(x=>x.id===id);if(!g)return;
     app.set('exs',id);
     drawList();
-    if(m&&data.features){if(selected)m.map.setFeatureState({source:'csd',id:selected},{selected:false});selected=id;m.map.setFeatureState({source:'csd',id},{selected:true});
+    if(m&&data.features){if(selected)m.map.setFeatureState({source:'csd',id:selected},{selected:false});m.map.setFeatureState({source:'csd',id},{selected:true});
       const f=data.features.features.find(x=>x.properties.DGUID===id);if(f&&user){const b=bbox({features:[f]});fit(m.map,b);}}
+    selected=id;
     panel.hidden=false;panel.replaceChildren(h('h5',{},g.name),h('p',{class:'card-sub'},g.description?.replace(/ \[[^\]]+\]/,'')??''),h('p',{class:'card-sub'},'Loading Census 2021 indicators…'));
     try {
-      const p=(await censusMany('CSD',[id],['1','2','3','6','40'])).get(id);if(selected!==id&&m)return;
+      const p=(await censusMany('CSD',[id],['1','2','3','6','40'])).get(id);if(selected!==id)return;
       panel.replaceChildren(h('h5',{},g.name),h('p',{class:'card-sub'},`${g.municipalType||'Census subdivision'} · CSD ${id.slice(9)}`),
         h('dl',{},h('dt',{},'Population, 2021'),h('dd',{},int(p.value('1'))),h('dt',{},'Change since 2016'),h('dd',{},p.value('3')==null?'Not available':`${fmt(p.value('3'))}%`),
           h('dt',{},'Density per km²'),h('dd',{},fmt(p.value('6'))),h('dt',{},'Median age'),h('dd',{},fmt(p.value('40')))),
         h('button',{type:'button',class:'btn',onclick:()=>app.choose({id,type:'CSD'},'profile')},'Open community profile',icon('chevronRight',15)));
-    } catch(e) {failure(panel,e,()=>select(id,false),'Indicators unavailable');}
+    } catch(e) {if(selected===id)failure(panel,e,()=>select(id,false),'Indicators unavailable');}
   }
   return {update(changed){if(['geo','refresh','ext'].some(k=>changed.has(k))||(changed.has('exq')&&!changed.has('geo')))render();},destroy:()=>m?.destroy()};
 }

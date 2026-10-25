@@ -124,6 +124,21 @@ await check('a level without industry data explains itself and offers the provin
   if(!/census divisions/.test(text))throw Error(text);
   return {text:text.replace(/\s+/g,' ').slice(0,180),offersProvince:await page.locator('#largest .state').getByRole('button',{name:/View Manitoba/}).count()};
 });
+await check('explorer on Canada (no map) fills the selected community panel',async page=>{
+  await page.goto(`${base}?geo=2021A000011124#explorer`);await section(page,'explorer');
+  await until(page,()=>document.querySelector('#explorer .community'),undefined,60000);
+  await page.locator('#explorer .community').first().click();
+  await until(page,()=>document.querySelector('#explorer .selected-panel dl'));
+  return {panel:(await page.locator('#explorer .selected-panel').textContent()).slice(0,120)};
+});
+await check('at 768 px the explorer map ends above the community list',async page=>{
+  await page.setViewportSize({width:768,height:900});
+  await page.goto(`${base}?geo=2021A000246#explorer`);await section(page,'explorer');
+  await until(page,()=>document.querySelector('#explorer .community'),undefined,60000);
+  const [map,list]=await page.evaluate(()=>['.map-wrap','.community-list'].map(s=>document.querySelector(`#explorer ${s}`).getBoundingClientRect()).map(r=>[r.top,r.bottom]));
+  if(map[1]>list[0]+1)throw Error(`map bottom ${map[1]} below list top ${list[0]}`);
+  return {map,list};
+});
 fs.writeFileSync(out,JSON.stringify({base,at:new Date().toISOString(),results},null,1));
 console.log(`${results.filter(r=>r.pass).length}/${results.length} passed`);
 await browser.close();
