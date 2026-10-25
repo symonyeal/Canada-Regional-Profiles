@@ -31,7 +31,8 @@ After the change, "failed" requests are hedge copies cancelled once the other co
 - Boundary files: divisions and provinces are within 0.001 % of the summed area of their subdivisions. Each province outline contains its Wikidata institutions (489 of 492; the other three lie offshore or outside every outline). The first build lost Manitoba's outline; the builder now stops on a difference over 1 %.
 - Screens at 1440 px: market (Quebec, Nunavut), explorer and talent (Manitoba), logistics (Montréal), and the economic, household, dwelling and livability dashboards for Manitoba; at 390 px: the economic and livability dashboards, market and fast-growing industries for Manitoba. No clipped cards and no horizontal overflow. The climate chart was empty for Winnipeg because a 500-row request omitted its series; it now draws.
 - Workflows 13 of 13 and the 21-geography sweep passed. Census division, economic region and population centre industry panels state that the level is not published, as intended.
-- Not measured: the deployed build (recorded below once published) and a 768 px pass.
+- Deployed (2b53530): GitHub Actions `checks` (with the cargo tests) and `pages` succeeded; the Pages URL served the boundary files, gzip-encoded (Nunavut subdivisions 2.9 MB, 0.83 MB transferred). Workflows 13 of 13. Manitoba settled in 16.5 s (119 requests, 0 failed; 18 institution locations); Quebec in 24.5 s (138 requests; the 5 failed were cancelled hedge copies; 137 institution locations, 65 of 94 institutions matched).
+- Not measured: a 768 px pass, and a deployed sweep of all 21 geographies.
 
 ## Browser workflows (local build, 2026-10-23)
 
