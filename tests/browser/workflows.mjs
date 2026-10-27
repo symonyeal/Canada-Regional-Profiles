@@ -27,7 +27,7 @@ async function check(name,fn){
 }
 await check('findings rank six measures among comparable areas, four destinations, no map requests',async p=>{
   const maps=[];p.on('request',r=>{if(/maplibre|openfreemap/.test(r.url()))maps.push(r.url());});
-  await p.goto(`${base}?geo=2021A000246`);await until(p,()=>document.querySelectorAll('#overview .finding').length===6&&/of 13 provinces/.test(document.querySelector('#overview .findings').textContent));
+  await p.goto(`${base}?geo=2021A000246`);await until(p,()=>document.querySelectorAll('#overview .findings.census .finding').length===6&&/of 13 provinces/.test(document.querySelector('#overview .findings.census').textContent));
   if(await p.locator('#section-links a').count()!==4||maps.length)throw Error('Unexpected navigation or eager map request');
   await p.locator('#overview summary',{hasText:'All 20 measures'}).click();
   const age=await p.locator('#overview tbody tr',{hasText:'Median age'}).locator('td').first().textContent();
@@ -35,12 +35,30 @@ await check('findings rank six measures among comparable areas, four destination
   if(Number(age)!==raw)throw Error('Median age differs from live adapter');
   return {age,raw,maps:maps.length};
 });
+// The front shows the latest annual year, ranked in that year; the value is the adapter's for that year.
+await check('latest annual values lead the findings, ranked among provinces in their own year',async p=>{
+  await p.goto(`${base}?geo=2021A000246`);
+  await until(p,()=>[...document.querySelectorAll('#overview .findings.recent .finding')].some(e=>/Unemployment rate/.test(e.textContent)&&/of 10 provinces and territories publishing it/.test(e.textContent)));
+  const card=p.locator('#overview .findings.recent .finding',{hasText:'Unemployment rate'}),year=Number(await card.locator('.finding-period').textContent());
+  const shown=await card.locator('.finding-value').textContent();
+  const raw=await p.evaluate(async()=>{const {trendSeries}=await import('./js/tools/common.js'),{trend}=await import('./js/trend-model.js');
+    return (await trendSeries(trend('unemployment'),[{id:'2021A000246',type:'PR',name:'Manitoba'}])).get('2021A000246').values.filter(v=>v.value!=null).at(-1);});
+  if(year<2024||raw.year!==year||shown!==`${raw.value.toFixed(1)}%`)throw Error(`Card ${shown} ${year}, adapter ${raw.value} ${raw.year}`);
+  const first=await p.locator('#overview h3.subhead').first().textContent();if(first!=='Latest published year')throw Error(`First heading ${first}`);
+  return {year,shown,cards:await p.locator('#overview .findings.recent .finding').count()};
+});
+await check('a municipality leads with its latest population estimate, ranked in its province',async p=>{
+  await p.goto(`${base}?geo=2021A00054602044`);
+  await until(p,()=>/Manitoba municipalities with 1,000\+ residents in 20\d\d/.test(document.querySelector('#overview .findings.recent')?.textContent??''));
+  const year=Number(await p.locator('#overview .findings.recent .finding-period').first().textContent());if(year<2024)throw Error(`Year ${year}`);
+  return {year,text:await p.locator('#overview .findings.recent .finding-text').first().textContent()};
+});
 await check('national findings name the provinces at each end of a measure',async p=>{
-  await p.goto(base);await until(p,()=>[...document.querySelectorAll('#overview .finding-text')].filter(e=>/range from .+ to /.test(e.textContent)).length===6);
-  return {findings:await p.locator('#overview .finding').count()};
+  await p.goto(base);await until(p,()=>[...document.querySelectorAll('#overview .findings.census .finding-text')].filter(e=>/range from .+ to /.test(e.textContent)).length===6);
+  return {findings:await p.locator('#overview .findings.census .finding').count()};
 });
 await check('a municipality is ranked within its province and compared with similar places and neighbours',async p=>{
-  await p.goto(`${base}?geo=2021A00054602044`);await until(p,()=>/Manitoba municipalities with 1,000\+ residents/.test(document.querySelector('#overview .findings')?.textContent??''));
+  await p.goto(`${base}?geo=2021A00054602044`);await until(p,()=>/Manitoba municipalities with 1,000\+ residents/.test(document.querySelector('#overview .findings.census')?.textContent??''));
   await nav(p,'compare');await until(p,()=>document.querySelectorAll('#compare .comparison-table tbody tr').length===7);
   const similar=await p.locator('#compare .comparison-table tbody th').allTextContents();
   await p.getByRole('button',{name:'Neighbours'}).click();await until(p,()=>/sharing a border/.test(document.querySelector('#compare').textContent));
@@ -130,7 +148,7 @@ await check('keyboard geography selection, province benchmark and inactive-tab r
   await p.goto(`${base}?geo=2021A000246`);await p.locator('#place-input').fill('Brandon');
   await until(p,()=>document.querySelector('#place-list [role=option]'));await p.keyboard.press('ArrowDown');await p.keyboard.press('Enter');
   await until(p,()=>document.querySelector('#place-name').textContent==='Brandon');await p.selectOption('#bench','PT');
-  await until(p,()=>/Manitoba [\d$]/.test(document.querySelector('#overview .findings')?.textContent??''));
+  await until(p,()=>/Manitoba [\d$]/.test(document.querySelector('#overview .findings.census')?.textContent??''));
   await nav(p,'detail');await p.getByRole('button',{name:'Work and education',exact:true}).click();
   await until(p,()=>document.querySelector('#detail .legend')?.textContent.includes('Manitoba'));
   return {url:p.url(),place:await p.locator('#place-name').textContent()};
@@ -142,9 +160,9 @@ await check('Back and Forward restore geography without stale headings',async p=
 });
 await check('Census outage leaves payroll independent and Retry recovers',async p=>{
   let block=true;await p.route('**/api.statcan.gc.ca/**',r=>block?r.abort():r.continue());
-  await p.goto(`${base}?geo=2021A000246`);await until(p,()=>document.querySelector('#overview .state.failure'));
+  await p.goto(`${base}?geo=2021A000246`);await until(p,()=>document.querySelector('#overview .state.failure')&&document.querySelector('#overview .findings.recent .finding-value'));
   await nav(p,'industries');await until(p,()=>document.querySelector('.industry-name'));block=false;
-  await nav(p,'overview');await until(p,()=>document.querySelector('#overview .finding-value'));return {recovered:true};
+  await nav(p,'overview');await until(p,()=>document.querySelector('#overview .findings.census .finding-value'));return {recovered:true};
 });
 await check('unsupported industry geography explains scope and offers its province',async p=>{
   await p.goto(`${base}?geo=2021A00034611#industries`);await until(p,()=>document.querySelector('#industries .state.failure'));

@@ -1,5 +1,14 @@
 # Decisions
 
+## 2026-10-27: latest year first
+
+The owner reported that the site "still only shows 2021 in the front": the annual series sat below the Census findings, in a panel showing one measure at a time.
+
+- **Findings open with the latest published year.** One card per annual measure published at the area's level (twelve for a province, one for a municipality), in catalogue order rather than by distinctiveness, since every card is current. Temperature is left to the Over time panel: one year's mean measures weather.
+- **Comparisons are same-period.** The year is the last one the selected area publishes; the benchmark and the cohort are read in that year, and an area without it is left out of the rank, which then says "publishing it". Change runs from the first published year in the five before.
+- **One read per measure** covers the area, its benchmark and its cohort, so cohorts do not wait for the Census profiles (the cohort's area list is now separate from its profiles). A failing source names its measures and leaves the others drawn.
+- Population cards carry no benchmark difference or benchmark tick: a count against Canada's is not a comparison.
+
 ## 2026-10-26: years beyond Census 2021
 
 The owner asked why only 2021 data was shown and asked for the longest history common to the places compared, shown as a selectable range, including sources outside Statistics Canada.
