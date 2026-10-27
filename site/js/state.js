@@ -1,5 +1,6 @@
 // Shared-URL state. Every parameter has one validator and one default; defaults are omitted from URLs.
-import {CANADA,geographyType,validGeographyId} from './model.js';
+// Legend: g = selected geography; v = benchmark key or identifier; pr = province code.
+import {CANADA,geographyType,validGeographyId,provinceOf} from './model.js';
 import {MEASURES} from './regional-model.js';
 import {TRENDS} from './trend-model.js';
 
@@ -9,7 +10,7 @@ const one=(...values)=>({ok:v=>values.includes(v),fallback:values[0]});
 const text=(re,fallback='')=>({ok:v=>re.test(v),fallback});
 // Keys marked geo describe a facility or area inside the current geography and reset when it changes.
 export const KEYS={
-  bench:one('CA','PT'),
+  bench:{ok:v=>['CA','PT'].includes(v)||!!geographyType(v),fallback:'CA'},
   dv:one(...DETAIL),
   iv:one('specialized','largest','change'), is:one('all','traded','local'),
   cm:one('employment',...MEASURES.map(m=>m.id).filter(id=>id!=='employment'&&id!=='population')),
@@ -24,12 +25,23 @@ export const KEYS={
 };
 export const SECTIONS=['overview','industries','compare','detail'];
 
+// A benchmark is Canada, a province, or another area of the selected level. Same-level choices may cross provinces.
+export function benchmarkFor(g,v) {
+  const pr=provinceOf(g);
+  if(v==='PT'&&pr&&g.type!=='PR')return {id:`2021A0002${pr}`,type:'PR'};
+  const type=geographyType(v);
+  if(g.id!==CANADA.id&&v!==g.id&&type&&(type==='PR'||type===g.type))return {id:v,type};
+  return {...CANADA};
+}
+const validBench=(g,v)=>['CA','PT'].includes(v)?v:benchmarkFor(g,v).id===CANADA.id?'CA':v;
+
 // Earlier sections and their view keys (cp, pv, hv; li, fg) route to the consolidated view that holds them.
 export function parse(search,hash='') {
   const q=new URLSearchParams(search),id=q.get('geo')??CANADA.id;
   const geo=validGeographyId(id)&&geographyType(id)?{id,type:geographyType(id)}:{id:CANADA.id,type:'PR'};
   const t={};
   for(const [k,spec] of Object.entries(KEYS)){const v=q.get(k);t[k]=v!=null&&spec.ok(v)?v:spec.fallback;}
+  t.bench=validBench(geo,t.bench);
   const old=hash.replace('#',''),view=[q.get('cp'),q.get('pv'),q.get('hv'),old==='workforce'?'workforce':null].find(v=>DETAIL.includes(v));
   const aliases={profile:view?'detail':'overview',people:'detail',housing:'detail',workforce:'detail',
     largest:'industries',growing:'industries',insights:'industries',market:'overview',explorer:'overview',logistics:'overview',talent:'overview'};
@@ -50,5 +62,6 @@ export function serialize(state) {
 // A new geography keeps view choices but drops facility and area selections that belonged to the old one.
 export function withGeography(state,geo) {
   const t={...state.t};for(const [k,spec] of Object.entries(KEYS))if(spec.geo)t[k]=spec.fallback;
+  t.bench=validBench(geo,t.bench);
   return {...state,geo:{id:geo.id,type:geo.type},t};
 }

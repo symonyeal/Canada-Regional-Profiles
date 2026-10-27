@@ -2,11 +2,27 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {industryRows,peerIds,MEASURES,MEASURE_IDS,difference,show,standing,rankText,findings,similar,sectorBase,shiftShare,SECTOR_IDS} from '../site/js/regional-model.js';
-import {parse,serialize,withGeography,SECTIONS} from '../site/js/state.js';
+import {parse,serialize,withGeography,SECTIONS,benchmarkFor} from '../site/js/state.js';
 import {PROFILE_IDS} from '../site/js/census.js';
 
 // A profile from {characteristic: value}; names for sector characteristics.
 const profile=(v,names={})=>({value:id=>v[id]??null,name:id=>names[id]??null});
+
+test('custom benchmarks accept provinces and same-level areas, survive URLs and reject incompatible levels',()=>{
+  const g={id:'2021A000246',type:'PR'},cd={id:'2021A00034611',type:'CD'};
+  assert.equal(benchmarkFor(g,'2021A000235').id,'2021A000235');
+  assert.equal(benchmarkFor(cd,'2021A00033520').id,'2021A00033520');
+  assert.equal(benchmarkFor(cd,'2021A000235').id,'2021A000235');
+  assert.equal(benchmarkFor(cd,'PT').id,'2021A000246');
+  assert.equal(benchmarkFor(g,g.id).id,'2021A000011124');
+  assert.equal(benchmarkFor(cd,'2021A00054611040').id,'2021A000011124');
+  const s=parse('?geo=2021A00034611&bench=2021A00033520','#compare');
+  assert.equal(s.t.bench,'2021A00033520');
+  assert.deepEqual(parse(serialize(s).split('#')[0],'#compare'),s);
+  assert.equal(withGeography(s,g).t.bench,'CA');
+  assert.equal(withGeography(s,{id:'2021A00033525',type:'CD'}).t.bench,'2021A00033520');
+  assert.equal(parse('?geo=2021A000246&bench=2021A00034611').t.bench,'CA');
+});
 
 test('rate differences are percentage points; money is a dollar difference; suppression remains missing',()=>{
   const m=MEASURES.find(m=>m.id==='employment'),money=MEASURES.find(m=>m.id==='income');

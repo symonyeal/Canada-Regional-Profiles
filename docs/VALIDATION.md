@@ -2,6 +2,15 @@
 
 What was checked, how, and the result. Runtime checks of the website are separate from the historical offline pipeline's records. Evidence files (browser reports, captures, recorded reference responses) are kept with the project's working files, outside this repository.
 
+## Configurable benchmarks (2026-10-27)
+
+- 56 JavaScript tests passed, including a new benchmark case covering same-level and provincial choices, cross-province counties, invalid levels, self-comparisons, URL round trips and changes of geography. Eleven Python tests passed (six historical slow checks deselected), plus Ruff and the dependency check.
+- The complete local browser suite passed 27 of 27 against live sources with in-process response reuse. New workflows verify Manitoba against Ontario across Findings, annual trends, Detail, Compare and reload; Manitoba Division No. 11 against Toronto census division through keyboard search, geography changes, Back and reload; and Steinbach against Winnipeg on a 390 px phone layout. Ontario's displayed Census employment benchmark is checked against its own live adapter value.
+- All six map/chart regression checks passed again with configurable benchmarks present. The prior 19-geography smoke check and Rust results above apply to the map/chart revision; they were not repeated for benchmark selection, which changes no boundary geometry or Rust code.
+- An earlier suite run passed 26 of 27: the peer-removal check counted rows from both the Census comparison and an annual-data table. Its selector now checks the first comparison table, and both its separate regression and the complete corrected suite passed. One later screenshot attempt timed out waiting for Census; source availability is not certified by these successful runs.
+- Province and county benchmark controls were captured at 1440, 768 and 390 px with no page exceptions or horizontal overflow. The final phone controls use a full-width geography-type field and a short benchmark choice label.
+- Live release checks compare the deployed assets with the committed blobs and run browser checks on the public URL; run-specific evidence is retained with the working files.
+
 ## Map and chart debugging (2026-10-27)
 
 - Reproduced the deployed blank map. Data, legend and boundaries loaded, but the map container measured 772 × 0 px while its canvas measured 772 × 300 px. The delayed MapLibre stylesheet changed the map's position to relative. The new browser regression failed on this zero-height viewport at desktop and phone widths.
@@ -11,7 +20,7 @@ What was checked, how, and the result. Runtime checks of the website are separat
 - Coverage smoke check: 19 geographies (Canada, all thirteen provinces and territories, a municipality, a census division, a cross-border metropolitan area, an economic region and a population centre), four views each, with zero page exceptions. The only reported failure panels were the three intended unpublished-industry states. Some annual slots were still loading when recorded; this is a navigation and scope smoke check, not full source-availability certification.
 - Local checks: 55 JavaScript tests, 10 Rust tests and 11 Python tests passed; six historical slow Python checks deselected. Ruff and the installed-dependency check passed. The Rust tests used the existing workspace Cargo cache in offline mode after the default registry connection failed.
 - Two visual rounds inspected the current findings and maps. The second captured histories, regional rankings and maps at 1440, 768 and 390 px and checked all four views: no page exceptions or horizontal overflow. The site retains its light theme; no full accessibility or dark-theme audit was performed. The new context bars measured 3.57:1 against white and 3.12:1 against their track; muted text measured 4.65:1 against the page.
-- Publication and verification of the updated live site are pending.
+- Live publication is checked separately from these local results.
 
 ## Latest year in Findings (2026-10-27)
 
