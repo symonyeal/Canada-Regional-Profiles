@@ -40,16 +40,17 @@ const keyFor=(g,bench,C,national)=>legend([...(national?[]:[[g.name,PRIMARY,'dot
 // One latest finding: annual measure m and its latest standing r in year y, with the benchmark and the cohort in y.
 function recentFinding(m,r,{C,bench,national,g,S}) {
   const fmt=x=>valueText(m.unit,x),when=y=>m.period?.(y)??String(y),rank=rankText(r.standing);
+  const countBench=m.unit==='people'&&bench?.type===g.type&&bench.id!==CANADA.id;
   const named=national?C.areas.map((a,i)=>[a.name,r.X[i]]).filter(([,v])=>v!=null).sort((s,t)=>t[1]-s[1]):[];
   const context=[national?named.length?`Provinces and territories range from ${named.at(-1)[0]} (${fmt(named.at(-1)[1])}) to ${named[0][0]} (${fmt(named[0][1])}).`:''
     :rank?`${rank[0].toUpperCase()}${rank.slice(1)} ${C.label}${r.standing.n<C.areas.length?' publishing it':''} in ${when(r.y)}.`:'',
-    !national&&r.w!=null&&m.unit!=='people'?`${bench.name} ${fmt(r.w)} (${m.unit==='%'||m.unit.startsWith('$')?difference(m,r.x,r.w):changeText(m.unit,{d:r.x-r.w})}).`:'',
+    !national&&r.w!=null?(countBench?`${bench.name} ${fmt(r.w)}.`:m.unit!=='people'?`${bench.name} ${fmt(r.w)} (${m.unit==='%'||m.unit.startsWith('$')?difference(m,r.x,r.w):changeText(m.unit,{d:r.x-r.w})}).`:''):'',
     r.change?.d!=null?`${changeText(m.unit,r.change)} since ${when(r.y0)}.`:''].filter(Boolean).join(' ');
   return h('article',{class:'finding'},
     h('div',{class:'finding-head'},h('span',{class:'finding-theme'},m.theme),h('h3',{},m.label),h('span',{class:'finding-period'},when(r.y))),
     h('div',{class:'finding-value'},fmt(r.x)),
     h('p',{class:'finding-text'},context),
-    strip({X:r.X,x:national?null:r.x,w:national||m.unit==='people'?null:r.w,format:fmt}),
+    strip({X:r.X,x:national?null:r.x,w:national||m.unit==='people'&&!countBench?null:r.w,format:fmt}),
     recentHistory(m,S.get(g.id),g));
 }
 
@@ -206,7 +207,9 @@ export function compare(el,app) {
     } catch(e) {if(a())failure(out,e,render,'Comparison unavailable');return;}
     if(!a())return;
     const bench=g.id===CANADA.id?null:app.bench,b=bench?await census(bench).catch(()=>null):null;if(!a())return;
-    const all=[...rows,...(b?[{...bench,p:b,bench:true}]:[])],m=measure(app.state.t.cm)??measure('employment'),ms=COLUMNS.map(measure);
+    const all=rows.map(r=>({...r,bench:r.id===bench?.id}));
+    if(b&&!all.some(r=>r.id===bench.id))all.push({...bench,p:b,bench:true});
+    const m=measure(app.state.t.cm)??measure('employment'),ms=COLUMNS.map(measure);
     const chart=chartCard({title:`${m.label} · ${m.period}`,subtitle:why,meta:meta({name:all.map(r=>r.name).join('; ')},()=>rowTable(all,MEASURES))},
       h('div',{class:'body'},barList(all.map(r=>({label:`${r.name}${r.bench?' (benchmark)':''}`,value:r.p?m.of(r.p):null,text:r.p?show(m,m.of(r.p)):'Source unavailable'})),{max:m.unit==='%'?100:undefined})));
     const over=h('div',{class:'trend-panel'});

@@ -1,5 +1,14 @@
 # Decisions
 
+## 2026-10-27: configurable regional benchmarks
+
+The owner identified province-to-province and county-to-county configurability as vital before publication.
+
+- The main benchmark control includes every province and territory, plus a searchable same-level choice for local and regional geographies across Canada. Geography type is visible in the main search controls. Census divisions include counties and other regional structures; the label says both.
+- A benchmark's official geography identifier is stored in the existing `bench` URL parameter. Reload and browser history restore its name and value. A geography change preserves a compatible benchmark and resets a self-comparison or incompatible level to Canada. The existing parent-province mode continues to follow the selected area.
+- Findings, annual comparisons, Census ranking marks, resident-sector comparisons and Detail use the chosen benchmark. Population findings also show another same-level area's count; a count against Canada's total remains omitted. Compare marks an existing peer as the benchmark instead of adding it twice.
+- Cohort ranks retain their stated populations. Choosing a county in another province as the benchmark does not relabel the selected county's provincial cohort. Payroll shift-share and detailed employment LQ retain their stated Canada reference.
+
 ## 2026-10-27: visible maps and charts beside the findings
 
 The owner reported a blank map and missing visualizations, and requested broader visual evidence alongside the insights.

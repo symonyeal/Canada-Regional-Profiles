@@ -29,15 +29,21 @@
       <div class="place-actions"><button type="button" class="btn ghost" id="explore-map">Explore map</button><button type="button" class="btn ghost" id="copy-link">Copy link</button></div>
     </div>
     <form class="geo-bar" id="geo-bar" role="search" aria-label="Choose a geography" onsubmit="return false">
-      <div class="field combo"><label for="place-input">Find a community</label>
+      <div class="field combo"><label for="place-input">Find a region</label>
         <input id="place-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="place-list" placeholder="Search by name" autocomplete="off">
         <ul id="place-list" role="listbox" class="combo-list" hidden></ul>
       </div>
       <label class="field"><span>Province or territory</span><select id="province"></select></label>
       <label class="field"><span>Benchmark</span><select id="bench"><option value="CA">Canada</option><option value="PT">Province or territory</option></select></label>
-      <details class="geo-advanced"><summary>Geography type</summary><label class="field"><span>Search within</span><select id="level">
-        <option value="CSD">Municipalities</option><option value="CD">Census divisions</option><option value="CMACA">Metropolitan areas and agglomerations</option><option value="ER">Economic regions</option><option value="POPCNTR">Population centres</option>
-      </select></label></details>
+      <label class="field geography-type"><span>Search geography type</span><select id="level">
+        <option value="CSD">Municipalities</option><option value="CD">Census divisions / counties</option><option value="CMACA">Metropolitan areas and agglomerations</option><option value="ER">Economic regions</option><option value="POPCNTR">Population centres</option>
+      </select></label>
+      <div class="field combo benchmark-search" id="benchmark-search" hidden>
+        <label for="bench-input">Benchmark region</label>
+        <input id="bench-input" type="search" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="bench-list" aria-describedby="bench-help" placeholder="Search the same geography type across Canada" autocomplete="off">
+        <ul id="bench-list" role="listbox" class="combo-list" hidden></ul>
+        <span id="bench-help">Choose a region to apply the benchmark.</span>
+      </div>
     </form>
     <p class="geo-status" id="geo-status" role="status" aria-live="polite"></p>
   </div>

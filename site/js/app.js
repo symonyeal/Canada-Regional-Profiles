@@ -1,7 +1,8 @@
 // Page state, URL and history, geography selection and lazy tool mounting.
-// Geography changes push a history entry; view and filter changes replace the current one.
+// Geography and benchmark changes push history entries; view and filter changes replace the current one.
+// Legend: g = resolved geography; B = benchmark search matches; j = focused benchmark option.
 import {PT,CANADA,TYPES,provinceOf,matchesProvince,int} from './model.js';
-import {parse,serialize,withGeography,SECTIONS,KEYS} from './state.js';
+import {parse,serialize,withGeography,SECTIONS,KEYS,benchmarkFor} from './state.js';
 import {geographies,census,journal} from './api.js';
 import {refreshData} from './refresh.js';
 import {h,dialog,dataTable} from './ui.js';
@@ -34,8 +35,9 @@ async function resolve(geo) {
   try {const p=await census(geo);return {...geo,name:p.area?.name??geo.id,province:provinceOf(geo)};}
   catch {return {...geo,name:geo.id,province:provinceOf(geo),unresolved:true};}
 }
-const benchmark=()=>{const pr=String(place?.province??'').split('_')[0];
-  return state.t.bench==='PT'&&pr&&place.type!=='PR'?{id:`2021A0002${pr}`,type:'PR',name:PT.find(x=>x[0]===pr)?.[2]??'Province',province:pr}:{...CANADA};};
+let benchPlace=null,benchPending=null;
+const benchmark=()=>{const g=benchmarkFor(place?.id===state.geo.id?place:state.geo,state.t.bench);
+  return benchPlace?.id===g.id?benchPlace:{...g,name:g.name??PT.find(p=>`2021A0002${p[0]}`===g.id)?.[2]??g.id};};
 
 // The context every tool receives. set() writes one URL key; choose() changes geography.
 let pending=null;
@@ -43,7 +45,13 @@ const resolveCurrent=()=>{if(pending?.id!==state.geo.id){pending=resolve(state.g
 const app={
   get state(){return state;},get place(){return place;},get bench(){return benchmark();},
   // Resolved place for the current geography; tools compare its id with app.state.geo.id before drawing.
-  async resolved(){const p=await resolveCurrent();place=p.id===state.geo.id?p:place;return p;},
+  async resolved(){const p=await resolveCurrent();if(p.id!==state.geo.id)return p;place=p;
+    const v=state.t.bench,g=benchmarkFor(p,v);
+    if(benchPlace?.id!==g.id){
+      if(benchPending?.id!==g.id){benchPending=resolve(g);benchPending.id=g.id;}
+      const b=await benchPending;if(p.id===state.geo.id&&v===state.t.bench)benchPlace=b;
+    }
+    return p;},
   set(key,value){state={...state,t:{...state.t,[key]:value}};history.replaceState(null,'',serialize(state)||location.pathname);},
   choose(geo,section='overview'){
     const next=withGeography(state,geo);next.t.map='';
@@ -68,10 +76,8 @@ async function apply(changed) {
   const token=++placeToken;
   showSection(changed);
   mapTool?.update(changed);
-  if(changed.has('geo')||!place){
-    if(place?.id!==state.geo.id)setHeader({...state.geo,name:'Loading…'});
-    const resolved=await app.resolved();if(token!==placeToken||resolved.id!==state.geo.id)return;setHeader(resolved);syncBar();
-  } else syncBar();
+  if(place?.id!==state.geo.id)setHeader({...state.geo,name:'Loading…'});
+  const resolved=await app.resolved();if(token!==placeToken||resolved.id!==state.geo.id)return;setHeader(resolved);syncBar();
 }
 function setHeader(g) {
   $('place-name').textContent=g.name;
@@ -88,14 +94,25 @@ function syncBar() {
   if(place&&place.type!=='PR')$('level').value=place.type;
   if(state.t.map&&!mapDialog)openMap(state.t.map);
   if(!state.t.map&&mapDialog)mapDialog.close();
-  $('bench').value=state.t.bench;
-  $('bench').options[1].disabled=!pr||place?.type==='PR';
+  const g=place??state.geo,custom=!['CA','PT'].includes(state.t.bench)&&benchmark().type!=='PR';
+  const options=[new Option('Canada','CA'),new Option('Province or territory','PT')];
+  options[1].disabled=!pr||g.type==='PR';
+  if(g.id!==CANADA.id)options.push(...PT.filter(([c])=>`2021A0002${c}`!==g.id).map(([c,,n])=>new Option(n,`2021A0002${c}`)));
+  if(g.type!=='PR')options.push(new Option('Another region…','custom'));
+  $('bench').replaceChildren(...options);$('bench').value=custom?'custom':state.t.bench;
+  $('benchmark-search').hidden=!custom;
+  $('bench-input').value=custom?benchmark().name:'';
+  $('bench-help').textContent=custom?`Comparing with ${benchmark().name}. Search by name anywhere in Canada.`:'Choose a region to apply the benchmark.';
   $('place-input').value=place&&place.type!=='PR'?place.name:'';
 }
 function setupBar() {
   $('province').append(new Option('Canada',''),...PT.map(([c,,n])=>new Option(n,c)));
   $('province').onchange=()=>{const c=$('province').value;go(withGeography(state,c?{id:`2021A0002${c}`,type:'PR'}:CANADA));};
-  $('bench').onchange=()=>{const v=$('bench').value;state={...state,t:{...state.t,bench:v}};history.replaceState(null,'',serialize(state)||location.pathname);apply(new Set(['bench']));};
+  $('bench').onchange=()=>{const v=$('bench').value;
+    if(v==='custom'){$('benchmark-search').hidden=false;$('bench-input').value='';$('bench-help').textContent=`Search ${TYPES[state.geo.type].toLowerCase()} names across Canada; select one to apply it.`;$('bench-input').focus();return;}
+    chooseBench(v);
+  };
+  setupBenchmark();
   $('level').onchange=()=>{$('place-input').value='';$('place-input').focus();openList();};
   const input=$('place-input'),list=$('place-list');let matches=[],active=-1,version=0;
   const close=()=>{list.hidden=true;input.setAttribute('aria-expanded','false');input.removeAttribute('aria-activedescendant');};
@@ -125,6 +142,37 @@ function setupBar() {
     catch{$('geo-status').textContent='Copy the address bar to share this view.';}};
   $('explore-map').onclick=()=>openMap('market');
   $('open-sources').onclick=sources;
+}
+
+// The benchmark uses the selected area's level, without restricting the search to its province.
+function chooseBench(v,g) {
+  if(g)benchPlace=g;
+  go({...state,t:{...state.t,bench:v}});
+}
+function setupBenchmark() {
+  const input=$('bench-input'),list=$('bench-list');let B=[],j=-1,version=0;
+  const close=()=>{version++;list.hidden=true;input.setAttribute('aria-expanded','false');input.removeAttribute('aria-activedescendant');};
+  const pick=i=>{const g=B[i];if(!g)return;close();chooseBench(g.id,g);};
+  async function search() {
+    const v=++version,type=state.geo.type,id=state.geo.id,q=input.value.trim().toLowerCase();
+    list.hidden=false;input.setAttribute('aria-expanded','true');list.replaceChildren(h('li',{class:'note'},'Loading official regions…'));
+    try {
+      const all=await placeList(type);if(v!==version||id!==state.geo.id)return;
+      B=all.filter(g=>g.id!==id&&`${g.name} ${g.description??''}`.toLowerCase().includes(q))
+        .sort((a,b)=>(b.population??0)-(a.population??0)).slice(0,40);j=-1;
+      list.replaceChildren(...(B.length?B.map((g,i)=>h('li',{id:`bench-opt-${i}`,role:'option','aria-selected':'false',onmousedown:e=>{e.preventDefault();pick(i);}},
+        h('span',{},g.description??g.name),h('small',{},PT.find(p=>p[0]===provinceOf(g))?.[1]??''))):[h('li',{class:'note'},'No matching regions. Try a name in another province.')]));
+    }catch(e){if(v===version)list.replaceChildren(h('li',{class:'note'},`Region list unavailable: ${e.message}`));}
+  }
+  const highlight=i=>{j=i;[...list.children].forEach((li,k)=>li.setAttribute('aria-selected',String(k===i)));
+    if(i>=0){input.setAttribute('aria-activedescendant',`bench-opt-${i}`);list.children[i]?.scrollIntoView({block:'nearest'});}};
+  input.addEventListener('input',search);input.addEventListener('focus',search);input.addEventListener('blur',()=>setTimeout(close,120));
+  input.addEventListener('keydown',e=>{
+    if(e.key==='ArrowDown'){e.preventDefault();if(list.hidden)search();else highlight(Math.min(B.length-1,j+1));}
+    else if(e.key==='ArrowUp'){e.preventDefault();highlight(Math.max(0,j-1));}
+    else if(e.key==='Enter'){e.preventDefault();pick(j>=0?j:0);}
+    else if(e.key==='Escape'){close();e.stopPropagation();}
+  });
 }
 
 // ---------- sections ----------

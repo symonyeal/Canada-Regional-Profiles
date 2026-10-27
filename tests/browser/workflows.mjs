@@ -138,10 +138,10 @@ await check('peer selection, reload and removal preserve same-level comparisons'
   await p.goto(`${base}?geo=2021A000246&pm=chosen#compare`);
   await p.getByRole('searchbox',{name:'Find a peer'}).fill('Ontario');
   await until(p,()=>document.querySelector('.peer-result'));await p.locator('.peer-result').first().click();
-  await until(p,()=>document.querySelectorAll('.comparison-table tbody tr').length===3);
+  await until(p,()=>document.querySelector('.comparison-table')?.querySelectorAll('tbody tr').length===3);
   const url=p.url();if(!url.includes('peers=2021A000235'))throw Error('Peer missing from URL');
-  await p.reload();await until(p,()=>document.querySelectorAll('.comparison-table tbody tr').length===3);
-  await p.getByRole('button',{name:'Remove Ontario'}).click();await until(p,()=>document.querySelectorAll('.comparison-table tbody tr').length===2);
+  await p.reload();await until(p,()=>document.querySelector('.comparison-table')?.querySelectorAll('tbody tr').length===3);
+  await p.getByRole('button',{name:'Remove Ontario'}).click();await until(p,()=>document.querySelector('.comparison-table')?.querySelectorAll('tbody tr').length===2);
   return {url};
 });
 await check('keyboard geography selection, province benchmark and inactive-tab refresh',async p=>{
@@ -184,6 +184,44 @@ for(const width of [1440,768,390])await check(`four views fit ${width}px and lab
     if(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error(`${k}: page overflow`);
   }
   return {width};
+});
+await check('a province can benchmark another province across findings, trends, detail and shared URLs',async p=>{
+  await p.goto(`${base}?geo=2021A000246`,{waitUntil:'domcontentloaded'});
+  await until(p,()=>document.querySelector('#bench option[value="2021A000235"]'));
+  await p.selectOption('#bench','2021A000235');
+  await until(p,()=>/Ontario/.test(document.querySelector('#overview .findings.census')?.textContent??'')&&/Ontario/.test(document.querySelector('#overview .trend-panel .legend')?.textContent??''));
+  const cells=await p.locator('#overview .recent-detail .chart-card tbody tr',{hasText:'Employment rate, age 15+'}).locator('td').allTextContents();
+  const raw=await p.evaluate(async()=>{const {census}=await import('./js/api.js');return (await census({id:'2021A000235',type:'PR'})).value('2229');});
+  if(cells[1]!==`${raw.toFixed(1)}%`)throw Error(`Benchmark value ${cells[1]} differs from Ontario ${raw}`);
+  await nav(p,'detail');await until(p,()=>[...document.querySelectorAll('#detail .legend')].some(e=>/Ontario/.test(e.textContent)));
+  await nav(p,'compare');await until(p,()=>[...document.querySelectorAll('#compare .comparison-table tbody th')].some(e=>e.textContent==='Ontario'));
+  const count=await p.locator('#compare .comparison-table').first().locator('tbody th',{hasText:/^Ontario$/}).count();
+  if(count!==1)throw Error(`Benchmark duplicated ${count} times`);
+  const url=p.url();await p.reload({waitUntil:'domcontentloaded'});
+  await until(p,()=>document.querySelector('#bench').value==='2021A000235'&&document.querySelector('#compare .bar-row'));
+  return {benchmark:'Ontario',url};
+});
+await check('county benchmarks search the same level across provinces and history restores the selection',async p=>{
+  await p.goto(`${base}?geo=2021A00034611`,{waitUntil:'domcontentloaded'});
+  await until(p,()=>document.querySelector('#bench option[value="custom"]'));
+  await p.selectOption('#bench','custom');await p.locator('#bench-input').fill('Toronto');
+  await until(p,()=>/Toronto/.test(document.querySelector('#bench-list [role=option]')?.textContent??''));
+  await p.locator('#bench-input').press('ArrowDown');await p.locator('#bench-input').press('Enter');
+  await until(p,()=>/Toronto/.test(document.querySelector('#overview .findings.census')?.textContent??''));
+  if(!p.url().includes('bench=2021A00033520'))throw Error('Wrong benchmark geography');
+  await p.selectOption('#province','35');await until(p,()=>document.querySelector('#place-name').textContent==='Ontario'&&document.querySelector('#bench').value==='CA');
+  await p.goBack();await until(p,()=>document.querySelector('#bench-input').value==='Toronto'&&document.querySelector('#place-name').textContent==='Division No. 11');
+  await p.reload({waitUntil:'domcontentloaded'});await until(p,()=>document.querySelector('#bench-input').value==='Toronto'&&document.querySelector('#overview .cohort-charts .bench-tick'));
+  return {benchmark:'Toronto census division',url:p.url()};
+});
+await check('municipal benchmark selection is keyboard accessible and applies on phones',async p=>{
+  await p.setViewportSize({width:390,height:900});await p.goto(`${base}?geo=2021A00054602044`,{waitUntil:'domcontentloaded'});
+  await until(p,()=>document.querySelector('#bench option[value="custom"]'));
+  await p.selectOption('#bench','custom');await p.locator('#bench-input').fill('Winnipeg');
+  await until(p,()=>/Winnipeg/.test(document.querySelector('#bench-list [role=option]')?.textContent??''));
+  await p.locator('#bench-input').press('Enter');await until(p,()=>/Winnipeg/.test(document.querySelector('#overview .findings.census')?.textContent??''));
+  if(!p.url().includes('bench=2021A00054611040')||await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('Wrong municipal benchmark or page overflow');
+  return {benchmark:'Winnipeg',width:390};
 });
 await b.close();console.log(`${R.filter(r=>r.pass).length}/${R.length} passed`);
 if(R.some(r=>!r.pass))process.exitCode=1;

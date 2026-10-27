@@ -19,6 +19,8 @@ The page queries Statistics Canada and the OECD when a view opens. It ships no d
 
 Each latest-year finding includes a line chart of up to fifteen recent years, with its own labelled axis and source. The cards load independently, so a slow source leaves other measures visible. **Across comparable areas** shows two selectable Census rankings with named regions, values and benchmark marks. Large cohorts show the six highest, six lowest and selected area; the source menu retains the complete ranking. On phones the map comes before its filter list. Boundaries remain visible when the basemap is unavailable.
 
+**Benchmark** can be Canada, the selected area's province or territory, any named province or territory, or another region of the same geography type anywhere in Canada. Choose **Another region…** to search census divisions/counties, municipalities, metropolitan areas, economic regions or population centres at the selected area's level. The benchmark follows through profile findings, annual comparisons, regional ranking marks, resident-sector comparisons and Detail. Shared links and browser history retain it. Compare also accepts up to three manually chosen peers of the same level. Payroll shift-share and detailed-industry employment LQ retain their explicitly labelled Canada reference.
+
 ## What the numbers are
 
 - Findings open with the latest published year of each annual measure below: the place, its benchmark and its cohort are compared in that same year, and change runs from the first published year in the five before it.
