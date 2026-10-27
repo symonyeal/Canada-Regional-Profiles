@@ -2,6 +2,17 @@
 
 What was checked, how, and the result. Runtime checks of the website are separate from the historical offline pipeline's records. Evidence files (browser reports, captures, recorded reference responses) are kept with the project's working files, outside this repository.
 
+## Findings, economy and peers (2026-10-26)
+
+- Local checks: 47 JavaScript tests (standing and rank text, headline selection, national spread, similarity, sector base and D, shift-share additivity, legacy links), 10 Rust tests (9 boundary, 1 adjacency), 11 Python tests (6 slow deselected), Ruff and the dependency check passed.
+- Shift-share against live SEPH (2019 and 2025): Alberta publishes all 20 sectors and its unattributed remainder is 0, so the sectors sum to the [11-91N] aggregate in both years; Canada's mix and regional terms are −1 and 0 jobs (rounding). Manitoba: +17,358 jobs; 44,400 at Canada's rate (7.26 %), sector mix +2,964, regional shift −30,088, three suppressed sectors +83.
+- Adjacency: 13 files, 34 to 1,380 areas each; Winnipeg's seven neighbours (Ritchot, Macdonald, Headingley, Springfield, East St. Paul, West St. Paul, Rosser) and Steinbach's two (Hanover, La Broquerie) inspected. Isolated areas (islands): 8 of 262 in Manitoba, 16 of 1,380 in Quebec.
+- Browser workflows against live sources: 18 of 18 passed in two full runs, the second on the final code (findings and ranks, national spread, municipal cohort with similar places and neighbours, payroll decomposition, legacy links, CSV agreement, industry detail, chosen peers, keyboard selection, history, Census outage recovery, unsupported levels, suppression, optional maps, 1440/768/390 px). Between them, isolated reruns of the outage check failed twice while WDS refused browser connections without CORS headers after the test load (curl reached it at the same time); the final full run passed after WDS recovered.
+- Sweep: Canada, the 13 provinces and territories, Winnipeg (CSD), Division No. 11, Ottawa–Gatineau, Winnipeg economic region and Brandon population centre rendered all four views with no page errors. The three detailed-industry failure panels are the unpublished-level states for a census division, an economic region and a population centre. Some Detail annual series were still loading when recorded.
+- Time to first finding and to ranks, one run each (2026-10-26, Statistics Canada answering slowly): Manitoba 4.0 s and 5.5 s; Montréal 10.1 s and 23.9 s; Toronto 13.8 s and 24.8 s, against 31.8 s and 51.1 s before the profile request started in parallel with the geography list. Network-dominated; not a benchmark.
+- Economy folds its two 20-sector tables under summary lines; the payroll table orders published sectors by regional shift and lists suppressed ones last.
+- Visual: findings for Steinbach, Manitoba and Canada, Compare for Steinbach (similar: Morden, Winkler, Brandon, Altona, Portage la Prairie), Economy for Manitoba and Alberta, captured at 1280 px. No dark-theme or full accessibility audit.
+
 ## Regional brief (2026-10-26)
 
 - Required local checks: 41 JavaScript tests, 9 Rust boundary tests and 11 Python tests passed; 6 historical slow Python tests deselected. Ruff and the installed-dependency check passed. Rust required a network setting to skip unavailable certificate-revocation lookups; certificate verification stayed enabled.

@@ -1,6 +1,7 @@
 // Helpers shared by the tools: independent async slots, Census pairs and level-aware annual series.
-import {census,annual,table,SourceError} from '../api.js';
-import {CANADA,PT} from '../model.js';
+import {census,censusMany,annual,table,memoRequest,SourceError} from '../api.js';
+import {CANADA,PT,provinceOf,matchesProvince} from '../model.js';
+import {MEASURE_IDS} from '../regional-model.js';
 import {loading,failure,h} from '../ui.js';
 
 // A generation counter per tool: work started for an older selection never draws.
@@ -54,3 +55,25 @@ export async function incomeSeries(place,kind) {
 export const tableMeta=(d,{title,universe,notes,period}={})=>({source:`Statistics Canada, table ${d.pid.replace(/(\d{2})(\d{2})(\d{4})/,'$1-$2-$3')}: ${d.metadata.cubeTitleEn}`,url:table(d.pid),
   geo:d.geoName,period:period??(d.values.length?`${d.values[0].year} to ${d.values.at(-1).year}`:''),universe,notes});
 export const provinceName=code=>PT.find(p=>p[0]===code)?.[2]??'';
+
+// The cohort an area is ranked among: the province's census subdivisions with at least 1,000 residents (smaller
+// counts are dominated by Census random rounding) or its census divisions; all metropolitan areas and
+// agglomerations (whole areas, not provincial parts), economic regions or population centres; the thirteen
+// provinces and territories for a province, territory or Canada. The selected area joins its cohort when outside it.
+// Returns {label, areas, P}, P[i] the measure profile of areas[i] or null.
+const cohorts=new Map();
+export const clearCohorts=()=>cohorts.clear();
+export function cohort(g,placeList) {
+  const pr=provinceOf(g),local=['CSD','CD'].includes(g.type),national=g.id===CANADA.id||g.type==='PR';
+  const key=national?'PR':local?`${g.type}:${pr}`:g.type;
+  return memoRequest(cohorts,`${key}:${g.id}`,async()=>{
+    const where=provinceName(pr);
+    const [areas,label]=national?[PT.map(([c,,name])=>({id:`2021A0002${c}`,type:'PR',name,province:c})),'provinces and territories']
+      :[(await placeList(g.type)).filter(a=>local?matchesProvince(a,pr)&&(g.type!=='CSD'||(a.population??0)>=1000):g.type!=='CMACA'||/^2021S050[34]/.test(a.id)),
+        {CSD:`${where} municipalities with 1,000+ residents`,CD:`census divisions in ${where}`,CMACA:'metropolitan areas and agglomerations',
+          ER:'economic regions',POPCNTR:'population centres'}[g.type]];
+    if(!national&&!areas.some(a=>a.id===g.id))areas.push({...g});
+    const P=await censusMany(national?'PR':g.type,areas.map(a=>a.id),MEASURE_IDS);
+    return {label,areas,P:areas.map(a=>P.get(a.id)?.rows.length?P.get(a.id):null)};
+  });
+}

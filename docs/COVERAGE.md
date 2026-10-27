@@ -1,8 +1,15 @@
 # Coverage and comparison with the reference
 
-The current interface has five primary views: Overview, People and work, Housing and incomes, Industries, and Compare. Optional maps contain the distribution explorer and community finder. Logistics and enrolments are not primary views. This structure was approved on 26 October 2026.
+The current interface has four views: Findings, Economy, Compare and Detail ([Decisions](DECISIONS.md), 2026-10-26). Optional maps contain the distribution explorer and community finder. Logistics, enrolments and climate are no longer shown.
 
-Overview and peer comparisons use Census 2021 and 2020 income across supported Census levels. Canada compares all thirteen provinces and territories; regional peer selection is restricted to the same geography level. Industry coverage remains SEPH payroll employment for provinces/territories and Canada, and labelled Business Register size-class estimates for municipalities and metropolitan areas. Other levels explain the limitation. Source failures and suppression stay unavailable.
+| Exhibit | Canada | Province/territory | CMA/CA | CSD | CD | ER | Population centre |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Findings with ranks | spread across provinces | among 13 | among 152 whole areas | province's CSDs with 1,000+ residents | province's CDs | among 76 | among 1,026 |
+| Resident sectors (Census) | shares only | yes | yes | yes | yes | yes | yes |
+| Payroll shift-share (SEPH) | sector change | yes | no | no | no | no | no |
+| Most similar areas | no (all provinces listed) | yes | yes | yes | yes | yes | yes |
+| Neighbours | no | no | no | yes, within the province | yes, within the province | no | no |
+| Detailed industries | SEPH | SEPH | Business Register estimates | Business Register estimates | not published | not published | not published |
 
 The matrix below is the historical nine-tool reference comparison, retained to document sources and differences. It does not describe the current navigation or claim that retired views remain visible.
 
