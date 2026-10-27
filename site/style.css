@@ -8,6 +8,7 @@
   --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s6:24px;--s8:32px;--s10:40px;
   --brief-width:1280px;--brief-text:16px;--brief-small:13px;--brief-radius:4px;--brief-rule:1px;
   --brief-white:#fff;--brief-title:44px;--brief-chart:260px;--brief-tap:44px;
+  --cohort-bar:#758d80;
 }
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -81,7 +82,9 @@ p{margin:0}
 .count-label::after{content:'';flex:1;height:1px;background:var(--line)}
 
 .map-wrap{position:relative;min-height:0;min-width:0;background:#f3f4f6}
-.map{position:absolute;inset:0}
+/* The lazily loaded MapLibre stylesheet sets position:relative on .maplibregl-map.
+   Keep this more specific so its absolutely positioned canvas cannot collapse the viewport. */
+.map-wrap>.map{position:absolute;inset:0}
 
 .map-kpi{position:absolute;z-index:3;top:12px;left:12px;background:#fff;border-radius:12px;box-shadow:0 4px 16px rgba(16,24,40,.10);padding:12px 16px;min-width:180px}
 .map-kpi span{display:block;font-size:12px;color:var(--body);font-weight:500}
@@ -686,6 +689,25 @@ table tbody th{font-weight:500}
 @media(max-width:820px){.findings{grid-template-columns:1fr}.finding-value{font-size:28px}.compare-controls{flex-wrap:wrap}}
 .strip-key .legend{justify-content:flex-start;border:0;padding:0 0 var(--s3);margin:0}
 .strip-key .legend i.tick::before{display:none}
+.recent-slot{min-width:0;list-style:none}
+.recent-slot .finding{height:100%}
+.finding-history{grid-column:1/-1;min-width:0;margin-top:var(--s4)}
+.finding-history .card-head{padding:0;align-items:center}
+.finding-history h4{font:500 var(--brief-small)/1.5 var(--ui)}
+.chart-source{font-size:12px;line-height:1.5;color:var(--muted);margin-top:var(--s2)}
+.cohort-charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s10);margin-bottom:var(--s8)}
+.cohort-chart{min-width:0}
+.cohort-chart>.field{margin-bottom:var(--s4)}
+.cohort-chart .bar-label{white-space:normal}
+.cohort-chart .legend{justify-content:flex-start}
+@media(max-width:820px){
+  .cohort-charts{grid-template-columns:1fr}
+  .finding-history .chart-svg{height:136px}
+  /* Put the map before the long filter list on narrow screens. */
+  .map-dialog-host .with-filters .rail{grid-row:1}
+  .map-dialog-host .with-filters .map-cell{grid-row:2}
+  .map-dialog-host .with-filters .filters{grid-row:3}
+}
 /* Year range over the years published for every area shown. */
 .trend-range{display:grid;grid-template-columns:auto minmax(160px,420px) auto;align-items:center;gap:var(--s3) var(--s6);margin:0 0 var(--s4)}
 .trend-range .field-label{font-size:var(--brief-small);color:var(--body)}

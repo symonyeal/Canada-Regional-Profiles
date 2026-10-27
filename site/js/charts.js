@@ -40,7 +40,7 @@ export function barList(items,{max,benchName,size='md'}={}) {
     const w=it.value==null?0:Math.max(0,100*it.value/top),b=it.bench==null?null:Math.min(100,100*it.bench/top);
     const row=h('div',{class:'bar-row',role:'listitem',tabindex:0,'aria-label':`${it.label}: ${it.text??'Not available'}${it.benchText?`; ${benchName}: ${it.benchText}`:''}`},
       h('div',{class:'bar-head'},h('span',{class:'bar-label'},it.label),h('span',{class:'bar-value'},it.text??'Not available')),
-      h('div',{class:'bar-track'},h('span',{class:'bar-fill',style:{width:`${w}%`}}),b==null?null:h('span',{class:'bench-tick',style:{left:`${b}%`}})));
+      h('div',{class:'bar-track'},h('span',{class:'bar-fill',style:{width:`${w}%`,...(it.color?{background:it.color}:{})}}),b==null?null:h('span',{class:'bench-tick',style:{left:`${b}%`}})));
     tipOn(row,`<b>${esc(it.label)}</b><br>${esc(it.text??'Not available')}${it.benchText?`<br>${esc(benchName)}: ${esc(it.benchText)}`:''}`);
     return row;
   }));
@@ -90,7 +90,7 @@ export function lines({x,series,fmt=compact,height=260,markers=true}) {
   const el=h('div',{class:'chart-svg',style:{height:`${height}px`},role:'img','aria-label':series.map(s=>`${s.name}: ${x.map((t,i)=>`${t} ${fmt(s.values[i])}`).join(', ')}`).join('. ')});
   return responsive(el,(w,H)=>{
     const vals=series.flatMap(s=>s.values).filter(Number.isFinite);if(!vals.length){el.replaceChildren();return;}
-    const yt=niceTicks(Math.min(0,...vals),Math.max(...vals),4),L=54,R=12,T=10,B=26,pw=w-L-R,ph=H-T-B,n=x.length;
+    const yt=niceTicks(Math.min(0,...vals),Math.max(...vals),4),L=Math.max(54,Math.min(112,Math.max(...yt.map(v=>fmt(v).length))*7+12)),R=16,T=10,B=26,pw=w-L-R,ph=H-T-B,n=x.length;
     const X=i=>L+(n<2?pw/2:i/(n-1)*pw),Y=v=>T+ph-(v-yt[0])/(yt.at(-1)-yt[0])*ph,s=svg('svg',{width:w,height:H});
     for(const t of yt)s.append(svg('line',{x1:L,x2:w-R,y1:Y(t),y2:Y(t),stroke:'#e2e7df'}),svg('text',{x:L-8,y:Y(t)+4,'text-anchor':'end',class:'axis'},fmt(t)));
     const step=Math.ceil(n/Math.max(2,Math.floor(pw/56)));x.forEach((t,i)=>{if(i%step===0&&n-1-i>=step/2||i===n-1)s.append(svg('text',{x:X(i),y:H-6,'text-anchor':'middle',class:'axis'},t));});

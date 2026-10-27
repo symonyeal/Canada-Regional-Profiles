@@ -25,7 +25,7 @@ export function explorer(el,app) {
       data={pr,all,place,features:null,points:new Map()};
       drawChips();drawList();
       if(!pr){note.hidden=false;note.textContent='Choose a province or territory to map its communities. The list covers all of Canada.';return;}
-      if(!m)return;await m.ready;
+      if(!m)return;await m.ready;if(!alive())return;
       let fc;
       try {fc=await subdivisions(pr);}
       catch(e){if(alive()){note.hidden=false;note.textContent=`Boundaries unavailable: ${e.message} The community list and profiles still work; Refresh data tries again.`;}return;}
@@ -88,5 +88,5 @@ export function explorer(el,app) {
         h('button',{type:'button',class:'btn',onclick:()=>app.choose({id,type:'CSD'},'profile')},'Open community profile',icon('chevronRight',15)));
     } catch(e) {if(selected===id)failure(panel,e,()=>select(id,false),'Indicators unavailable');}
   }
-  return {update(changed){if(['geo','refresh','ext'].some(k=>changed.has(k))||(changed.has('exq')&&!changed.has('geo')))render();},destroy:()=>m?.destroy()};
+  return {update(changed){if(['geo','refresh','ext'].some(k=>changed.has(k))||(changed.has('exq')&&!changed.has('geo')))render();},destroy:()=>{life.next();m?.destroy();}};
 }

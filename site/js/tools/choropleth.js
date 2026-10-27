@@ -133,9 +133,12 @@ export function mapPanel(container,{unit='p',onunit,onopen,label:fixedLabel}={})
     await m.ready;
     let fc;
     try {fc=await model.shapes;}
-    catch(e){if(model===last&&!wrap.querySelector('.map-note'))wrap.append(h('p',{class:'map-note'},`Boundaries unavailable: ${e.message} The card, legend and data table still use the published values; Refresh data tries again.`));return list;}
-    if(model!==last)return list;
-    wrap.querySelector('.map-note')?.remove();
+    catch(e){if(model===last&&mapEl.isConnected){
+      wrap.querySelector('.basemap-note')?.remove();
+      if(!wrap.querySelector('.map-note:not(.basemap-note)'))wrap.append(h('p',{class:'map-note'},`Boundaries unavailable: ${e.message} The card, legend and data table still use the published values; Refresh data tries again.`));
+    }return list;}
+    if(model!==last||!mapEl.isConnected)return list;
+    wrap.querySelector('.map-note:not(.basemap-note)')?.remove();
     const features={type:'FeatureCollection',features:fc.features.map(ft=>({type:'Feature',geometry:ft.geometry,properties:{dguid:ft.properties.DGUID,
       name:rows.get(ft.properties.DGUID)?.name??ft.properties.name??'',color:colorOf(rows.get(ft.properties.DGUID)?.value)}}))};
     setLayer(m.map,'areas',features,[{id:'areas-fill',type:'fill',paint:{'fill-color':['get','color'],'fill-opacity':.85}},
