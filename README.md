@@ -2,34 +2,33 @@
 
 [Open the dashboard](https://symonyeal.github.io/Canada-Regional-Profiles/)
 
-Compare population, work, housing and industries across Canada, provinces and territories, and local Census geographies. Choose a place and a benchmark; the address bar preserves the selection and view for sharing.
+Where a Canadian place stands out, and why. Choose a province, territory, municipality, census division, metropolitan area, economic region or population centre; the page ranks it among comparable areas, decomposes its payroll job change, and finds its most similar places and its neighbours. The address bar keeps the selection and view for sharing.
 
-The page queries public sources when a view opens. It ships no downloaded observations and holds results only in the open tab. **Refresh data**, under **Data and sources**, queries the sources again. A simplified copy of Statistics Canada's 2021 cartographic boundaries is served with the page; it contains geometry and identifiers, not observations.
+The page queries Statistics Canada when a view opens. It ships no downloaded observations and holds results only in the open tab. **Refresh data**, under **Data and sources**, queries the sources again. Two kinds of geometry are served with the page: a simplified copy of the 2021 cartographic boundaries, and each area's list of bordering areas derived from it. Neither contains observations.
 
 ## Views
 
 | View | What it answers |
 | --- | --- |
-| Overview | How do population, employment, household income and tenant shelter costs compare? Canada shows employment rates across all thirteen provinces and territories. A regional view shows its benchmark differences. Recent annual population estimates open separately. |
-| People and work | How do age, resident industries, occupations and qualifications differ? Industry and occupation shares include benchmark marks. Education indicators explicitly state that their categories overlap. |
-| Housing and incomes | How do household income bands, composition, housing stock, costs and commuting compare? Every exhibit states its population and period. |
-| Industries | Which industries are largest, adding or losing jobs, or specialized? Rankings show full names, values, changes and a separate starting base for job-change comparisons. Click an industry for employment history, earnings and other detail. |
-| Compare | Compare up to three peers with the selected region, at the same geography level and Census period. Canada shows all provinces and territories. Shareable links preserve peers and the chosen chart measure. |
+| Findings | On which measures does this place differ most from comparable areas? One finding per theme (population, work, income, housing, people, commuting), each with the value, its rank in the cohort, the benchmark and the cohort's distribution. For Canada: where provinces and territories differ most. Also the sectors in which residents are over-represented. |
+| Economy | How did payroll jobs change since 2019, and how much of that is national growth, sector mix or regional performance (provinces and territories)? Which sectors employ residents more than the benchmark (all levels)? Detailed industries by specialization, size or change, with an industry detail. |
+| Compare | How does the place compare with its five most similar areas, its neighbours (municipalities and census divisions) or peers chosen by the reader, on the same measures and period? |
+| Detail | Residents, work and education, households, housing stock, costs and commuting, each against the benchmark. |
 
-**Explore map** opens distribution maps and the community finder on demand. Logistics and enrolments are no longer primary sections. Old section links route to their relevant consolidated view. Each exhibit keeps a source menu, data table and CSV export.
+**Explore map** opens distribution maps and the community finder on demand. Each exhibit has a source menu, data table and CSV export.
 
 ## What the numbers are
 
-- Overview and peer comparisons use Census 2021, with 2020 household incomes. A live request does not make these current-year observations. Differences in rates are percentage points, labelled pp.
-- Recent population, income and industry time series state their own periods. Family income and household income describe different populations and retain distinct labels.
-- Industry rankings use published SEPH payroll employment for Canada and provinces/territories. Municipal and metro rankings use separately labelled Business Register size-class estimates. Other levels state that industry employment is unavailable and offer the province. These measures are not combined in peer comparisons.
-- Suppression and failed requests remain unavailable, never zero. Industry rankings cover published industries only; unknown history does not become zero growth.
-- Job-change rankings show the largest published gains and losses over the existing five-year period. Percentage change is undefined for a zero baseline. A 2020 baseline carries a recovery warning; the industry detail shows the annual series.
-- Employment specialization compares the region's industry employment share with Canada's share. National specialization directs the reader to an industry's interprovincial benchmarks. Traded/local is an optional approximate US-based classification.
-- Tenant shelter costs describe tenant households, and dwelling values describe owner households. Their medians are not combined into an invented housing-cost-burden rate.
-- Optional maps sum bins from one active distribution. Age, income and other filters are not combined into unpublished joint counts.
+- Findings, comparisons and sector shares use Census 2021, with 2020 incomes. A live request does not make them current. Rate differences are percentage points (pp).
+- A **cohort** is the set a place is ranked in: the province's municipalities (census subdivisions) with at least 1,000 residents, or its census divisions; all metropolitan areas and agglomerations, economic regions or population centres in Canada; the thirteen provinces and territories for a province, territory or Canada. Ranks count areas with a published value; 1 is the highest.
+- A finding's distinctiveness is how far its rank lies from the cohort's middle. The headline shows the most distinctive measure of each theme. For Canada it shows the measures with the largest spread across provinces and territories (coefficient of variation).
+- **Most similar** areas are the nearest in the cohort on nine standardised measures: population and median household income (logarithms), population growth, median age, employment rate, renter share, bachelor's degree share, immigrant share and Indigenous identity share. **Neighbours** share a border of positive length; neighbours across a provincial border are not listed.
+- **Payroll job change** (provinces and territories) uses SEPH 14-10-0202 annual averages for 20 NAICS sectors in 2019 and the latest year. Shift-share (Dunn 1960) splits each sector's change into national growth, sector mix and regional shift; changes of suppressed sectors are reported as unattributed, never as zero. SEPH covers forestry and logging, not agriculture.
+- **Resident sectors** count the Census labour force by place of residence, not jobs located in the area. LQ is the sector's share over the benchmark's share; the mix difference D = ½ Σ |s − S| is the share of workers who would have to change sector to match the benchmark.
+- Detailed industries use SEPH payroll employment for Canada, provinces and territories and Business Register size-class estimates, labelled as estimates, for metropolitan areas and municipalities. Other levels say that industry employment is not published and offer the province.
+- Suppression and failed requests remain unavailable, never zero. Tenant shelter costs describe tenant households and dwelling values owner households.
 
-The earlier reference was Advance Rural Manitoba's [Why Rural Manitoba](https://advanceruralmanitoba.ca/why-rural-manitoba/). The owner approved the five-view regional brief on 26 October 2026; reference composition and visual identity are no longer acceptance requirements. Historical reference comparisons remain documented separately.
+The project began as a rebuild of Advance Rural Manitoba's [Why Rural Manitoba](https://advanceruralmanitoba.ca/why-rural-manitoba/); reference comparisons remain documented separately.
 
 Details: [reference](docs/REFERENCE.md), [coverage](docs/COVERAGE.md), [sources](docs/SOURCES.md), [decisions](docs/DECISIONS.md), [validation](docs/VALIDATION.md).
 
@@ -66,6 +65,12 @@ cargo run --release --manifest-path tools/boundaries/Cargo.toml -- <cache-dir> s
 ```
 
 It pages through the 2021 cartographic boundary service into `<cache-dir>` (resumable; about 150 MB), joins neighbouring subdivisions into shared arcs, forms divisions and provinces as their unions, removes islands and holes under 0.5 km² (25 km² on the Canada map) and simplifies each arc once (Visvalingam–Whyatt), so neighbours keep identical borders. It stops if a division or province differs in area from the sum of its subdivisions by more than 1 %. From a full cache it runs in about 80 s.
+
+`neighbours-<pr>.json` lists, for each subdivision and division, the areas that share an arc with it in the committed files. Rebuild it after the boundary files:
+
+```text
+cargo run --release --manifest-path tools/boundaries/Cargo.toml --bin neighbours -- site/boundaries
+```
 
 ## Historical analysis
 

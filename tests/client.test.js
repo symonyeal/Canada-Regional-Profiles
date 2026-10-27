@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {squarify,niceTicks,geographyType,compact,ramp,luminance,tradedShare} from '../site/js/model.js';
+import {niceTicks,geographyType,compact,ramp,luminance,tradedShare} from '../site/js/model.js';
 import {parse,serialize,withGeography} from '../site/js/state.js';
 import {matcher,topology} from '../site/js/geo.js';
 import {parseSelection,serializeSelection,shapes,areas} from '../site/js/tools/choropleth.js';
@@ -8,14 +8,6 @@ import {request,clearCache,units,SourceError} from '../site/js/api.js';
 import {FILTERS,PROFILE_IDS,HH_INCOME5} from '../site/js/census.js';
 import {refreshData} from '../site/js/refresh.js';
 
-test('squarified tiles cover the rectangle with areas proportional to the values',()=>{
-  const v=[50,20,12,9,5,3,1],W=600,H=400,r=squarify(v,0,0,W,H),total=v.reduce((a,b)=>a+b,0);
-  r.forEach((x,i)=>assert.ok(Math.abs(x.w*x.h-v[i]/total*W*H)<1e-6));
-  for(const x of r){assert.ok(x.x>=-1e-9&&x.y>=-1e-9&&x.x+x.w<=W+1e-9&&x.y+x.h<=H+1e-9);}
-  for(let i=0;i<r.length;i++)for(let j=i+1;j<r.length;j++){const a=r[i],b=r[j];
-    const overlap=Math.max(0,Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x))*Math.max(0,Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y));assert.ok(overlap<1e-6);}
-  assert.deepEqual(squarify([],0,0,10,10),[]);
-});
 test('nice ticks cover the range with 1, 2 or 5 times a power of ten',()=>{
   for(const [lo,hi] of [[0,39876],[0,0.73],[-12,31],[3,3]]){const t=niceTicks(lo,hi);
     assert.ok(t[0]<=lo&&t.at(-1)>=hi);const step=t[1]-t[0],e=10**Math.floor(Math.log10(step));assert.ok([1,2,5,10].some(k=>Math.abs(step/e-k)<1e-9));}
@@ -44,14 +36,13 @@ test('TopoJSON decoding joins arcs, reverses ~i references and applies the trans
   assert.deepEqual(fc.features[1].geometry.coordinates[0],[[12,0],[14,0],[14,1],[12,1],[12,0]]);
 });
 test('shared URLs round-trip; malformed values fall back; a new geography drops area selections',()=>{
-  const s=parse('?geo=2021S0504610&lg=rail&lgf=YWG&li=traded&cp=household&mkr=2-5&bench=PT','#largest');
-  assert.equal(s.geo.type,'CMACA');assert.equal(s.section,'industries');
-  assert.equal(parse(serialize(s).split('#')[0],'#largest').t.li,'traded');
+  const s=parse('?geo=2021S0504610&li=traded&exs=2021A00054611040&mkr=2-5&bench=PT&pm=near','#largest');
+  assert.equal(s.geo.type,'CMACA');assert.equal(s.section,'industries');assert.equal(s.t.is,'traded');assert.equal(s.t.iv,'largest');
   assert.deepEqual(parse(serialize(s).split('#')[0]).t,s.t);
-  const bad=parse('?geo=../etc&lg=boats&cp=<script>&mkr=1;drop');
-  assert.equal(bad.geo.id,'2021A000011124');assert.equal(bad.t.lg,'air');assert.equal(bad.t.cp,'economic');assert.equal(bad.t.mkr,'');
+  const bad=parse('?geo=../etc&dv=<script>&mkr=1;drop&cm=gdp');
+  assert.equal(bad.geo.id,'2021A000011124');assert.equal(bad.t.dv,'resident');assert.equal(bad.t.mkr,'');assert.equal(bad.t.cm,'employment');
   const moved=withGeography(s,{id:'2021A000246',type:'PR'});
-  assert.equal(moved.t.lgf,'');assert.equal(moved.t.li,'traded');assert.equal(moved.t.lg,'rail');
+  assert.equal(moved.t.exs,'');assert.equal(moved.t.is,'traded');assert.equal(moved.t.pm,'near');
   assert.equal(serialize(parse('')),'');
 });
 test('filter selections keep a contiguous interval for ordered bins and any subset for categories',()=>{
@@ -102,7 +93,7 @@ test('permanent failures are not retried and keep their kind; failed requests ca
 });
 test('an error payload with HTTP 200 is a malformed response, not data',async()=>{
   clearCache();globalThis.fetch=async()=>reply(200,{error:{message:'Invalid query'}});
-  try {await assert.rejects(request('https://example.test/arcgis',{attempts:2,backoff:1}),e=>e.kind==='malformed');}
+  try {await assert.rejects(request('https://example.test/error',{attempts:2,backoff:1}),e=>e.kind==='malformed');}
   finally {globalThis.fetch=realFetch;}
 });
 test('series published in thousands are scaled by their unit of measure',async()=>{

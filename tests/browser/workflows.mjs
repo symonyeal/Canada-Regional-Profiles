@@ -1,4 +1,4 @@
-// Browser checks for the regional brief. Legend: p = page; b = browser; R = results.
+// Browser checks for the regional findings. Legend: p = page; b = browser; R = results.
 // Usage: node tests/browser/workflows.mjs <base-url> <report-path>.
 import {chromium} from 'playwright-core';
 import fs from 'node:fs';
@@ -25,18 +25,33 @@ async function check(name,fn){
     R.push({name,pass:false,error:e.message.split('\n')[0],errors,state:state.slice(0,2000),requests});console.log('FAIL',name,e.message.split('\n')[0]);}
   finally{await p.close();fs.writeFileSync(out,JSON.stringify({base,mode,results:R},null,2));}
 }
-await check('overview has four dated values, five destinations, and no map requests',async p=>{
-  const maps=[];p.on('request',r=>{if(/maplibre|openfreemap|valhalla|wikidata/.test(r.url()))maps.push(r.url());});
-  await p.goto(`${base}?geo=2021A000246`);await until(p,()=>document.querySelectorAll('#overview .kpi-value').length===4);
-  if(await p.locator('#section-links a').count()!==5||maps.length)throw Error('Unexpected navigation or eager map request');
-  const population=await p.locator('#overview .kpi-value').first().textContent();
-  const raw=await p.evaluate(async()=>{const {census}=await import('./js/api.js');return (await census({id:'2021A000246',type:'PR'})).value('1');});
-  if(Number(population.replaceAll(',',''))!==raw)throw Error('Population differs from live adapter');
-  return {population,raw,maps:maps.length};
+await check('findings rank six measures among comparable areas, four destinations, no map requests',async p=>{
+  const maps=[];p.on('request',r=>{if(/maplibre|openfreemap/.test(r.url()))maps.push(r.url());});
+  await p.goto(`${base}?geo=2021A000246`);await until(p,()=>document.querySelectorAll('#overview .finding').length===6&&/of 13 provinces/.test(document.querySelector('#overview .findings').textContent));
+  if(await p.locator('#section-links a').count()!==4||maps.length)throw Error('Unexpected navigation or eager map request');
+  await p.locator('#overview summary',{hasText:'All 20 measures'}).click();
+  const age=await p.locator('#overview tbody tr',{hasText:'Median age'}).locator('td').first().textContent();
+  const raw=await p.evaluate(async()=>{const {census}=await import('./js/api.js');return (await census({id:'2021A000246',type:'PR'})).value('40');});
+  if(Number(age)!==raw)throw Error('Median age differs from live adapter');
+  return {age,raw,maps:maps.length};
 });
-await check('national overview compares provinces instead of Canada with itself',async p=>{
-  await p.goto(base);await until(p,()=>document.querySelectorAll('.national-bars .bar-row').length===13);
-  return {regions:await p.locator('.national-bars .bar-row').count()};
+await check('national findings name the provinces at each end of a measure',async p=>{
+  await p.goto(base);await until(p,()=>[...document.querySelectorAll('#overview .finding-text')].filter(e=>/range from .+ to /.test(e.textContent)).length===6);
+  return {findings:await p.locator('#overview .finding').count()};
+});
+await check('a municipality is ranked within its province and compared with similar places and neighbours',async p=>{
+  await p.goto(`${base}?geo=2021A00054602044`);await until(p,()=>/Manitoba municipalities with 1,000\+ residents/.test(document.querySelector('#overview .findings')?.textContent??''));
+  await nav(p,'compare');await until(p,()=>document.querySelectorAll('#compare .comparison-table tbody tr').length===7);
+  const similar=await p.locator('#compare .comparison-table tbody th').allTextContents();
+  await p.getByRole('button',{name:'Neighbours'}).click();await until(p,()=>/sharing a border/.test(document.querySelector('#compare').textContent));
+  const near=await p.locator('#compare .comparison-table tbody th').allTextContents();
+  if(!p.url().includes('pm=near')||!near.includes('Hanover'))throw Error('Neighbours missing');
+  return {similar,near};
+});
+await check('provincial payroll change is decomposed into national, mix and regional effects',async p=>{
+  await p.goto(`${base}?geo=2021A000246#industries`);await until(p,()=>/payroll jobs from 2019 to/.test(document.querySelector('#industries .economy-cards')?.textContent??''));
+  const text=await p.locator('#industries .economy-cards').textContent();if(!/At Canada’s rate/.test(text)||!/Regional shift/i.test(text))throw Error('Decomposition missing');
+  return {headline:await p.locator('#industries .economy-cards h4').first().textContent()};
 });
 await check('legacy industry link opens the consolidated view with its filter',async p=>{
   await p.goto(`${base}?geo=2021A000246&li=traded#largest`);await until(p,()=>document.querySelector('#industries .industry-name'));
@@ -49,12 +64,12 @@ await check('industry changes include losses, baseline and percentage changes',a
   return {losses:await p.locator('.rank-fill.negative').count()};
 });
 await check('industry table and exported data share their leading value',async p=>{
-  await p.goto(`${base}?geo=2021A000246#industries`);await until(p,()=>document.querySelector('.industry-name'));
+  await p.goto(`${base}?geo=2021A000246&iv=largest#industries`);await until(p,()=>document.querySelector('.industry-name'));
   const name=await p.locator('.industry-name').first().textContent(),jobs=await p.locator('.rank-value>span').first().textContent();
-  await p.locator('#industries .kebab').click();await p.getByRole('menuitem',{name:'View data table'}).click();
+  await p.locator('.industry-brief .kebab').click();await p.getByRole('menuitem',{name:'View data table'}).click();
   const row=await p.locator('dialog tbody tr').first().locator('td,th').allTextContents();
   if(row[0]!==name||row[1]!==jobs)throw Error('Displayed and source-table values differ');
-  await p.keyboard.press('Escape');await p.locator('#industries .kebab').click();
+  await p.keyboard.press('Escape');await p.locator('.industry-brief .kebab').click();
   const [dl]=await Promise.all([p.waitForEvent('download'),p.getByRole('menuitem',{name:'Download CSV'}).click()]);
   const text=fs.readFileSync(await dl.path(),'utf8');if(!text.includes(`"${name}","${Number(jobs.replaceAll(',',''))}"`))throw Error('CSV leading row differs');
   return {name,jobs};
@@ -72,22 +87,22 @@ await check('industry row opens detail, Escape restores focus',async p=>{
   return {name,shared};
 });
 await check('peer selection, reload and removal preserve same-level comparisons',async p=>{
-  await p.goto(`${base}?geo=2021A000246#compare`);
+  await p.goto(`${base}?geo=2021A000246&pm=chosen#compare`);
   await p.getByRole('searchbox',{name:'Find a peer'}).fill('Ontario');
   await until(p,()=>document.querySelector('.peer-result'));await p.locator('.peer-result').first().click();
-  await until(p,()=>document.querySelectorAll('.comparison-table tbody tr').length===2);
+  await until(p,()=>document.querySelectorAll('.comparison-table tbody tr').length===3);
   const url=p.url();if(!url.includes('peers=2021A000235'))throw Error('Peer missing from URL');
-  await p.reload();await until(p,()=>document.querySelectorAll('.comparison-table tbody tr').length===2);
-  await p.getByRole('button',{name:'Remove Ontario'}).click();await until(p,()=>document.querySelectorAll('.comparison-table tbody tr').length===1);
+  await p.reload();await until(p,()=>document.querySelectorAll('.comparison-table tbody tr').length===3);
+  await p.getByRole('button',{name:'Remove Ontario'}).click();await until(p,()=>document.querySelectorAll('.comparison-table tbody tr').length===2);
   return {url};
 });
 await check('keyboard geography selection, province benchmark and inactive-tab refresh',async p=>{
   await p.goto(`${base}?geo=2021A000246`);await p.locator('#place-input').fill('Brandon');
   await until(p,()=>document.querySelector('#place-list [role=option]'));await p.keyboard.press('ArrowDown');await p.keyboard.press('Enter');
   await until(p,()=>document.querySelector('#place-name').textContent==='Brandon');await p.selectOption('#bench','PT');
-  await until(p,()=>document.querySelector('#overview .kpi-context')?.textContent.includes('since 2016'));
-  await nav(p,'people');await p.getByRole('button',{name:'Work and education',exact:true}).click();
-  await until(p,()=>document.querySelector('#people .legend')?.textContent.includes('Manitoba'));
+  await until(p,()=>/Manitoba [\d$]/.test(document.querySelector('#overview .findings')?.textContent??''));
+  await nav(p,'detail');await p.getByRole('button',{name:'Work and education',exact:true}).click();
+  await until(p,()=>document.querySelector('#detail .legend')?.textContent.includes('Manitoba'));
   return {url:p.url(),place:await p.locator('#place-name').textContent()};
 });
 await check('Back and Forward restore geography without stale headings',async p=>{
@@ -99,7 +114,7 @@ await check('Census outage leaves payroll independent and Retry recovers',async 
   let block=true;await p.route('**/api.statcan.gc.ca/**',r=>block?r.abort():r.continue());
   await p.goto(`${base}?geo=2021A000246`);await until(p,()=>document.querySelector('#overview .state.failure'));
   await nav(p,'industries');await until(p,()=>document.querySelector('.industry-name'));block=false;
-  await nav(p,'overview');await until(p,()=>document.querySelector('#overview .kpi-value'));return {recovered:true};
+  await nav(p,'overview');await until(p,()=>document.querySelector('#overview .finding-value'));return {recovered:true};
 });
 await check('unsupported industry geography explains scope and offers its province',async p=>{
   await p.goto(`${base}?geo=2021A00034611#industries`);await until(p,()=>document.querySelector('#industries .state.failure'));
@@ -115,9 +130,9 @@ await check('optional maps open on demand and closing clears shared state',async
   if(!p.url().includes('map=market'))throw Error('Map state not shared');await p.keyboard.press('Escape');await until(p,()=>!document.querySelector('.map-dialog'));
   if(p.url().includes('map='))throw Error('Map URL not cleared');return {closed:true};
 });
-for(const width of [1440,768,390])await check(`five views fit ${width}px and labels remain readable`,async p=>{
-  await p.setViewportSize({width,height:900});await p.goto(`${base}?geo=2021A000246`);await until(p,()=>document.querySelector('#overview .kpi-value'));
-  for(const k of ['overview','people','housing','industries','compare']){await nav(p,k);await p.waitForTimeout(1000);
+for(const width of [1440,768,390])await check(`four views fit ${width}px and labels remain readable`,async p=>{
+  await p.setViewportSize({width,height:900});await p.goto(`${base}?geo=2021A000246`);await until(p,()=>document.querySelector('#overview .finding-value'));
+  for(const k of ['overview','industries','compare','detail']){await nav(p,k);await p.waitForTimeout(1000);
     if(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error(`${k}: page overflow`);
   }
   return {width};

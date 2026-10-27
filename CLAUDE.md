@@ -21,14 +21,16 @@ not break. Codex reads the same file through [AGENTS.md](AGENTS.md).
 ## The live model is written once
 
 The website is `site/index.html`, `site/style.css` and ES modules in `site/js/`: `api.js` (requests,
-retries, Census SDMX and WDS adapters), `model.js` (pure calculation), `census.js` (characteristic
+retries, Census SDMX and WDS adapters), `model.js` and `regional-model.js` (pure calculation: findings, ranks,
+similarity, sector base, shift-share), `census.js` (characteristic
 identifiers per exhibit), `state.js` (URL state), `geo.js` (boundary files, maps, spatial services),
 `ui.js` and `charts.js` (components and exhibits, each with a data table and CSV), and one module
 per tool in `site/js/tools/`. `app.js` owns geography, history and lazy mounting. Docs/REFERENCE.md
 is the visual and behavioural specification. Never relabel provincial observations as local values.
 
 `site/boundaries/` is quantized TopoJSON built by `tools/boundaries` (Rust) from the 2021 cartographic boundary
-service; it holds geometry, DGUIDs and names only. Rebuild it only when the boundary vintage changes, and commit the
+service; it holds geometry, DGUIDs and names only. `neighbours-<pr>.json` is derived from those files by the `neighbours`
+binary of the same crate. Rebuild it only when the boundary vintage changes, and commit the
 output: deployment does not run the builder.
 
 Browser checks live in `tests/browser/` (`workflows.mjs`, `sweep.mjs`); they need `npm install`

@@ -1,5 +1,5 @@
 // Runtime public sources. Completed and in-flight requests share an in-memory cache; failures are evicted.
-import {numeric,Profile,CANADA,reconcileCounts,estimate} from './model.js';
+import {numeric,Profile,CANADA,SECTORS,reconcileCounts,estimate} from './model.js';
 import {PROFILE_IDS} from './census.js';
 
 export const CENSUS='https://api.statcan.gc.ca/census-recensement/profile/sdmx/rest';
@@ -34,7 +34,7 @@ export function clearCache() {cache.clear();}
 const lanes=new Map();
 async function lane(url,fn,limit) {
   const host=new URL(url,globalThis.location?.href??'http://localhost/').host;
-  limit??=host.includes('valhalla')?1:host.includes('wikidata')?2:6;
+  limit??=6;
   const s=lanes.get(host)??lanes.set(host,{active:0,queue:[]}).get(host);
   if(s.active>=limit) await new Promise(r=>s.queue.push(r));
   s.active++;
@@ -226,6 +226,23 @@ export async function seph(geo,level='4') {
     value:get(g.memberId,n,year),previous:get(g.memberId,n,year-5),national:get(ca.memberId,n,year)}))};
 }
 
+// Payroll jobs by NAICS sector (SEPH 14-10-0202) for geo and Canada, in year `from` and the latest annual period.
+// The 20 sectors partition the industrial aggregate excluding unclassified businesses [11-91N]; SEPH covers
+// forestry and logging [11N], not agriculture. Suppressed cells stay null.
+export async function sephSectors(geo,from=2019) {
+  const m=await metadata('14100202'),[gd,ed,nd]=m.dimension,g=geoMember(gd,geo),ca=geoMember(gd,CANADA);
+  if(!g) throw new SourceError('unsupported','SEPH industry employment is published for Canada, provinces and territories only.');
+  const employee=ed.member.find(x=>x.memberNameEn==='All employees'),aggregate=nd.member.find(x=>x.classificationCode==='11-91N');
+  const code=x=>(x.classificationCode??'').split(',')[0].replace(/N$/,'');
+  const sectors=nd.member.filter(x=>x!==aggregate&&SECTORS[code(x)]),year=Number(m.cubeEndDate.slice(0,4));
+  const key=(gi,n)=>coord([gi,employee.memberId,n.memberId]);
+  const data=await points(m.productId,[g.memberId,ca.memberId].flatMap(gi=>[aggregate,...sectors].map(n=>key(gi,n))),year-from+1);
+  const at=(gi,n,y)=>data.get(key(gi,n))?.find(p=>p.refPer.startsWith(String(y)))?.value??null;
+  const four=n=>({e0:at(g.memberId,n,from),e1:at(g.memberId,n,year),E0:at(ca.memberId,n,from),E1:at(ca.memberId,n,year)});
+  return {metadata:m,year,from,geoName:g.memberNameEn,agg:four(aggregate),
+    rows:sectors.map(n=>({code:code(n),name:n.memberNameEn.replace(/ \[[^\]]+\]$/,''),...four(n)}))};
+}
+
 export async function businessSlice(t,geo,level='4') {
   const m=await metadata(t.productId),[gd,sd,nd]=m.dimension,g=geoMember(gd,geo);
   if(!g) throw new SourceError('unsupported','Business Counts does not publish this geography in the selected release.');
@@ -263,54 +280,4 @@ export async function establishments(geo) {
   const values=recent.map(t=>{const title=infoBy.get(String(t.productId))?.object?.SeriesTitleEn??'',p=dataBy.get(String(t.productId))?.object?.vectorDataPoint?.[0];
     return {year:t.year,value:title.startsWith(g.memberNameEn)&&p?numeric(p.value):null,title:t.cubeTitleEn,pid:t.productId};});
   return {values,geoName:g.memberNameEn,latest};
-}
-
-export async function psis(geo,{institution='',kind=1,status=1,registration=1,gender=1,periods=6}={}) {
-  const m=await metadata('37100277'),gd=m.dimension[0];
-  const province=geo.id===CANADA.id?'11124':String(geo.province||geo.id.slice(9,11)).split('_')[0];
-  const region=gd.member.find(x=>String(x.classificationCode)===province);
-  if(!region) throw new SourceError('unsupported','No PSIS region is published for this selection.');
-  const institutions=gd.member.filter(x=>(geo.id===CANADA.id?x.parentMemberId!=null:x.parentMemberId===region.memberId)&&x.classificationCode==null);
-  const g=institution?institutions.find(x=>String(x.memberId)===String(institution)):region;
-  if(!g) throw new SourceError('unsupported','The institution does not belong to this province or territory.');
-  const fields=m.dimension[1].member.filter(x=>/^\d{2}\.$|^30\.\d{2}$/.test(x.classificationCode??''));
-  const keys=fields.map(f=>coord([g.memberId,f.memberId,1,1,kind,registration,status,gender]));
-  const totalKey=coord([g.memberId,1,1,1,kind,registration,status,gender]);
-  const data=await points(m.productId,[...keys,totalKey],periods);
-  return {fields:fields.map((f,i)=>({id:f.memberId,code:f.classificationCode,name:f.memberNameEn,series:data.get(keys[i])??[]})),
-    totalSeries:data.get(totalKey)??[],institutions,region:region.memberNameEn,regionId:region.memberId,geoName:g.memberNameEn,metadata:m};
-}
-// Enrolments by CIP primary grouping as published (37-10-0011): Canada, provinces, and the three territories combined.
-// kind: institution type member (1 all, 2 university, 3 college); registration: 1 all, 2 full-time, 3 part-time.
-export async function psisGroups(province,{kind=1,registration=1,periods=8}={}) {
-  const m=await metadata('37100011'),[gd,kd,pd,cd,fd,rd,sd]=m.dimension;
-  const name=!province?'Canada':Number(province)>=60?'Territories':PT_NAMES[province];
-  const g=gd.member.find(x=>x.memberNameEn===name);if(!g) throw new SourceError('unsupported','No enrolment grouping is published for this province or territory.');
-  const fields=fd.member.filter(x=>x.memberId!==1),key=f=>coord([g.memberId,kind,1,1,f,registration,1]);
-  const data=await points(m.productId,[key(1),...fields.map(f=>key(f.memberId))],periods);
-  return {geoName:g.memberNameEn,metadata:m,total:data.get(key(1))??[],groups:fields.map(f=>({id:String(f.memberId),name:f.memberNameEn,series:data.get(key(f.memberId))??[]}))};
-}
-const PT_NAMES={'10':'Newfoundland and Labrador','11':'Prince Edward Island','12':'Nova Scotia','13':'New Brunswick','24':'Quebec','35':'Ontario','46':'Manitoba','47':'Saskatchewan','48':'Alberta','59':'British Columbia'};
-// Whole-institution totals for each institution of a region, one field set at a time.
-export async function psisInstitutions(meta,institutions,fieldIds,{kind=1,status=1,registration=1,gender=1}={},refPer) {
-  const key=(i,f)=>coord([i.memberId,f,1,1,kind,registration,status,gender]);
-  const data=await points(meta.productId,institutions.flatMap(i=>fieldIds.map(f=>key(i,f))),2);
-  return new Map(institutions.map(i=>{const v=fieldIds.map(f=>data.get(key(i,f))?.find(p=>p.refPer===refPer)?.value??null);
-    return [i.memberId,v.every(x=>x!=null)?v.reduce((s,x)=>s+x,0):null];}));
-}
-
-// Air passenger traffic: airports of a province (or all), with sector values in the latest complete year.
-export async function airTraffic(province) {
-  const m=await metadata('23100253'),[gd,sd]=m.dimension;
-  const region=province?gd.member.find(x=>String(x.classificationCode)===province):null;
-  const airports=gd.member.filter(x=>x.classificationCode==null&&(!region||x.parentMemberId===region.memberId));
-  const sectors=sd.member;
-  const keys=airports.flatMap(a=>sectors.map(s=>coord([a.memberId,s.memberId])));
-  const data=await points(m.productId,keys,3);
-  return {metadata:m,sectors,airports:airports.map(a=>{
-    const series=Object.fromEntries(sectors.map(s=>[s.memberNameEn,data.get(coord([a.memberId,s.memberId]))??[]]));
-    const total=series[sectors[0].memberNameEn].filter(p=>p.value!=null).at(-1);
-    const at=name=>series[name]?.find(p=>p.refPer===total?.refPer)?.value??null;
-    return {id:a.memberId,name:a.memberNameEn,year:total?Number(total.refPer.slice(0,4)):null,total:total?.value??null,at,series};
-  })};
 }

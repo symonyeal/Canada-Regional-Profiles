@@ -3,7 +3,6 @@ import {request,memoRequest,SourceError} from './api.js';
 import {h,icon} from './ui.js';
 import {CANADA} from './model.js';
 
-export const GEOCA='https://maps-cartes.services.geo.ca/server_serveur/rest/services';
 const STYLE='https://tiles.openfreemap.org/styles/positron';
 
 // 2021 Census cartographic boundaries, built from Statistics Canada's boundary service by tools/boundaries into
@@ -39,45 +38,6 @@ export async function boundaryOf(geo) {
 }
 export const subdivisions=province=>file(`csd-${province}`);
 export const provinces=()=>file('pr');
-// Metropolitan areas and agglomerations (provincial parts) of a province, or of Canada.
-export async function metroAreas(province) {
-  // A territory without one has no file (HTTP 404, read as unsupported).
-  const fcs=await Promise.all((province?[province]:['10','11','12','13','24','35','46','47','48','59','60','61','62'])
-    .map(pr=>file(`cma-${pr}`).catch(e=>{if(e.kind==='unsupported')return {features:[]};throw e;})));
-  return {type:'FeatureCollection',features:fcs.flatMap(fc=>fc.features)};
-}
-
-// Federal ArcGIS map services on geo.ca (Transport Canada, NRCan). Paged GeoJSON queries.
-export async function arcgis(service,params,max=8000) {
-  const features=[];
-  for(let start=0;start<max;start+=1000) {
-    const q=new URLSearchParams({where:'1=1',outFields:'*',returnGeometry:'true',outSR:'4326',f:'geojson',resultOffset:String(start),resultRecordCount:'1000',...params});
-    const d=await request(`${GEOCA}/${service}/MapServer/0/query?${q}`,{attempts:3});
-    features.push(...(d.features??[]));if(!d.exceededTransferLimit&&(d.features?.length??0)<1000)break;
-  }
-  return {type:'FeatureCollection',features};
-}
-
-// Drive-time areas from the public FOSSGIS Valhalla server (OpenStreetMap roads). The server caps contours at 60 minutes.
-export async function isochrone(lon,lat,minutes) {
-  const json=JSON.stringify({locations:[{lat,lon}],costing:'auto',contours:minutes.map(time=>({time})),polygons:true,denoise:.5,generalize:120});
-  return request(`https://valhalla1.openstreetmap.de/isochrone?json=${encodeURIComponent(json)}`,{attempts:2,timeout:30000});
-}
-export async function wikidata(sparql) {
-  const d=await request(`https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(sparql)}`,{accept:'application/sparql-results+json',attempts:2});
-  return d.results.bindings.map(b=>Object.fromEntries(Object.entries(b).map(([k,v])=>[k,v.value])));
-}
-
-// Whether point pt = [lon, lat] lies in some feature of fc (even–odd ray casting; holes excluded). A feature's
-// bounding box, computed once, rejects most points before the O(vertices) ray cast.
-const boxes=new WeakMap();
-export const contains=(pt,fc)=>fc.features.some(f=>{
-  if(!boxes.has(f))boxes.set(f,bbox({features:[f]}));const b=boxes.get(f);
-  if(!b||pt[0]<b[0][0]||pt[0]>b[1][0]||pt[1]<b[0][1]||pt[1]>b[1][1])return false;
-  const polys=f.geometry.type==='MultiPolygon'?f.geometry.coordinates:[f.geometry.coordinates];
-  return polys.some(rings=>{const hit=r=>{let c=false;for(let i=0,j=r.length-1;i<r.length;j=i++){const [a,b]=r[i],[x,y]=r[j];if((b>pt[1])!==(y>pt[1])&&pt[0]<(x-a)*(pt[1]-b)/(y-b)+a)c=!c;}return c;};
-    return hit(rings[0])&&!rings.slice(1).some(hit);});});
-
 export function bbox(fc) {
   let a=[180,90,-180,-90];
   const walk=c=>{if(typeof c[0]==='number'){a=[Math.min(a[0],c[0]),Math.min(a[1],c[1]),Math.max(a[2],c[0]),Math.max(a[3],c[1])];}else c.forEach(walk);};
@@ -147,14 +107,4 @@ export function removeLayer(map,id) {
   if(!map.getStyle())return;
   for(const l of map.getStyle().layers.filter(l=>l.source===id))map.removeLayer(l.id);
   if(map.getSource(id))map.removeSource(id);
-}
-export function raster(map,id,tiles,{opacity=1,attribution}={}) {
-  if(map.getSource(id))return;
-  map.addSource(id,{type:'raster',tiles:[tiles],tileSize:256,attribution});
-  map.addLayer({id,type:'raster',source:id,paint:{'raster-opacity':opacity}},map.getStyle().layers.find(l=>l.type==='symbol')?.id);
-}
-// Icon marker in a coloured disc, keyboard focusable; returns the MapLibre marker.
-export function marker(map,[lon,lat],{iconName,color,label,selected,onclick}) {
-  const el=h('button',{type:'button',class:`map-marker${selected?' selected':''}`,style:{'--c':color},'aria-label':label,title:label,onclick},icon(iconName,selected?16:13));
-  return new maplibregl.Marker({element:el}).setLngLat([lon,lat]).addTo(map);
 }

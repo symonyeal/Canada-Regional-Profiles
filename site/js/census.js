@@ -1,6 +1,7 @@
 // Census Profile 2021 characteristic identifiers (codelist CL_CHARACTERISTIC) behind each exhibit.
 // These are classification identifiers and bin edges, not observations. Groups sum published components only.
 import {MAP_SCALE} from './palette.js';
+import {MEASURE_IDS} from './regional-model.js';
 
 const ids=(a,b)=>Array.from({length:b-a+1},(_,i)=>String(a+i));
 const money=v=>v==null?'+':`$${v.toLocaleString('en-CA')}`;
@@ -66,22 +67,11 @@ export const FILTERS={
   businesses:{title:'Local businesses',unit:'Businesses',icon:'store',description:'Employer business locations in the selected industries, from the latest Canadian Business Counts release.',maps:{
     industry:{label:'by Industry',icon:'store',kind:'toggle',source:'business',ramp:MAP_SCALE,default:[0],bins:null,universe:'Employer locations with employees'},
   }},
-  workforce:{title:'Workforce',unit:'Workers',icon:'workforce',description:'Three independent maps. Pick one, then switch its groups on or off.',maps:{
-    education:{label:'by Education',icon:'graduation',kind:'toggle',total:'2014',ramp:MAP_SCALE,default:[1],
-      bins:[['No certificate, diploma or degree','2015'],['High school diploma or equivalent','2016'],['Apprenticeship or trades certificate','2019'],
-        ['College, CEGEP or other non-university diploma','2022'],['University certificate below bachelor level','2023'],['Bachelor’s degree','2025'],
-        ['University certificate above bachelor level','2026'],['Medicine, dentistry, veterinary or optometry','2027'],['Master’s degree','2028'],['Earned doctorate','2029']].map(([name,id])=>({id,name})),
-      unit:'People',universe:'Population aged 25 to 64, 2021'},
-    occupation:{label:'by Occupation',icon:'briefcase',kind:'toggle',total:'2248',ramp:MAP_SCALE,default:[1],
-      bins:ids(2249,2258).map(id=>({id,name:null})),unit:'Workers',universe:'Labour force aged 15+, 2021'},
-    industry:{label:'by Industry',icon:'factory',kind:'toggle',total:'2261',ramp:MAP_SCALE,default:[15],
-      bins:ids(2262,2281).map(id=>({id,name:null})),unit:'Workers',universe:'Labour force aged 15+, 2021'},
-  }},
 };
 
 // Every characteristic an exhibit reads: one request per area instead of the 2,600-characteristic profile.
 export const PROFILE_IDS=(()=>{
-  const s=new Set(Object.values(KPI).concat(['2225','2226']));
+  const s=new Set(Object.values(KPI).concat(['2225','2226'],MEASURE_IDS));
   for(const g of [AGE10,HH_INCOME5,HH_TYPE,HH_SIZE,TENURE,CONSTRUCTION,DWELLING,COMMUTE_MODE,PLACE_OF_WORK,COMMUTE_TIME,EDUCATION,OCCUPATION,INDUSTRY]){s.add(g.total);for(const [,ids] of g.groups)ids.forEach(i=>s.add(i));}
   for(const group of Object.values(FILTERS))for(const m of Object.values(group.maps)){if(m.total)s.add(m.total);for(const b of m.bins??[])s.add(b.id);}
   return [...s].sort((a,b)=>a-b);

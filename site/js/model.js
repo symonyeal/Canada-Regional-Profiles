@@ -120,28 +120,6 @@ export function jenks(values,k=6) {
   for(let j=k,c=n;j>=2;j--){b[j-1]=x[L[c][j]-2];c=L[c][j]-1;}return b;
 }
 
-// Squarified treemap (Bruls, Huizing and van Wijk 2000). Values must be positive and sorted descending.
-// Returns one rectangle per value, in input order, tiling (x,y,w,h) with areas proportional to the values.
-export function squarify(values,x,y,w,h) {
-  const total=values.reduce((s,v)=>s+v,0),out=[];
-  if(!values.length||total<=0||w<=0||h<=0) return values.map(()=>({x,y,w:0,h:0}));
-  const a=values.map(v=>v*w*h/total);
-  const worst=(row,s)=>{const r=row.reduce((p,v)=>p+v,0),mx=Math.max(...row),mn=Math.min(...row);return Math.max(s*s*mx/(r*r),r*r/(s*s*mn));};
-  let i=0;
-  while(i<a.length) {
-    const s=Math.min(w,h),row=[a[i]];let j=i+1;
-    while(j<a.length&&worst([...row,a[j]],s)<=worst(row,s))row.push(a[j++]);
-    const r=row.reduce((p,v)=>p+v,0),thick=r/s;let offset=0;
-    for(const v of row) {
-      const len=v/thick;
-      out.push(w>=h?{x,y:y+offset,w:thick,h:len}:{x:x+offset,y,w:len,h:thick});offset+=len;
-    }
-    if(w>=h){x+=thick;w-=thick;}else{y+=thick;h-=thick;}
-    i=j;
-  }
-  return out;
-}
-
 // Heckbert's nice numbers: tick step 1, 2 or 5 × 10^k covering [lo, hi] in about n intervals.
 export function niceTicks(lo,hi,n=5) {
   if(!(hi>lo)){hi=lo+1;}

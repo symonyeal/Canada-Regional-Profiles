@@ -13,13 +13,10 @@ import {overview,compare} from './tools/regional.js';
 
 const $=id=>document.getElementById(id);
 const TOOLS={
-  overview:{title:'Overview',text:'Population, work and living conditions, with dates and a common benchmark.',make:overview},
-  people:{title:'People and work',text:'Residents, qualifications and occupations. Resident workers are distinct from jobs located in the area.',
-    make:(el,app)=>profile(el,app,{key:'pv',maps:false,tabs:[['resident','Residents','resident'],['workforce','Work and education','workforce']]})},
-  housing:{title:'Housing and incomes',text:'Household composition, housing stock and shelter costs. Every measure states its population and period.',
-    make:(el,app)=>profile(el,app,{key:'hv',maps:false,tabs:[['household','Households','household'],['dwelling','Housing stock','dwelling'],['livability','Costs and commuting','livability']]})},
-  industries:{title:'Industries',text:'Industry size, job gains and losses, and specialization. Open an industry for its history and earnings.',make:industries},
-  compare:{title:'Compare regions',text:'The same measures and periods across peer regions.',make:compare},
+  overview:{title:'Findings',text:'Where this place stands out: its value, its rank among comparable areas and the benchmark.',make:overview},
+  industries:{title:'Economy',text:'Payroll job change by sector since 2019, the sectors residents work in, and detailed industries.',make:industries},
+  compare:{title:'Compare',text:'The same measures and period across the most similar areas, neighbours or peers you choose.',make:compare},
+  detail:{title:'Detail',text:'Residents, work, households, housing and commuting, each against the benchmark.',make:(el,app)=>profile(el,app)},
 };
 
 let state=parse(location.search,location.hash),place=null,placeToken=0;
@@ -50,7 +47,7 @@ const app={
   set(key,value){state={...state,t:{...state.t,[key]:value}};history.replaceState(null,'',serialize(state)||location.pathname);},
   choose(geo,section='overview'){
     const next=withGeography(state,geo);next.t.map='';
-    go(next,({profile:'overview',market:'overview',explorer:'overview',workforce:'people',insights:'industries',largest:'industries',growing:'industries'})[section]??section);
+    go(next,({profile:'overview',market:'overview',explorer:'overview',insights:'industries'})[section]??section);
   },
   placeList,
   show(section){state={...state,section};history.replaceState(null,'',serialize(state)||location.pathname);showSection();},
@@ -137,7 +134,7 @@ function build() {
     const t=TOOLS[key],mount=h('div',{class:'tool',id:`${key}-tool`});
     main.append(h('section',{class:'tool-section',id:key,hidden:true,'aria-labelledby':`${key}-h`},
       h('div',{class:'wrap'},h('div',{class:'section-head'},h('h2',{id:`${key}-h`},t.title),h('p',{},t.text)),mount)));
-    links.append(h('li',{},h('a',{href:`#${key}`,onclick:e=>{e.preventDefault();app.show(key);}},t.title==='Compare regions'?'Compare':t.title)));
+    links.append(h('li',{},h('a',{href:`#${key}`,onclick:e=>{e.preventDefault();app.show(key);}},t.title)));
   }
 }
 function showSection(changed=new Set()) {

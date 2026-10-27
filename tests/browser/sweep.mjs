@@ -11,11 +11,11 @@ for(const g of geos.filter(g=>!only.length||only.includes(g))){
   const p=await b.newPage({viewport:{width:1440,height:1000}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
   await p.goto(`${base}?geo=${g}`,{waitUntil:'domcontentloaded'});
   const views={};
-  for(const k of ['overview','people','housing','industries','compare']){
+  for(const k of ['overview','industries','compare','detail']){
     await p.locator(`#section-links a[href="#${k}"]`).click();
-    await p.waitForFunction(k=>{const e=document.getElementById(k);return e.querySelector('.kpi-value,.industry-name,.bar-row,.state.failure,.unpublished');},k,{timeout:90000}).catch(()=>{});
+    await p.waitForFunction(k=>{const e=document.getElementById(k);return e.querySelector('.finding-value,.kpi-value,.industry-name,.bar-row,.state.failure,.unpublished');},k,{timeout:90000}).catch(()=>{});
     views[k]=await p.locator(`#${k}`).evaluate(e=>({loading:e.querySelectorAll('.state.loading').length,failures:[...e.querySelectorAll('.state.failure')].map(x=>x.textContent),
-      values:[...e.querySelectorAll('.kpi-value,.rank-value>span')].slice(0,4).map(x=>x.textContent),rows:e.querySelectorAll('.bar-row,tbody tr').length,text:e.innerText.slice(-350)}));
+      values:[...e.querySelectorAll('.finding-value,.kpi-value,.rank-value>span')].slice(0,4).map(x=>x.textContent),rows:e.querySelectorAll('.bar-row,tbody tr').length,text:e.innerText.slice(-350)}));
   }
   R.push({geo:g,place:await p.locator('#place-name').textContent(),views,errors});console.log(g,R.at(-1).place,JSON.stringify(Object.fromEntries(Object.entries(views).map(([k,v])=>[k,{loading:v.loading,failures:v.failures.length,rows:v.rows}]))));
   fs.writeFileSync(out,JSON.stringify({base,results:R},null,2));await p.close();
