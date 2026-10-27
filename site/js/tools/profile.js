@@ -13,20 +13,20 @@ import {boundaryOf,centroid} from '../geo.js';
 const DASHBOARDS=[['economic','Economic','economic'],['resident','Resident','resident'],['household','Household','household'],
   ['dwelling','Dwelling','dwelling'],['workforce','Workforce','workforce'],['livability','Livability','livability']];
 
-export function profile(el,app) {
+export function profile(el,app,{tabs=DASHBOARDS,key='cp',maps=true}={}) {
   const life=lifetime(el),frame=h('div',{class:'frame with-rail'});el.append(frame);
   let panel=null;
   function render() {
-    const alive=life.next(),dash=app.state.t.cp;
+    const alive=life.next(),dash=tabs.some(t=>t[0]===app.state.t[key])?app.state.t[key]:tabs[0][0];
     panel?.destroy?.();panel=null;
     const body=h('div',{class:`dash ${dash}`});
-    frame.replaceChildren(rail(DASHBOARDS.map(([key,label,icon])=>({key,label,icon})),dash,key=>{app.set('cp',key);render();},'Community profile dashboards'),body);
+    frame.replaceChildren(rail(tabs.map(([key,label,icon])=>({key,label,icon})),dash,v=>{app.set(key,v);render();},'Profile views'),body);
     app.resolved().then(place=>{if(!alive()||place.id!==app.state.geo.id)return;
-      const ctx={place,bench:app.bench,alive,app};
+      const ctx={place,bench:app.bench,alive,app,maps};
       ctx.base=sharedPair(place,ctx.bench);
       panel=DASH[dash](body,ctx)??null;});
   }
-  return {update(changed){if(changed.has('geo')||changed.has('bench')||changed.has('cp')||changed.has('refresh'))render();}};
+  return {update(changed){if(changed.has('geo')||changed.has('bench')||changed.has(key)||changed.has('refresh'))render();},destroy:()=>panel?.destroy?.()};
 }
 
 // ---------- shared card builders ----------
@@ -50,7 +50,7 @@ function seriesKpi(target,{title,ctx,load,fallback,kind='area',format,universe})
     try {
       const d=await load();if(!ctx.alive())return;const last=d.values.filter(v=>v.value!=null).at(-1);
       if(!last) throw new Error('No observations published for this geography.');
-      t.replaceChildren(kpiCard({title,value:format(last.value),sub:`${d.geoName} · ${last.year}`,spark:spark(d.values,kind),
+      t.replaceChildren(kpiCard({title,value:format(last.value),sub:`${d.geoName} · ${last.year} · trend ${d.values[0].year}–${last.year}`,spark:spark(d.values,kind),
         meta:{...tableMeta(d,{universe}),table:()=>({headers:['Year',title],rows:d.values.map(v=>[String(v.year),v.value]),numeric:new Set([1]),format:(v,i)=>i?format(v):v})}}));
     } catch(e) {
       if(!fallback) throw e;
@@ -136,12 +136,12 @@ const DASH={
   livability(body,ctx) {
     const {place,base}=ctx,[a,b,c,d,s,t]=['a','b','c','d','s','t'].map(n=>cell(body,n));
     censusKpi(a,{title:'Median dwelling value',id:KPI.dwellingValue,ctx,base,format:v=>compact(v,'$'),sub:`${place.name} · owner households, Census 2021`});
-    censusKpi(b,{title:'Median monthly rent',id:KPI.rent,ctx,base,format:moneyFull,sub:`${place.name} · tenant shelter costs, Census 2021`});
+    censusKpi(b,{title:'Median monthly tenant shelter costs',id:KPI.rent,ctx,base,format:moneyFull,sub:`${place.name} · tenant households, Census 2021`});
     slot(c,async el=>{const {p}=await base,v=p.sum(['2612','2613']),tot=p.value(COMMUTE_TIME.total),share=v!=null&&tot>0?100*v/tot:null;
       el.replaceChildren(kpiCard({title:'Commutes under 30 minutes',value:share==null?'Not available':pct(share),sub:`${place.name} · Census 2021`,
         meta:{...censusMeta(place,{universe:'Employed labour force with a usual place of work or no fixed address',notes:'The Census Profile publishes commuting duration in bands; it does not publish a mean commuting time.'}),
           table:()=>({headers:['Duration',place.name],rows:COMMUTE_TIME.groups.map(([l,ids])=>[l,p.sum(ids)]),numeric:new Set([1]),format:v=>int(v)})}}));},{alive:ctx.alive,context:'Commute duration'});
-    climateCard(d,ctx);
+    if(ctx.maps!==false)climateCard(d,ctx);else d.remove();
     shareCard(s,{title:'Mode of commuting',subtitle:`Commute to work, ${place.name}${ctx.bench.id!==place.id?` vs ${ctx.bench.name}`:''}`,group:COMMUTE_MODE,ctx,base,size:'sm'});
     shareCard(t,{title:'Place of work status',subtitle:`Employed labour force, ${place.name}${ctx.bench.id!==place.id?` vs ${ctx.bench.name}`:''}`,group:PLACE_OF_WORK,ctx,base,size:'sm'});
   },
@@ -150,16 +150,22 @@ const DASH={
 // Workforce indicators (also the Workforce tool's first view): industry treemap, occupations, education.
 export function workforceCards(body,ctx) {
   const {place,base}=ctx,[a,s,t]=['a','s','t'].map(n=>cell(body,n));
-  slot(a,async el=>{const {p}=await base,rows=shares(p,INDUSTRY);
-    el.replaceChildren(chartCard({title:'Residents’ industry of employment',subtitle:'Labour force aged 15+ by industry sector, Census 2021',
-      meta:{...censusMeta(place,{universe:'Labour force aged 15+'}),table:()=>({headers:['Sector',place.name],rows:rows.map(r=>[r.label,r.count]),numeric:new Set([1]),format:v=>int(v)})}},
-      h('div',{class:'body'},treemap(rows.filter(r=>r.count>0).map(r=>({label:r.label,value:r.count,text:int(r.count)})),{height:'fill'}))));},{alive:ctx.alive,context:'Industry of employment'});
-  slot(s,async el=>{const {p}=await base,rows=shares(p,OCCUPATION).sort((x,y)=>(y.count??-1)-(x.count??-1)).slice(0,5);
+  slot(a,async el=>{const {p,b}=await base,rows=shares(p,INDUSTRY),ben=b?shares(b,INDUSTRY):null;
+    const sorted=rows.map((r,i)=>({...r,bench:ben?.[i].value})).filter(r=>r.value!=null).sort((a,b)=>b.value-a.value);
+    const max=Math.max(1,...rows.flatMap((r,i)=>[r.value,ben?.[i].value]).filter(Number.isFinite));
+    const plot=items=>barList(items.map(r=>({label:r.label,value:r.value,text:pct(r.value),bench:r.bench,benchText:b?pct(r.bench):null})),{max,size:'sm',benchName:ctx.bench.name});
+    el.replaceChildren(chartCard({title:'Top industries of the resident labour force',subtitle:'Ten largest published sectors · share of the labour force aged 15+, including unemployed people with recent work · Census 2021',
+      meta:{...censusMeta(place,{universe:'Labour force aged 15+, including unemployed people with recent work'}),table:()=>({headers:['Sector',`${place.name} people`,`${place.name} share (%)`,...(b?[`${ctx.bench.name} share (%)`]:[])],rows:rows.map((r,i)=>[r.label,r.count,r.value,...(b?[ben[i].value]:[])]),numeric:new Set([1,2,3]),format:(v,i)=>i>1?pct(v):typeof v==='number'?int(v):v})}},
+      h('div',{class:'body'},plot(sorted.slice(0,10)),sorted.length>10?h('details',{class:'remaining-sectors'},h('summary',{},'Show remaining sectors'),plot(sorted.slice(10))):null),
+      legend([[place.name,PRIMARY],...(b?[[ctx.bench.name,COMPARE,'tick']]:[])])));
+    },{alive:ctx.alive,context:'Industry of employment'});
+  slot(s,async el=>{const {p,b}=await base,ben=b?shares(b,OCCUPATION):null,rows=shares(p,OCCUPATION).map((r,i)=>({...r,bench:ben?.[i].value})).sort((x,y)=>(y.count??-1)-(x.count??-1)).slice(0,5);
     el.replaceChildren(chartCard({title:'Top occupations',subtitle:'Labour force aged 15+ by occupation group (NOC 2021)',
-      meta:{...censusMeta(place,{universe:'Labour force aged 15+'}),table:()=>({headers:['Occupation group',place.name],rows:shares(p,OCCUPATION).map(r=>[r.label,r.count]),numeric:new Set([1]),format:v=>int(v)})}},
-      h('div',{class:'body'},barList(rows.map(r=>({label:r.label,value:r.count,text:int(r.count)})),{size:'sm'}))));},{alive:ctx.alive,context:'Top occupations'});
+      meta:{...censusMeta(place,{universe:'Labour force aged 15+'}),table:()=>({headers:['Occupation group',`${place.name} people`,`${place.name} share (%)`,...(b?[`${ctx.bench.name} share (%)`]:[])],rows:shares(p,OCCUPATION).map((r,i)=>[r.label,r.count,r.value,...(b?[ben[i].value]:[])]),numeric:new Set([1,2,3]),format:(v,i)=>i>1?pct(v):typeof v==='number'?int(v):v})}},
+      h('div',{class:'body'},barList(rows.map(r=>({label:r.label,value:r.value,text:pct(r.value),bench:r.bench,benchText:b?pct(r.bench):null})),{size:'sm',benchName:ctx.bench.name})),legend([[place.name,PRIMARY],...(b?[[ctx.bench.name,COMPARE,'tick']]:[])])));
+    },{alive:ctx.alive,context:'Top occupations'});
   slot(t,async el=>{const {p}=await base,rows=shares(p,EDUCATION);
-    el.replaceChildren(chartCard({title:'Education levels',subtitle:'Share of population aged 25 to 64, Census 2021',
+    el.replaceChildren(chartCard({title:'Education levels',subtitle:'Population aged 25 to 64, Census 2021. These indicators overlap: higher degrees also count toward the broader qualifications.',
       meta:{...censusMeta(place,{universe:'Population aged 25 to 64 in private households',notes:'The four indicators are nested, not exclusive: a master’s degree also counts as bachelor’s or higher.'}),
         table:()=>({headers:['Credential','People','Share (%)'],rows:rows.map(r=>[r.label,r.count,r.value]),numeric:new Set([1,2]),format:(v,i)=>i===2?pct(v):int(v)})}},
       h('div',{class:'body'},shareBars(rows.map(r=>({label:r.label,value:r.value,count:r.count}))))));},{alive:ctx.alive,context:'Education levels'});
@@ -167,6 +173,10 @@ export function workforceCards(body,ctx) {
 
 // The Resident and Household dashboards embed one target-group map with a single range filter.
 function embeddedMap(target,ctx,group,mapKey,urlKey) {
+  if(ctx.maps===false){
+    if(mapKey==='hhincome')shareCard(target,{title:'Household income distribution',subtitle:'Share of private households by 2020 total income',group:HH_INCOME5,ctx,base:ctx.base,size:'sm'});
+    else target.remove();return null;
+  }
   const spec=FILTERS[group].maps[mapKey],{place,app}=ctx;
   target.classList.add('map-cell');
   const filter=h('div',{class:'map-card',style:{top:'112px',left:'12px',minWidth:'190px'}});

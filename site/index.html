@@ -4,14 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Canada Regional Profiles</title>
-<meta name="description" content="Logistics, demographics, markets, workforce, industries and postsecondary enrolments for Canada, its provinces and territories and local Census geographies, queried live from public sources.">
+<meta name="description" content="Population, housing, workforce and industry comparisons for Canada, its provinces and territories and local Census geographies, queried live from public sources.">
 <meta name="theme-color" content="#173f35">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23173f35'/%3E%3Cpath d='M9 22V10h5.5a3.5 3.5 0 010 7H9m6 0l4 5M19 10v12' stroke='white' stroke-width='2.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" crossorigin="anonymous">
 <link rel="stylesheet" href="style.css">
-<script defer src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js" crossorigin="anonymous"></script>
 <script type="module" src="js/app.js"></script>
 </head>
 <body>
@@ -20,57 +18,38 @@
   <div class="wrap topbar-inner">
     <a class="brand" href="./"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2Z M9 3v16 M15 5v16"/></svg></span><span>Canada <span class="brand-light">Regional Profiles</span></span></a>
     <nav class="topbar-links" aria-label="Project">
-      <button type="button" class="link-btn" id="open-sources">Sources and requests</button>
+      <button type="button" class="link-btn" id="open-sources">Data and sources</button>
       <a href="https://github.com/symonyeal/Canada-Regional-Profiles">Source code</a>
     </nav>
   </div>
 </header>
-<section class="hero" aria-labelledby="place-name">
+<section class="hero brief-header" aria-labelledby="place-name">
   <div class="wrap">
-    <div class="hero-lead">
-      <div class="hero-copy">
-        <p class="eyebrow"><span class="eyebrow-line" aria-hidden="true"></span>Regional atlas / Canada</p>
-        <h1 id="place-name">Canada</h1>
-        <p class="place-meta" id="place-meta">Country · Census 2021 geography</p>
-        <p class="hero-description">Demographics, infrastructure and industry<br>for Canadian communities.</p>
-      </div>
-      <figure class="atlas" aria-label="Map of Canada's provinces and territories, 2021 Census boundaries">
-        <img src="assets/canada.svg" width="460" height="280" alt="Outline of Canada with provincial and territorial boundaries">
-        <figcaption>13 provinces &amp; territories <span aria-hidden="true">·</span> 2021 Census geography</figcaption>
-      </figure>
+    <div class="place-heading"><div><h1 id="place-name">Canada</h1><p class="place-meta" id="place-meta">Country</p></div>
+      <div class="place-actions"><button type="button" class="btn ghost" id="explore-map">Explore map</button><button type="button" class="btn ghost" id="copy-link">Copy link</button></div>
     </div>
-    <div class="geo-panel">
-    <div class="geo-panel-head"><span class="eyebrow">Choose your geography</span><span>Applies to all nine sections</span></div>
     <form class="geo-bar" id="geo-bar" role="search" aria-label="Choose a geography" onsubmit="return false">
-      <label class="field"><span>Province or territory</span><select id="province"></select></label>
-      <label class="field"><span>Local geography</span><select id="level">
-        <option value="CSD">Census subdivision (municipality)</option><option value="CD">Census division</option>
-        <option value="CMACA">Metropolitan area or agglomeration</option><option value="ER">Economic region</option><option value="POPCNTR">Population centre</option>
-      </select></label>
-      <div class="field combo">
-        <label for="place-input">Find a place</label>
+      <div class="field combo"><label for="place-input">Find a community</label>
         <input id="place-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="place-list" placeholder="Search by name" autocomplete="off">
         <ul id="place-list" role="listbox" class="combo-list" hidden></ul>
       </div>
-      <label class="field"><span>Compare with</span><select id="bench"><option value="CA">Canada</option><option value="PT">Province or territory</option></select></label>
-      <div class="geo-actions">
-        <button type="button" class="btn ghost" id="copy-link">Copy link</button>
-        <button type="button" class="btn ghost" id="refresh" title="Discard data held in this tab and query the sources again">Refresh data</button>
-      </div>
+      <label class="field"><span>Province or territory</span><select id="province"></select></label>
+      <label class="field"><span>Benchmark</span><select id="bench"><option value="CA">Canada</option><option value="PT">Province or territory</option></select></label>
+      <details class="geo-advanced"><summary>Geography type</summary><label class="field"><span>Search within</span><select id="level">
+        <option value="CSD">Municipalities</option><option value="CD">Census divisions</option><option value="CMACA">Metropolitan areas and agglomerations</option><option value="ER">Economic regions</option><option value="POPCNTR">Population centres</option>
+      </select></label></details>
     </form>
     <p class="geo-status" id="geo-status" role="status" aria-live="polite"></p>
-    </div>
-    <div class="atlas-note"><span>Public data, requested at source</span><span>Census 2021 · Each exhibit states its reference period</span></div>
   </div>
 </section>
-<nav class="section-nav" aria-label="Tools">
+<nav class="section-nav" aria-label="Profile sections">
   <div class="wrap"><ul id="section-links"></ul></div>
 </nav>
 <main id="main" tabindex="-1"></main>
 <footer class="footer">
   <div class="wrap footer-inner">
     <div><strong>Canada Regional Profiles</strong>
-      <p>Observations are requested from Statistics Canada, Environment and Climate Change Canada, Transport Canada, Natural Resources Canada, OpenStreetMap and Wikidata each time the page is used. Boundaries are a simplified copy of Statistics Canada's 2021 cartographic boundary files. Every exhibit names its source, geography and reference period.</p></div>
+      <p>Observations are requested from Statistics Canada when a view is opened. Optional maps use OpenStreetMap. Census observations describe 2021; Census income describes 2020. Recent series state their own periods. Boundaries are a simplified copy of Statistics Canada's 2021 cartographic boundary files. Every exhibit names its source, geography and reference period.</p></div>
     <ul>
       <li><a href="https://www.statcan.gc.ca/en/terms-conditions/open-licence">Statistics Canada Open Licence</a></li>
       <li><a href="https://open.canada.ca/en/open-government-licence-canada">Open Government Licence – Canada</a></li>

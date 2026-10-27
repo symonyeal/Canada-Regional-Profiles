@@ -5,7 +5,7 @@ import {MAP_SCALE} from './palette.js';
 const ids=(a,b)=>Array.from({length:b-a+1},(_,i)=>String(a+i));
 const money=v=>v==null?'+':`$${v.toLocaleString('en-CA')}`;
 
-export const KPI={population:'1',medianAge:'40',households:'50',householdSize:'56',dwellings:'5',
+export const KPI={population:'1',populationChange:'3',medianAge:'40',households:'50',householdSize:'56',dwellings:'5',
   medianHouseholdIncome:'229',medianIndividualIncome:'113',dwellingValue:'1474',rent:'1480',
   participation:'2228',employmentRate:'2229',unemployment:'2230',labourForce:'2224'};
 

@@ -45,7 +45,7 @@ test('TopoJSON decoding joins arcs, reverses ~i references and applies the trans
 });
 test('shared URLs round-trip; malformed values fall back; a new geography drops area selections',()=>{
   const s=parse('?geo=2021S0504610&lg=rail&lgf=YWG&li=traded&cp=household&mkr=2-5&bench=PT','#largest');
-  assert.equal(s.geo.type,'CMACA');assert.equal(s.section,'largest');
+  assert.equal(s.geo.type,'CMACA');assert.equal(s.section,'industries');
   assert.equal(parse(serialize(s).split('#')[0],'#largest').t.li,'traded');
   assert.deepEqual(parse(serialize(s).split('#')[0]).t,s.t);
   const bad=parse('?geo=../etc&lg=boats&cp=<script>&mkr=1;drop');

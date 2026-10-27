@@ -1,5 +1,7 @@
 # Reference dashboard
 
+The owner approved a five-view regional brief on 26 October 2026. The current layout follows that decision in [DECISIONS.md](DECISIONS.md); the nine-section composition below is a historical source reference, not the current visual specification. Data definitions remain relevant.
+
 The reference is [Why Rural Manitoba](https://advanceruralmanitoba.ca/why-rural-manitoba/) by Advance Rural Manitoba. Each tool on that page is an embedded Localintel (ecdev.org) application parameterised by `location=ca-pr-46` (Manitoba). It was rendered in Edge on 2026-10-22 at 1440, 768 and 390 px wide, every control was exercised, and the embeds' API responses were recorded.
 
 A headless browser receives HTTP 406 from `rmed.ecdev.org/embed/*`; with a desktop user agent the embeds redirect to `app.ecdev.org` and render. Earlier notes that "the embeds failed" described that block, not an outage.

@@ -53,7 +53,7 @@ export function market(el,app) {
     frame.replaceChildren(rail(MARKET.map(([key,label,icon])=>({key,label,icon})),group,key=>{app.set('mk',key);app.set('mkm','');app.set('mkr','');render();},'Market'),body);
     panel=groupView(body,app,group,{map:'mkm',sel:'mkr',unit:'mku'},alive);
   }
-  return {update(changed){if(['geo','refresh','mk','mkm','mkr'].some(k=>changed.has(k)))render();}};
+  return {update(changed){if(['geo','refresh','mk','mkm','mkr'].some(k=>changed.has(k)))render();},destroy:()=>panel?.destroy?.()};
 }
 
 export function workforce(el,app) {

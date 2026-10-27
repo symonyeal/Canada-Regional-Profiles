@@ -112,4 +112,4 @@ function draw(kind,view,rows,d,place) {
 
 export const largest=industryTool('largest');
 export const growing=industryTool('growing');
-export const industryCache={data:industryData,classification};
+export const industryCache={data:industryData,classification,clear:()=>cache.clear()};
