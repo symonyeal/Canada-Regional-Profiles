@@ -1,7 +1,7 @@
 // Legend: s = synthetic annual series; Y = common years; m = annual measure.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {TRENDS,trend,combine,commonYears,parseRange,clampRange,rangeText,change,changeText} from '../site/js/trend-model.js';
+import {TRENDS,trend,combine,commonYears,parseRange,clampRange,rangeText,change,changeText,latest} from '../site/js/trend-model.js';
 import {parse,serialize,withGeography} from '../site/js/state.js';
 
 const s=(from,values)=>values.map((value,i)=>({year:from+i,value}));
@@ -65,4 +65,14 @@ test('a slope fit is the least-squares trend per decade over the finite years in
   const spike=s(2000,[5,5,5,5,5,5,9]),k=change(spike,[2000,2006],'°C','slope');
   assert.ok(k.d<change(spike,[2000,2006],'°C').d*10/6);
   assert.equal(change(s(2000,[1,2]),[2000,2001],'°C','slope').d,null);
+});
+test('the latest standing compares every area in the selected area’s last year and measures change over at most k years',()=>{
+  const m=trend('unemployment'),x=s(2018,[6,7,null,5,4]),b=s(2018,[5,5,5,5]),S=[s(2022,[3]),null,s(2018,[9,9,9,9,9])];
+  const r=latest(m,x,b,S);
+  assert.deepEqual([r.y,r.y0,r.x,r.w,r.X],[2022,2018,4,null,[3,null,9]]);
+  assert.equal(r.change.d,-2);
+  // The change starts at the first published year in [y − k, y): a gap at y − k moves it later.
+  assert.equal(latest(m,x,null,null,2).y0,2021);
+  assert.equal(latest(m,s(2020,[5]),null,null).change,null);
+  assert.equal(latest(m,s(2020,[null]),null,null),null);
 });

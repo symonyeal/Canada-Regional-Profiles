@@ -2,6 +2,14 @@
 
 What was checked, how, and the result. Runtime checks of the website are separate from the historical offline pipeline's records. Evidence files (browser reports, captures, recorded reference responses) are kept with the project's working files, outside this repository.
 
+## Latest year in Findings (2026-10-27)
+
+- Local checks: 55 JavaScript tests, one new (latest year, same-year benchmark and cohort values, change start moved past a gap, nothing published).
+- Browser workflows on the final code, local server against live sources: 24 of 24 passed, two new: Manitoba's unemployment card shows the adapter's last published value and year (5.9 %, 2025, 3rd lowest of 10 provinces and territories publishing it) and "Latest published year" is the first heading; Steinbach leads with its 2025 population, 3rd highest of 148 Manitoba municipalities with 1,000+ residents. The Census-outage check now also requires the annual cards to draw while Census is blocked.
+- Sweep: 19 geographies, no page errors or failed Findings slots.
+- Time to a complete latest block from page load, local server: Canada 5.8 s, Manitoba 5.7 s, Quebec 5.5 s, Ottawa–Gatineau 5.8 s, Steinbach 7.5 s, Division No. 11 3.9 s. After the sweep the OECD API refused connections; the four OECD cards were named as unavailable and the eight Statistics Canada cards drew.
+- Visual: Manitoba at 1440 and 390 px, no horizontal overflow. No dark-theme or full accessibility audit.
+
 ## Annual ranges and OECD sources (2026-10-26)
 
 - Cause of the 2021-only view: the Census Profile SDMX service lists 14 dataflows, all 2021; Findings and Compare used only it, and the annual series elsewhere were cut to the last 12, 15 or 16 periods. Economic-region population read 17-10-0137 (2016 boundaries, inactive, ends 2022).

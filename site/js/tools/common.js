@@ -74,20 +74,21 @@ export const provinceName=code=>PT.find(p=>p[0]===code)?.[2]??'';
 // counts are dominated by Census random rounding) or its census divisions; all metropolitan areas and
 // agglomerations (whole areas, not provincial parts), economic regions or population centres; the thirteen
 // provinces and territories for a province, territory or Canada. The selected area joins its cohort when outside it.
-// Returns {label, areas, P}, P[i] the measure profile of areas[i] or null.
+// cohortAreas returns {label, areas}; cohort adds P, P[i] the measure profile of areas[i] or null.
 const cohorts=new Map();
 export const clearCohorts=()=>cohorts.clear();
+export async function cohortAreas(g,placeList) {
+  const pr=provinceOf(g),local=['CSD','CD'].includes(g.type),where=provinceName(pr);
+  if(g.id===CANADA.id||g.type==='PR')return {label:'provinces and territories',areas:PT.map(([c,,name])=>({id:`2021A0002${c}`,type:'PR',name,province:c}))};
+  const areas=(await placeList(g.type)).filter(a=>local?matchesProvince(a,pr)&&(g.type!=='CSD'||(a.population??0)>=1000):g.type!=='CMACA'||/^2021S050[34]/.test(a.id));
+  if(!areas.some(a=>a.id===g.id))areas.push({...g});
+  return {areas,label:{CSD:`${where} municipalities with 1,000+ residents`,CD:`census divisions in ${where}`,CMACA:'metropolitan areas and agglomerations',
+    ER:'economic regions',POPCNTR:'population centres'}[g.type]};
+}
 export function cohort(g,placeList) {
-  const pr=provinceOf(g),local=['CSD','CD'].includes(g.type),national=g.id===CANADA.id||g.type==='PR';
-  const key=national?'PR':local?`${g.type}:${pr}`:g.type;
+  const national=g.id===CANADA.id||g.type==='PR',key=national?'PR':['CSD','CD'].includes(g.type)?`${g.type}:${provinceOf(g)}`:g.type;
   return memoRequest(cohorts,`${key}:${g.id}`,async()=>{
-    const where=provinceName(pr);
-    const [areas,label]=national?[PT.map(([c,,name])=>({id:`2021A0002${c}`,type:'PR',name,province:c})),'provinces and territories']
-      :[(await placeList(g.type)).filter(a=>local?matchesProvince(a,pr)&&(g.type!=='CSD'||(a.population??0)>=1000):g.type!=='CMACA'||/^2021S050[34]/.test(a.id)),
-        {CSD:`${where} municipalities with 1,000+ residents`,CD:`census divisions in ${where}`,CMACA:'metropolitan areas and agglomerations',
-          ER:'economic regions',POPCNTR:'population centres'}[g.type]];
-    if(!national&&!areas.some(a=>a.id===g.id))areas.push({...g});
-    const P=await censusMany(national?'PR':g.type,areas.map(a=>a.id),MEASURE_IDS);
+    const {label,areas}=await cohortAreas(g,placeList),P=await censusMany(national?'PR':g.type,areas.map(a=>a.id),MEASURE_IDS);
     return {label,areas,P:areas.map(a=>P.get(a.id)?.rows.length?P.get(a.id):null)};
   });
 }

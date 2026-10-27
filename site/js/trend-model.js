@@ -8,7 +8,8 @@
 //   x0, x1    values at a and c
 import {int,pct} from './model.js';
 
-// Annual measures and their sources by geography level (PR also serves Canada). A source is {x, n}: each term
+// Annual measures and their sources by geography level (PR also serves Canada). theme groups measures as in
+// regional-model.js; period(y), when given, names year y's reference period. A source is {x, n}: each term
 // is [table, selector] (Statistics Canada) or {oecd: dataflow, key, title} (OECD); the value is x, or x/n as a
 // share (%) or rate (per 1,000). A level lists
 // sources in order of preference and an area takes the first that publishes it. Census 2021 measures with the
@@ -22,32 +23,32 @@ const lfs=c=>({PR:[{x:['14100327',{'Labour force characteristics':c}]},{x:['1410
 const tax=(pid,selector)=>({PR:[{x:[pid,selector]}],CMACA:[{x:[pid,selector]}]});
 const arrivals=l=>[{PR:'17100008',CMACA:'17100149',CD:'17100153',ER:'17100151'}[l],{'Components of population growth':/^Immigrants$/,'Gender|Sex':/^Total - gender$|^Both sexes$/,'Age group':ALL}];
 export const TRENDS=[
-  {id:'population',label:'Population',unit:'people',survey:'Population estimates, July 1',
+  {id:'population',theme:'Population',label:'Population',unit:'people',survey:'Population estimates, July 1',
     source:{...estimates(ALL),CSD:[{x:['17100155',{}]}]}},
-  {id:'age',label:'Median age',unit:'years',survey:'Population estimates, July 1',source:estimates(/^Median age$/)},
-  {id:'seniors',label:'Residents aged 65 and over',unit:'%',survey:'Population estimates, July 1',
+  {id:'age',theme:'Population',label:'Median age',unit:'years',survey:'Population estimates, July 1',source:estimates(/^Median age$/)},
+  {id:'seniors',theme:'Population',label:'Residents aged 65 and over',unit:'%',survey:'Population estimates, July 1',
     source:Object.fromEntries(LEVELS.map(l=>[l,[{x:[people(l)[0],pop(/^65 years and older$/)],n:people(l)}]]))},
-  {id:'immigration',label:'Immigrants admitted per 1,000 residents',unit:'per 1,000',survey:'Components of population change',note:'Year y runs from July 1 of y to June 30 of y + 1; residents are counted on July 1 of y.',
+  {id:'immigration',theme:'People',label:'Immigrants admitted per 1,000 residents',unit:'per 1,000',survey:'Components of population change',period:y=>`${y}/${String(y+1).slice(2)}`,note:'Year y runs from July 1 of y to June 30 of y + 1; residents are counted on July 1 of y.',
     source:Object.fromEntries(LEVELS.map(l=>[l,[{x:arrivals(l),n:people(l)}]]))},
-  {id:'employment',label:'Employment rate, age 15+',unit:'%',survey:'Labour Force Survey, annual averages',note:'Not published annually for the territories or census agglomerations.',source:lfs(/^Employment rate$/)},
-  {id:'unemployment',label:'Unemployment rate',unit:'%',survey:'Labour Force Survey, annual averages',note:'Not published annually for the territories or census agglomerations.',source:lfs(/^Unemployment rate$/)},
-  {id:'income',label:'Median census family income',unit:'$',survey:'Tax filers, current dollars',
+  {id:'employment',theme:'Work',label:'Employment rate, age 15+',unit:'%',survey:'Labour Force Survey, annual averages',note:'Not published annually for the territories or census agglomerations.',source:lfs(/^Employment rate$/)},
+  {id:'unemployment',theme:'Work',label:'Unemployment rate',unit:'%',survey:'Labour Force Survey, annual averages',note:'Not published annually for the territories or census agglomerations.',source:lfs(/^Unemployment rate$/)},
+  {id:'income',theme:'Income',label:'Median census family income',unit:'$',survey:'Tax filers, current dollars',
     source:tax('11100009',{'Family characteristics':/^Median total income, all families$/})},
-  {id:'lowincome',label:'Residents in low income (CFLIM-AT)',unit:'%',survey:'Tax filers',
+  {id:'lowincome',theme:'Income',label:'Residents in low income (CFLIM-AT)',unit:'%',survey:'Tax filers',
     source:tax('11100018',{'Age group':/^All persons$/,'Statistics (CFLIM-AT; updated methodology)':/^Percentage of persons in low income$/})},
-  {id:'rent',label:'Average rent, two-bedroom',unit:'$/month',survey:'CMHC Rental Market Survey, October',note:'Private row and apartment structures of three units and over; centres of 10,000 residents or more.',
+  {id:'rent',theme:'Housing',label:'Average rent, two-bedroom',unit:'$/month',survey:'CMHC Rental Market Survey, October',note:'Private row and apartment structures of three units and over; centres of 10,000 residents or more.',
     source:Object.fromEntries(['CMACA'].map(l=>[l,[{x:['34100133',{'Type of structure':/^Row and apartment structures of three units and over$/,'Type of unit':/^Two bedroom units$/}]}]]))},
   // OECD Regional Statistics. Canada's GDP, income, life expectancy and homicide figures are compiled from
   // Statistics Canada; air temperature is the ERA5 reanalysis (Copernicus) averaged over the region.
-  {id:'gdp',label:'Real GDP per person',unit:'$',survey:'OECD regional accounts, constant prices',
+  {id:'gdp',theme:'Economy',label:'Real GDP per person',unit:'$',survey:'OECD regional accounts, constant prices',
     source:{PR:[{x:{oecd:'DSD_REG_ECO@DF_GDP',key:'GDP._T.Q.XDC_PS',title:'Gross domestic product, constant prices, per person'}}]}},
-  {id:'disposable',label:'Real household disposable income per person',unit:'$',survey:'OECD regional accounts, constant prices',
+  {id:'disposable',theme:'Income',label:'Real household disposable income per person',unit:'$',survey:'OECD regional accounts, constant prices',
     source:{PR:[{x:{oecd:'DSD_REG_ECO@DF_INC',key:'B6N._T.Q.XDC_PS',title:'Household disposable income, net, constant prices, per person'}}]}},
-  {id:'life',label:'Life expectancy at birth',unit:'years',survey:'OECD regional demography',
+  {id:'life',theme:'Health',label:'Life expectancy at birth',unit:'years',survey:'OECD regional demography',
     source:{PR:[{x:{oecd:'DSD_REG_DEMO@DF_LIFE_EXP',key:'LFEXP.Y0._T.Y',title:'Life expectancy at birth, total'}}]}},
-  {id:'homicide',label:'Homicides per 100,000 residents',unit:'per 100,000',survey:'OECD regional well-being, safety',
+  {id:'homicide',theme:'Safety',label:'Homicides per 100,000 residents',unit:'per 100,000',survey:'OECD regional well-being, safety',
     source:{PR:[{x:{oecd:'DSD_REG_SOC@DF_SAFETY',key:'HOMIC._T._T.CS_10P5PS',title:'Intentional homicides per 100,000 persons'}}]}},
-  {id:'temperature',label:'Mean air temperature',unit:'°C',survey:'OECD regional climate, ERA5 reanalysis',fit:'slope',note:'Single years vary by a degree or more, so change is the least-squares trend over every year in the range, per decade.',
+  {id:'temperature',theme:'Climate',label:'Mean air temperature',unit:'°C',survey:'OECD regional climate, ERA5 reanalysis',fit:'slope',note:'Single years vary by a degree or more, so change is the least-squares trend over every year in the range, per decade.',
     source:Object.fromEntries(['PR','CD'].map(l=>[l,[{x:{oecd:'DSD_REG_CLIM@DF_AIR_TEMP',key:'AIR_TEMP2M._Z._Z._Z._Z.C',title:'Air temperature at 2 m, annual mean'}}]]))},
 ];
 export const trend=id=>TRENDS.find(m=>m.id===id);
@@ -103,6 +104,14 @@ export function changeText(unit,{d,rate,fit}) {
   if(unit==='%')return `${s}${m.toFixed(1)} pp`;
   if(unit==='°C')return `${s}${m.toFixed(fit==='slope'?2:1)} °C${fit==='slope'?' per decade':''}`;
   return `${s}${m.toFixed(1)}${unit==='years'?' years':''}`;
+}
+// Latest standing: y is the last year s publishes; x, w and X are the values in y of s, the benchmark's series b
+// and the cohort's series S (an entry null or missing y is null), so every comparison is same-period. The change
+// runs from y0, the first year s publishes in [y − k, y), to y. Null when s publishes nothing.
+export function latest(m,s,b,S,k=5) {
+  const v=finite(s);if(!v.size)return null;
+  const Y=[...v.keys()].sort((p,q)=>p-q),y=Y.at(-1),y0=Y.find(t=>t>=y-k&&t<y)??null,at=t=>t?finite(t).get(y)??null:null;
+  return {y,y0,x:v.get(y),w:at(b),X:S?S.map(at):null,change:y0==null?null:change(s,[y0,y],m.unit,m.fit)};
 }
 export const valueText=(unit,x)=>x==null?'Not published':unit==='%'?pct(x):unit.startsWith('$')?`$${int(x)}`:unit==='years'?x.toFixed(1)
   :unit==='°C'?`${x.toFixed(1)} °C`:unit.startsWith('per ')?x.toFixed(1):int(x);

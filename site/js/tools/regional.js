@@ -2,17 +2,19 @@
 // C = cohort {label, areas, P}; m = measure; r = finding row; a = live render generation.
 import {census,censusMany,request} from '../api.js';
 import {CANADA,PT,int,pct} from '../model.js';
-import {MEASURES,MEASURE_IDS,SIMILAR,measure,show,difference,findings,rankText,similar,sectorBase,peerIds} from '../regional-model.js';
+import {MEASURES,MEASURE_IDS,SIMILAR,measure,show,difference,findings,standing,rankText,similar,sectorBase,peerIds} from '../regional-model.js';
+import {latest,valueText,changeText} from '../trend-model.js';
 import {h,chartCard,dataTable,loading,failure,segmented} from '../ui.js';
 import {barList,strip,legend} from '../charts.js';
 import {PRIMARY,COMPARE} from '../palette.js';
 
 // The cohort's dots: PRIMARY at the strip's 16 % opacity over the page.
 const COHORT='#cfd8cd';
-import {lifetime,sharedPair,censusMeta,slot,cohort,provinceName} from './common.js';
-import {trendPanel} from './trends.js';
+import {lifetime,sharedPair,censusMeta,slot,cohort,cohortAreas,trendSeries,provinceName} from './common.js';
+import {trendPanel,trendsFor} from './trends.js';
 
 const note=()=>h('p',{class:'period-note'},'Census 2021 · income refers to 2020. Same-period comparisons; a live request does not make the observations current.');
+const recentNote=()=>h('p',{class:'period-note'},'Annual series from Statistics Canada tables (population estimates, Labour Force Survey, tax data, CMHC rents) and the OECD regional database. Each card gives the latest year published for this area and compares the benchmark and comparable areas in that same year. Survey definitions differ from the Census measures below.');
 const trendNote=()=>h('p',{class:'period-note'},'Annual series from Statistics Canada tables (population estimates, Labour Force Survey, tax data, CMHC rents) and the OECD regional database, separate from the Census 2021 values. The range covers the years published for every area shown.');
 const meta=(g,table,notes)=>({...censusMeta(g,{notes}),table});
 
@@ -31,19 +33,56 @@ function finding(r,{C,bench,national}) {
     X?strip({X,x:national?null:x,w,format:v=>show(m,v)}):h('div',{class:'strip'}));
 }
 
+// The strip key: selected area, benchmark and cohort, as the strips draw them.
+const keyFor=(g,bench,C,national)=>legend([...(national?[]:[[g.name,PRIMARY,'dot']]),...(bench||national?[[national?'Canada':bench.name,COMPARE,'tick']]:[]),
+  ...(C?[[`${C.areas.length} ${C.label}`,COHORT,'dot']]:[])]);
+
+// One latest finding: annual measure m and its latest standing r in year y, with the benchmark and the cohort in y.
+function recentFinding(m,r,{C,bench,national}) {
+  const fmt=x=>valueText(m.unit,x),when=y=>m.period?.(y)??String(y),rank=rankText(r.standing);
+  const named=national?C.areas.map((a,i)=>[a.name,r.X[i]]).filter(([,v])=>v!=null).sort((s,t)=>t[1]-s[1]):[];
+  const context=[national?named.length?`Provinces and territories range from ${named.at(-1)[0]} (${fmt(named.at(-1)[1])}) to ${named[0][0]} (${fmt(named[0][1])}).`:''
+    :rank?`${rank[0].toUpperCase()}${rank.slice(1)} ${C.label}${r.standing.n<C.areas.length?' publishing it':''} in ${when(r.y)}.`:'',
+    !national&&r.w!=null&&m.unit!=='people'?`${bench.name} ${fmt(r.w)} (${m.unit==='%'||m.unit.startsWith('$')?difference(m,r.x,r.w):changeText(m.unit,{d:r.x-r.w})}).`:'',
+    r.change?.d!=null?`${changeText(m.unit,r.change)} since ${when(r.y0)}.`:''].filter(Boolean).join(' ');
+  return h('li',{class:'finding'},
+    h('div',{class:'finding-head'},h('span',{class:'finding-theme'},m.theme),h('h3',{},m.label),h('span',{class:'finding-period'},when(r.y))),
+    h('div',{class:'finding-value'},fmt(r.x)),
+    h('p',{class:'finding-text'},context),
+    strip({X:r.X,x:national?null:r.x,w:national||m.unit==='people'?null:r.w,format:fmt}));
+}
+
+// Latest annual values: every annual measure published at the area's level, read once for the area, its benchmark
+// and its cohort. A source failing for one measure names that measure and leaves the others drawn.
+async function recent(t,app,a,key) {
+  const g=await app.resolved(),national=g.id===CANADA.id,bench=national?null:app.bench,M=trendsFor(g).filter(m=>!m.fit);if(!a())return;
+  if(!M.length){t.replaceChildren(h('li',{class:'notice'},'No annual series is published for this geography level; the Census 2021 values follow.'));return;}
+  const C=await cohortAreas(g,app.placeList),R=[...new Map([g,...(bench?[bench]:[]),...C.areas].map(x=>[x.id,x])).values()];
+  const D=await Promise.all(M.map(m=>trendSeries(m,R).catch(e=>e)));if(!a())return;
+  const failed=M.filter((_,i)=>D[i] instanceof Error);if(failed.length===M.length)throw D[0];
+  const rows=M.map((m,i)=>{if(D[i] instanceof Error)return null;const S=D[i],r=latest(m,S.get(g.id)?.values,bench?S.get(bench.id)?.values:null,C.areas.map(x=>S.get(x.id)?.values));
+    return r&&{m,r:{...r,standing:national?null:standing(r.x,r.X)}};}).filter(Boolean);
+  key.replaceChildren(keyFor(g,bench,C,national));
+  t.replaceChildren(...rows.map(({m,r})=>recentFinding(m,r,{C,bench,national})),
+    ...(failed.length?[h('li',{class:'notice'},`Unavailable now: ${failed.map(m=>m.label).join('; ')}. The source did not answer; reload to retry.`)]:[]),
+    ...(rows.length?[]:[h('li',{class:'notice'},`No annual series is published for ${g.name}; the Census 2021 values follow.`)]));
+}
+
 export function overview(el,app) {
   const life=lifetime(el);
   function render() {
-    const a=life.next(),key=h('div',{class:'strip-key'}),list=h('ol',{class:'findings'}),base=h('div',{class:'brief-body'}),rest=h('div',{class:'brief-body'});
-    const over=h('div',{class:'trend-panel'});
-    el.replaceChildren(note(),key,list,h('h3',{class:'subhead'},'Over time'),trendNote(),over,base,rest);
+    const a=life.next(),key=h('div',{class:'strip-key'}),latestList=h('ol',{class:'findings recent'}),list=h('ol',{class:'findings census'});
+    const base=h('div',{class:'brief-body'}),rest=h('div',{class:'brief-body'}),over=h('div',{class:'trend-panel'});
+    el.replaceChildren(h('h3',{class:'subhead first'},'Latest published year'),recentNote(),key,latestList,h('h3',{class:'subhead'},'Census 2021'),note(),list,
+      h('h3',{class:'subhead'},'Over time'),trendNote(),over,base,rest);
+    slot(latestList,t=>recent(t,app,a,key),{alive:a,context:'Latest published year'});
     // The profiles need only the DGUID: start them while the geography list resolves the name; the request cache joins them.
     for(const geo of [app.state.geo,...(app.state.t.bench==='CA'?[CANADA]:[])])census(geo).catch(()=>{});
     slot(list,async t=>{
       const g=await app.resolved(),bench=app.bench,national=g.id===CANADA.id,{p,b}=await sharedPair(g,bench);if(!a())return;
       const draw=(C,error)=>{
         const F=findings(p,national?p:b,C?.P??null,{national});
-        key.replaceChildren(legend([...(national?[]:[[g.name,PRIMARY,'dot']]),...(b||national?[[national?'Canada':bench.name,COMPARE,'tick']]:[]),...(C?[[`${C.areas.length} ${C.label}`,COHORT,'dot']]:[])]));
+        if(C)key.replaceChildren(keyFor(g,b?bench:null,C,national));
         t.replaceChildren(...F.headline.map(r=>finding(r,{C,bench:national?CANADA:bench,national})));
         if(error)t.append(h('li',{class:'notice'},`Ranks unavailable: ${error.message}`));
         if(!national)sectorCard(base,g,p,b,bench);
