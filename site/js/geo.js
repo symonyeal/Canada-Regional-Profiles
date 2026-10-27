@@ -58,7 +58,7 @@ export function centroid(f) {
 // ---------- the map ----------
 let styleJSON;
 async function baseStyle() {
-  styleJSON??=request(STYLE,{attempts:3}).then(s=>{
+  styleJSON??=request(STYLE,{attempts:1,timeout:10000}).then(s=>{
     const st=structuredClone(s);
     for(const l of st.layers){
       if(l.id==='background')l.paint={'background-color':'#f3f5ee'};
@@ -70,7 +70,7 @@ async function baseStyle() {
       if(l.type==='symbol'&&/"name/.test(JSON.stringify(l.layout?.['text-field']??'')))l.layout={...l.layout,'text-field':['coalesce',['get','name:latin'],['get','name']]};
     }
     return st;
-  });
+  }).catch(e=>{styleJSON=null;throw e;});
   return styleJSON;
 }
 // Creates a MapLibre map inside el. Returns {map, ready, destroy}. The basemap failing leaves overlays usable on a plain background.
@@ -79,9 +79,11 @@ export function createMap(el,{bounds,controls=true}={}) {
   const map=new maplibregl.Map({container:el,style:{version:8,sources:{},layers:[{id:'background',type:'background',paint:{'background-color':'#f3f5ee'}}],glyphs:'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf'},
     center:[-96,60],zoom:2.4,attributionControl:{compact:true},cooperativeGestures:false,dragRotate:false,pitchWithRotate:false,maxPitch:0});
   map.touchZoomRotate.disableRotation();map.scrollZoom.disable();
+  let disposed=false;
   const ready=new Promise(resolve=>map.once('load',resolve)).then(async()=>{
-    try {const st=await baseStyle();map.setStyle(st,{diff:false});await new Promise(r=>map.once('style.load',r));}
-    catch {el.parentElement?.append(h('p',{class:'map-note'},'Basemap unavailable; boundaries and data layers are still shown.'));}
+    try {const st=await baseStyle();if(disposed)return map;
+      await new Promise(resolve=>{map.once('style.load',resolve);map.setStyle(st,{diff:false});});}
+    catch {if(!disposed)el.parentElement?.append(h('p',{class:'map-note basemap-note'},'Basemap unavailable; boundaries and data layers are still shown.'));}
     return map;
   });
   if(controls){const zoom=h('div',{class:'map-controls'},
@@ -91,7 +93,7 @@ export function createMap(el,{bounds,controls=true}={}) {
     el.append(zoom);}
   const ro=new ResizeObserver(()=>{if(el.isConnected)map.resize();});ro.observe(el);
   el._bounds=bounds;if(bounds)fit(map,bounds,false);
-  return {map,ready,destroy:()=>{ro.disconnect();map.remove();}};
+  return {map,ready,destroy:()=>{disposed=true;ro.disconnect();map.remove();}};
 }
 export function fit(map,bounds,animate=true) {
   if(!bounds)return;const c=map.getContainer(),pad=Math.min(48,c.clientWidth/10);

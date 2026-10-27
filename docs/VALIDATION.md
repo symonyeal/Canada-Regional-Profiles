@@ -2,6 +2,17 @@
 
 What was checked, how, and the result. Runtime checks of the website are separate from the historical offline pipeline's records. Evidence files (browser reports, captures, recorded reference responses) are kept with the project's working files, outside this repository.
 
+## Map and chart debugging (2026-10-27)
+
+- Reproduced the deployed blank map. Data, legend and boundaries loaded, but the map container measured 772 × 0 px while its canvas measured 772 × 300 px. The delayed MapLibre stylesheet changed the map's position to relative. The new browser regression failed on this zero-height viewport at desktop and phone widths.
+- Local map checks measured 772 × 679 px at desktop and 354 × 418 px on a phone, with matching canvas dimensions. With the entire basemap host blocked, 233 boundary features were rendered. Switching map tools and Escape closing produced no page exceptions. A real click on Alberta in the national map opened its provincial profile.
+- Six new browser checks passed: delayed stylesheet, basemap failure and map disposal, phone viewport, national map selection, a deliberately pending OECD source with Statistics Canada findings already visible, and selectable Census rankings. Manitoba's displayed Census employment rate, 59.1%, matched the live adapter value of 59.1.
+- Existing browser workflows: 24 of 24 passed against live public sources with in-process response reuse. These cover municipal selection, benchmark selection, history, shared URLs, same-level peers, industries, detail focus, exports, Census failure and recovery, and the four views at 1440, 768 and 390 px.
+- Coverage smoke check: 19 geographies (Canada, all thirteen provinces and territories, a municipality, a census division, a cross-border metropolitan area, an economic region and a population centre), four views each, with zero page exceptions. The only reported failure panels were the three intended unpublished-industry states. Some annual slots were still loading when recorded; this is a navigation and scope smoke check, not full source-availability certification.
+- Local checks: 55 JavaScript tests, 10 Rust tests and 11 Python tests passed; six historical slow Python checks deselected. Ruff and the installed-dependency check passed. The Rust tests used the existing workspace Cargo cache in offline mode after the default registry connection failed.
+- Two visual rounds inspected the current findings and maps. The second captured histories, regional rankings and maps at 1440, 768 and 390 px and checked all four views: no page exceptions or horizontal overflow. The site retains its light theme; no full accessibility or dark-theme audit was performed. The new context bars measured 3.57:1 against white and 3.12:1 against their track; muted text measured 4.65:1 against the page.
+- Publication and verification of the updated live site are pending.
+
 ## Latest year in Findings (2026-10-27)
 
 - Local checks: 55 JavaScript tests, one new (latest year, same-year benchmark and cohort values, change start moved past a gap, nothing published).

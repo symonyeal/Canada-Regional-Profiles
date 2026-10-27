@@ -1,5 +1,15 @@
 # Decisions
 
+## 2026-10-27: visible maps and charts beside the findings
+
+The owner reported a blank map and missing visualizations, and requested broader visual evidence alongside the insights.
+
+- The map library's stylesheet is loaded after the site's CSS. Its positioning rule collapsed the map viewport to zero height; the site's viewport rule now has higher specificity. The regression check measures the viewport and canvas, rather than accepting the presence of a map element as evidence of rendering.
+- Basemap requests have one ten-second attempt. Failure leaves the Census boundaries usable, with a visible notice. Reopening retries a failed style request. Closing a map invalidates pending community work before disposing it.
+- Annual findings draw independently. Each has a history of up to fifteen recent years with a labelled axis, visible source, data table and CSV for the plotted years. The Over time panel retains its full history and benchmark comparison.
+- Two selectable Census rankings show regional names and exact values. All published regions appear for cohorts of fifteen or fewer; larger cohorts show the six highest, six lowest and selected area, with the complete ranking in the data table and CSV. Missing profiles stay unavailable.
+- On narrow screens the distribution map precedes the filter list. Clicking a province on Canada's distribution map opens a provincial profile; subdivision maps open municipal profiles.
+
 ## 2026-10-27: latest year first
 
 The owner reported that the site "still only shows 2021 in the front": the annual series sat below the Census findings, in a panel showing one measure at a time.

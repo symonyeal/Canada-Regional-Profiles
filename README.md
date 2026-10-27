@@ -17,6 +17,8 @@ The page queries Statistics Canada and the OECD when a view opens. It ships no d
 
 **Explore map** opens distribution maps and the community finder on demand. Each exhibit has a source menu, data table and CSV export.
 
+Each latest-year finding includes a line chart of up to fifteen recent years, with its own labelled axis and source. The cards load independently, so a slow source leaves other measures visible. **Across comparable areas** shows two selectable Census rankings with named regions, values and benchmark marks. Large cohorts show the six highest, six lowest and selected area; the source menu retains the complete ranking. On phones the map comes before its filter list. Boundaries remain visible when the basemap is unavailable.
+
 ## What the numbers are
 
 - Findings open with the latest published year of each annual measure below: the place, its benchmark and its cohort are compared in that same year, and change runs from the first published year in the five before it.
@@ -51,6 +53,7 @@ node --test tests/*.test.js
 cargo test --release --manifest-path tools/boundaries/Cargo.toml
 npm install
 node tests/browser/workflows.mjs http://localhost:8765/ <evidence-folder>/workflows.json
+node tests/browser/visuals.mjs http://localhost:8765/ <evidence-folder>/visuals.json
 node tests/browser/sweep.mjs http://localhost:8765/ <evidence-folder>/sweep.json
 ```
 

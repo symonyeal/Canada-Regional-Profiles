@@ -2,6 +2,7 @@
 import {FILTERS} from '../census.js';
 import {h,rail,exhibitMenu,failure} from '../ui.js';
 import {lifetime} from './common.js';
+import {CANADA} from '../model.js';
 import {filterData,filterCards,parseSelection,serializeSelection,mapPanel,mapTable,shapes,scopeOf} from './choropleth.js';
 
 const MARKET=[['consumers','Consumers','household'],['dwellings','Dwellings','dwelling'],['businesses','Businesses','store']];
@@ -11,7 +12,7 @@ function groupView(el,app,group,keys,alive) {
   const g=FILTERS[group],filters=h('div',{class:'filters'}),mapBox=h('div',{class:'map-cell',style:{position:'relative',minHeight:'0',display:'flex'}});
   el.replaceChildren(filters,mapBox);
   const mapKey=g.maps[app.state.t[keys.map]]?app.state.t[keys.map]:Object.keys(g.maps)[0];
-  const panel=mapPanel(mapBox,{unit:app.state.t[keys.unit],onunit:v=>app.set(keys.unit,v),onopen:id=>app.choose({id,type:'CSD'})});
+  const panel=mapPanel(mapBox,{unit:app.state.t[keys.unit],onunit:v=>app.set(keys.unit,v),onopen:id=>app.choose({id,type:app.state.geo.id===CANADA.id?'PR':'CSD'})});
   mapBox.querySelector('.map-wrap').style.flex='1';
   const head=[h('h3',{class:'side-title'},g.title),h('p',{class:'side-text'},g.description),h('div',{class:'count-label'},`${Object.keys(g.maps).length} ${Object.keys(g.maps).length===1?'map':'maps'}`)];
   const cards=h('div',{});filters.append(...head,cards);
