@@ -67,3 +67,16 @@ Census requests list the 172 characteristics the exhibits use: about 100 KB and 
 ## Historical pipeline
 
 `analysis/` is the earlier offline Python build. It is not used by the website or its deployment and is kept for its comparison records and tests.
+
+
+## 2026-10-26: regional brief and peer comparison
+
+The owner approved replacing the nine-tool catalogue with Overview, People and work, Housing and incomes, Industries, and Compare. The compact header leads to dated observations. Logistics and enrolments leave primary navigation; distribution maps and the community finder open only on request. The map library is also requested only then.
+
+Overview and peer comparisons use a common Census 2021 period, with 2020 income. Recent annual population estimates are separate. Peers must have the same geography level and are preserved in shared URLs; a geography change clears them. Canada compares all thirteen provinces and territories, retaining the territory-first order.
+
+One industry workspace uses the existing payroll and employee-estimate adapters. The default ranking uses bars and full names; job-change rankings include up to ten gains and ten losses with published history. The five-year baseline is preserved and explicitly labelled, including the implications of a 2020 start. The industry detail remains available directly from a row. National specialization leads to industry-specific provincial benchmarks rather than a Canada-to-itself LQ.
+
+Resident labour-force sectors and occupations use shares and benchmark marks. Their exports retain the underlying counts alongside shares. Qualification categories keep their published nested definitions and now explain their overlap beside the chart. Household income distribution remains a comparison; repeated profile maps and the duplicate workforce view are removed from the main flow. Climate is omitted from the general housing view rather than given an empty national panel.
+
+This is an approved presentation and navigation change, including which rows are selected for job-change rankings. The source adapters, industry estimator, missing-value reconciliation and five-year source pairing are unchanged. It is not a claim of complete numerical parity across every geography and filter.

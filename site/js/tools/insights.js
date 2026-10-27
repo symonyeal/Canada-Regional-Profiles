@@ -34,13 +34,13 @@ async function series(pid,geo,code,select,n=12) {
     values:(d.get(k)??[]).map(p=>({year:Number(p.refPer.slice(0,4)),value:p.value==null?null:p.value*u.scale}))};
 }
 
-export function insights(el,app) {
+export function insights(el,app,{banner:showBanner=true}={}) {
   const life=lifetime(el);let overlay=null,opener=null;
   const banner=h('div',{class:'insights-banner'},h('div',{style:{position:'relative',zIndex:1}},
     h('h3',{},'Discover industry insights'),h('p',{},'Employment trends, specialization and business locations for any industry, for the selected area.'),
     h('div',{class:'banner-actions'},h('button',{type:'button',class:'btn light',onclick:e=>open('selection',e.currentTarget,'search')},icon('search',16),'Search for an industry'),
       h('button',{type:'button',class:'btn text',onclick:e=>open('selection',e.currentTarget,'browse')},'Browse all industries',icon('chevronRight',16)))));
-  el.append(banner);
+  if(showBanner)el.append(banner);
 
   function close() {overlay?.remove();overlay=null;document.body.style.overflow='';app.set('ins','');app.set('inst','trends');opener?.focus();}
   async function open(tab,from,mode='search') {
@@ -173,10 +173,10 @@ export function insights(el,app) {
     estCache.set(key,p);p.catch(()=>estCache.delete(key));return p;
   }
 
-  return {update(changed){
+  return {open(code,from,tab='trends'){app.set('ins',code);app.set('inst',tab);open(code?tab:'selection',from);},destroy:close,update(changed){
     if(changed.has('refresh'))estCache.clear();
     if((changed.has('geo')||changed.has('refresh'))&&overlay)open(app.state.t.inst);
     if(changed.has('ins')||changed.has('inst')){if(app.state.t.ins)open(app.state.t.inst);else if(overlay)close();}
-    if(changed.has('geo')&&!overlay&&app.state.t.ins&&app.state.section==='insights')open(app.state.t.inst);
+    if(changed.has('geo')&&!overlay&&app.state.t.ins&&['insights','industries'].includes(app.state.section))open(app.state.t.inst);
   }};
 }

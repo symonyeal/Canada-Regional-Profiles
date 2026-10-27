@@ -128,7 +128,7 @@ export function mapPanel(container,{unit='p',onunit,onopen,label:fixedLabel}={})
     const fin=list.map(r=>r.value).filter(Number.isFinite),f=v=>v==null?'–':unit==='p'?pct(v,0):int(v);
     legend.replaceChildren(h('b',{},`Target ${label}`),h('div',{class:'scale'},h('span',{},f(fin.length?Math.min(...fin):null)),h('span',{},f(fin.length?Math.max(...fin):null))),
       h('div',{class:'grad',style:{background:`linear-gradient(90deg,${colors.join(',')})`}}),
-      list.some(r=>r.value==null)?h('div',{class:'scale',style:{marginTop:'6px',marginBottom:0}},h('span',{},'Grey: not published')):null);
+      ...(list.some(r=>r.value==null)?[h('div',{class:'scale',style:{marginTop:'6px',marginBottom:0}},h('span',{},'Grey: not published'))]:[]));
     if(!m) return list;
     await m.ready;
     let fc;

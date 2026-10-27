@@ -2,6 +2,18 @@
 
 What was checked, how, and the result. Runtime checks of the website are separate from the historical offline pipeline's records. Evidence files (browser reports, captures, recorded reference responses) are kept with the project's working files, outside this repository.
 
+## Regional brief (2026-10-26)
+
+- Required local checks: 41 JavaScript tests, 9 Rust boundary tests and 11 Python tests passed; 6 historical slow Python tests deselected. Ruff and the installed-dependency check passed. Rust required a network setting to skip unavailable certificate-revocation lookups; certificate verification stayed enabled.
+- The source API adapter, pure numerical model and taxonomy configuration have no diff against the implementation baseline. This does not establish numerical parity across every geography/filter. The display now uses resident-sector/occupation shares and an approved gains/losses selection.
+- Browser interactions: 16 of 16 passed using captured successful public Census/SEPH responses, with live requests for cache misses. This checks navigation, legacy URLs, same-level peer selection and reload/removal, keyboard place selection, benchmark selection, history, industry detail/focus, table/CSV agreement, optional maps, source-failure recovery and 1440/768/390px page width. Captures are local test evidence and are not shipped with the site.
+- Direct-source runs are separate: the initial run passed 12 of 16; a later live-source run passed 14 of 16. The two remaining timeouts in that later run show seven network refusals from WDS metadata requests in their request logs. A separate live probe rendered the same legacy industry link successfully. Do not call these live-source runs fully passing. An intermediate replay was 15 of 16 because its text assertion expected lowercase while CSS displayed uppercase; the corrected assertion passed in the final 16-of-16 run.
+- A live coverage smoke run sampled Canada, Nunavut, Manitoba, Winnipeg municipality and Manitoba Division No. 11 across the five views. There were no page JavaScript exceptions. Some annual-series slots were still loading when recorded. The division's industry panel correctly reported unavailable local industry employment and offered the province. This is a sampled smoke check, not complete coverage certification.
+- Visual inspection: five views captured at 1440, 768 and 390px, with no horizontal page overflow, no page exceptions and no visible main-content text under 12px in the final probe. Two earlier rounds were retained. The final phone-label check separately verifies that qualification labels wrap. The site retains its explicit light theme; no complete accessibility or dark-theme audit was performed.
+- The industry-detail shared URL was separately reloaded after correcting its consolidated-section route; the expanded row/detail/focus/reload check passed.
+- Palette checks against the cream page measured ink 13.34:1, body 6.28:1, muted text 4.65:1, forest green 8.02:1 and copper 5.12:1. These are token-pair checks, not a complete contrast audit.
+- Source availability remains variable. A successful interaction replay does not establish the reliability of the upstream public services. No load-time improvement or exhaustive numerical parity is claimed.
+
 ## Gate
 
 ### Atlas design (2026-10-25)

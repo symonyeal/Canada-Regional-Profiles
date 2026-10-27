@@ -1,8 +1,12 @@
 # Coverage and comparison with the reference
 
-The page reproduces the nine tools of the [reference](REFERENCE.md) in its order and composition, for Canada, all 13 provinces and territories and local Census geographies. Every observation is requested from a public service when the tool is shown. Status: **reproduced** (same behaviour and, for Manitoba, the same values where the definitions match), **replacement** (a public-data equivalent that measures something stated on screen), **not reproduced** (the input is not public).
+The current interface has five primary views: Overview, People and work, Housing and incomes, Industries, and Compare. Optional maps contain the distribution explorer and community finder. Logistics and enrolments are not primary views. This structure was approved on 26 October 2026.
 
-## Feature matrix
+Overview and peer comparisons use Census 2021 and 2020 income across supported Census levels. Canada compares all thirteen provinces and territories; regional peer selection is restricted to the same geography level. Industry coverage remains SEPH payroll employment for provinces/territories and Canada, and labelled Business Register size-class estimates for municipalities and metropolitan areas. Other levels explain the limitation. Source failures and suppression stay unavailable.
+
+The matrix below is the historical nine-tool reference comparison, retained to document sources and differences. It does not describe the current navigation or claim that retired views remain visible.
+
+## Historical reference feature matrix
 
 The 2026-10-25 visual redesign intentionally changes the page styling: ivory and green surfaces, copper comparisons, serif headings, a geography panel and numbered navigation. The following matrix records functional and data coverage against the original reference; it does not claim visual identity. See [Decisions](DECISIONS.md).
 
