@@ -1,5 +1,6 @@
 // Helpers shared by the tools: independent async slots, Census pairs and level-aware annual series.
-import {census,censusMany,annual,table,memoRequest,SourceError} from '../api.js';
+import {census,censusMany,annual,history,oecdHistory,oecdExplorer,table,memoRequest,SourceError} from '../api.js';
+import {trend,combine} from '../trend-model.js';
 import {CANADA,PT,provinceOf,matchesProvince} from '../model.js';
 import {MEASURE_IDS} from '../regional-model.js';
 import {loading,failure,h} from '../ui.js';
@@ -31,29 +32,42 @@ export function sharedPair(place,bench) {
 export const censusMeta=(place,{universe,notes}={})=>({source:'Statistics Canada, Census Profile 2021',url:'https://www12.statcan.gc.ca/census-recensement/2021/dp-pd/prof/index.cfm',
   geo:place.name,period:'Census 2021 (May 2021); income refers to 2020',universe,notes});
 
-// Annual tables by geography level. Each entry: table id, member selectors. Levels without a table return null.
-const POPULATION={PR:['17100005',{'Gender':/^Total - gender$/,'Age group':/^All ages$/}],CSD:['17100155',{}],
-  CMACA:['17100148',{'Gender':/^Total - gender$/,'Age group':/^All ages$/}],CD:['17100152',{'Gender':/^Total - gender$/,'Age group':/^All ages$/}],
-  ER:['17100137',{'Sex':/^Both sexes$/,'Age group':/^All ages$/}]};
-const LFS=['14100464'];
 export const levelOf=place=>place.id===CANADA.id?'PR':place.type;
+// Population estimates, every published year, from the first population source of the area's level.
 export async function populationSeries(place) {
-  const spec=POPULATION[levelOf(place)];if(!spec) throw new SourceError('unsupported','Annual population estimates are not published for population centres.');
-  return annual(spec[0],place,spec[1],16);
-}
-// Labour Force Survey annual averages: Canada, provinces and economic regions (14-10-0464).
-export async function lfsSeries(place,indicator) {
-  if(!['PR','ER'].includes(levelOf(place))) throw new SourceError('unsupported','Annual Labour Force Survey estimates are published for Canada, provinces, territories and economic regions.');
-  return annual(LFS[0],place,{'Labour force characteristics':indicator},15);
+  const s=trend('population').source[levelOf(place)];if(!s) throw new SourceError('unsupported','Annual population estimates are not published for population centres.');
+  return annual(s[0].x[0],place,s[0].x[1]);
 }
 // Tax-filer income series (11-10-0008 individuals, 11-10-0009 census families): Canada, provinces, CMAs and CAs.
 export async function incomeSeries(place,kind) {
   if(!['PR','CMACA'].includes(levelOf(place))) throw new SourceError('unsupported','Annual tax-filer income is published for Canada, provinces, territories, metropolitan areas and agglomerations.');
-  return kind==='family'?annual('11100009',place,{'Family characteristics':/^Median total income, all families$/},12)
-    :annual('11100008',place,{'Sex':/^Both sexes$/,'Age group':/^All age groups$/,'Persons with income':/^Median total income$/},12);
+  return kind==='family'?annual('11100009',place,{'Family characteristics':/^Median total income, all families$/})
+    :annual('11100008',place,{'Sex':/^Both sexes$/,'Age group':/^All age groups$/,'Persons with income':/^Median total income$/});
 }
-export const tableMeta=(d,{title,universe,notes,period}={})=>({source:`Statistics Canada, table ${d.pid.replace(/(\d{2})(\d{2})(\d{4})/,'$1-$2-$3')}: ${d.metadata.cubeTitleEn}`,url:table(d.pid),
-  geo:d.geoName,period:period??(d.values.length?`${d.values[0].year} to ${d.values.at(-1).year}`:''),universe,notes});
+// Series of annual measure m for areas G. Each area takes the first source of its level that publishes a value for
+// it; a source whose categories a table lacks is skipped. A term is [table, selector] (Statistics Canada) or
+// {oecd: dataflow, key} (OECD). Returns Map id → {name, source, url, values: [{year, value}]}; areas no source
+// publishes are absent.
+export async function trendSeries(m,G) {
+  const out=new Map(),levels=new Map();for(const g of G)levels.set(levelOf(g),[...levels.get(levelOf(g))??[],g]);
+  const read=(t,A)=>(t.oecd?oecdHistory(t.oecd,t.key,A):history(t[0],A,t[1])).catch(e=>{if(e.kind==='unsupported')return null;throw e;});
+  const cite=(t,x)=>t.oecd?{source:`OECD Regional Statistics, ${t.title}${x.base&&x.base!=='_Z'?`, ${x.base} prices`:''}`,url:oecdExplorer(t.oecd)}
+    :{source:`Statistics Canada, table ${tableId(t[0])}: ${x.metadata.cubeTitleEn}`,url:table(t[0])};
+  await Promise.all([...levels].map(async([l,A])=>{
+    for(const s of m.source[l]??[]){
+      const rest=A.filter(g=>!out.has(g.id));if(!rest.length)break;
+      const [X,N]=await Promise.all([read(s.x,rest),s.n?read(s.n,rest):undefined]);if(!X||N===null)continue;
+      for(const g of rest){const x=X.get(g.id);if(!x)continue;
+        const n=N&&new Map((N.get(g.id)?.values??[]).map(v=>[v.year,v.value]));
+        const values=x.values.map(v=>({year:v.year,value:combine(m,v.value,n?n.get(v.year)??null:undefined)}));
+        if(values.some(v=>v.value!=null))out.set(g.id,{name:x.name,...cite(s.x,x),values});}
+    }
+  }));
+  return out;
+}
+export const tableId=pid=>String(pid).replace(/(\d{2})(\d{2})(\d{4})/,'$1-$2-$3');
+export const tableMeta=(d,{title,universe,notes,period}={})=>({source:`Statistics Canada, table ${tableId(d.pid)}: ${d.metadata.cubeTitleEn}`,url:table(d.pid),
+  geo:d.geoName,period:period??(f=>f.length?`${f[0].year} to ${f.at(-1).year}`:'')(d.values.filter(v=>v.value!=null)),universe,notes});
 export const provinceName=code=>PT.find(p=>p[0]===code)?.[2]??'';
 
 // The cohort an area is ranked among: the province's census subdivisions with at least 1,000 residents (smaller

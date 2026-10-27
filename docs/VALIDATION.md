@@ -2,6 +2,17 @@
 
 What was checked, how, and the result. Runtime checks of the website are separate from the historical offline pipeline's records. Evidence files (browser reports, captures, recorded reference responses) are kept with the project's working files, outside this repository.
 
+## Annual ranges and OECD sources (2026-10-26)
+
+- Cause of the 2021-only view: the Census Profile SDMX service lists 14 dataflows, all 2021; Findings and Compare used only it, and the annual series elsewhere were cut to the last 12, 15 or 16 periods. Economic-region population read 17-10-0137 (2016 boundaries, inactive, ends 2022).
+- Local checks: 54 JavaScript tests, 7 of them new (common years with gaps, zeros and areas publishing nothing; range snapping; per cent, compound rate and point changes; least-squares slope per decade on an exact line; share and rate terms; source catalogue; URL state).
+- Every annual measure through the site's adapters in the browser, one area per level (Canada, Manitoba, Yukon, Winnipeg CMA, Ottawa–Gatineau Ontario part, Portage la Prairie CA, Division No. 11, Southeast ER, Steinbach): published spans as in [COVERAGE.md](COVERAGE.md); the Labour Force Survey tables publish no territory and no CA. Immigration periods checked against the table footnote (2025 is 2025/2026, 368,224 immigrants to Canada).
+- OECD adapter: six requests from the page, all HTTP 200, 1.1–1.6 s. The Northwest Territories and Nunavut carry 0 marked as normal values before 1999 in income (1991–1998) and homicides (1995–1998); the adapter drops those years. Yukon's zero-homicide years stay.
+- Browser workflows against live sources: 22 of 22 passed on the final code, including four new checks (Manitoba population 1971–2026 with its Canada benchmark and a shared `tm`/`yr` range; Steinbach 2001–2025, +124.3 %, 7th of 148 Manitoba municipalities with 1,000+ residents; the economic region reads 17-10-0150 and never 17-10-0137; the payroll range starts in 2001).
+- Sweep: Canada, the 13 provinces and territories, Winnipeg (CSD), Division No. 11, Ottawa–Gatineau, Winnipeg economic region and Brandon population centre rendered all four views with no page errors. The default annual panel spans 1971–2026 for Canada and the provinces and Yukon, 1991–2026 for the Northwest Territories and Nunavut, 2001–2025 below the provinces, and says that no annual series exists for a population centre.
+- Visual: captures of Findings (Manitoba, Steinbach at 390 px, Division No. 11 temperature), Compare (Canada employment, Steinbach) and Economy (Manitoba, 2015–2025) checked for overlap; the x-axis end label no longer collides and comparison lines are distinguishable by role. No dark-theme or full accessibility audit.
+- Statistics Canada's WDS served its unavailable page without CORS headers for about 70 minutes from 01:55 UTC on 2026-10-27; all live checks above ran after it recovered.
+
 ## Findings, economy and peers (2026-10-26)
 
 - Local checks: 47 JavaScript tests (standing and rank text, headline selection, national spread, similarity, sector base and D, shift-share additivity, legacy links), 10 Rust tests (9 boundary, 1 adjacency), 11 Python tests (6 slow deselected), Ruff and the dependency check passed.

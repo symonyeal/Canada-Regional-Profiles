@@ -685,3 +685,9 @@ table tbody th{font-weight:500}
 @media(max-width:820px){.findings{grid-template-columns:1fr}.finding-value{font-size:28px}.compare-controls{flex-wrap:wrap}}
 .strip-key .legend{justify-content:flex-start;border:0;padding:0 0 var(--s3);margin:0}
 .strip-key .legend i.tick::before{display:none}
+/* Year range over the years published for every area shown. */
+.trend-range{display:grid;grid-template-columns:auto minmax(160px,420px) auto;align-items:center;gap:var(--s3) var(--s6);margin:0 0 var(--s4)}
+.trend-range .field-label{font-size:var(--brief-small);color:var(--body)}
+.trend-range .range{padding:4px 8px}
+.trend-panel .comparison-table{margin-top:var(--s4)}
+@media(max-width:820px){.trend-range{grid-template-columns:1fr}}

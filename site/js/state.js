@@ -1,6 +1,7 @@
 // Shared-URL state. Every parameter has one validator and one default; defaults are omitted from URLs.
 import {CANADA,geographyType,validGeographyId} from './model.js';
 import {MEASURES} from './regional-model.js';
+import {TRENDS} from './trend-model.js';
 
 const DETAIL=['resident','workforce','household','dwelling','livability'];
 
@@ -13,6 +14,8 @@ export const KEYS={
   iv:one('specialized','largest','change'), is:one('all','traded','local'),
   cm:one('employment',...MEASURES.map(m=>m.id).filter(id=>id!=='employment'&&id!=='population')),
   pm:one('similar','near','chosen'),
+  // Annual measure and year range "2001-2025"; the range snaps to the years published for the areas shown.
+  tm:one(...TRENDS.map(m=>m.id)), yr:text(/^(19|20)\d\d-(19|20)\d\d$/), py:text(/^(19|20)\d\d-(19|20)\d\d$/),
   peers:{ok:v=>v.split(',').length<=3&&v.split(',').every(x=>validGeographyId(x)&&geographyType(x)),fallback:'',geo:true},
   map:one('','market','explorer'),
   exq:text(/^[^<>]{1,60}$/), ext:text(/^[^<>]{1,60}$/), exs:{...text(/^2021[AS]\d{6,15}$/),geo:true},

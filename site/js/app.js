@@ -14,7 +14,7 @@ import {overview,compare} from './tools/regional.js';
 const $=id=>document.getElementById(id);
 const TOOLS={
   overview:{title:'Findings',text:'Where this place stands out: its value, its rank among comparable areas and the benchmark.',make:overview},
-  industries:{title:'Economy',text:'Payroll job change by sector since 2019, the sectors residents work in, and detailed industries.',make:industries},
+  industries:{title:'Economy',text:'Payroll job change by sector over the years you choose, the sectors residents work in, and detailed industries.',make:industries},
   compare:{title:'Compare',text:'The same measures and period across the most similar areas, neighbours or peers you choose.',make:compare},
   detail:{title:'Detail',text:'Residents, work, households, housing and commuting, each against the benchmark.',make:(el,app)=>profile(el,app)},
 };
