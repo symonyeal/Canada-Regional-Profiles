@@ -4,14 +4,16 @@ import {census,censusMany,request} from '../api.js';
 import {CANADA,PT,int,pct} from '../model.js';
 import {MEASURES,MEASURE_IDS,SIMILAR,measure,show,difference,findings,rankText,similar,sectorBase,peerIds} from '../regional-model.js';
 import {h,chartCard,dataTable,loading,failure,segmented} from '../ui.js';
-import {barList,lines,strip,legend} from '../charts.js';
+import {barList,strip,legend} from '../charts.js';
 import {PRIMARY,COMPARE} from '../palette.js';
 
 // The cohort's dots: PRIMARY at the strip's 16 % opacity over the page.
 const COHORT='#cfd8cd';
-import {lifetime,sharedPair,censusMeta,populationSeries,tableMeta,slot,cohort,provinceName} from './common.js';
+import {lifetime,sharedPair,censusMeta,slot,cohort,provinceName} from './common.js';
+import {trendPanel} from './trends.js';
 
 const note=()=>h('p',{class:'period-note'},'Census 2021 · income refers to 2020. Same-period comparisons; a live request does not make the observations current.');
+const trendNote=()=>h('p',{class:'period-note'},'Annual series from Statistics Canada tables (population estimates, Labour Force Survey, tax data, CMHC rents) and the OECD regional database, separate from the Census 2021 values. The range covers the years published for every area shown.');
 const meta=(g,table,notes)=>({...censusMeta(g,{notes}),table});
 
 // One finding: measure, value, standing in the cohort, benchmark and the cohort's distribution.
@@ -33,7 +35,8 @@ export function overview(el,app) {
   const life=lifetime(el);
   function render() {
     const a=life.next(),key=h('div',{class:'strip-key'}),list=h('ol',{class:'findings'}),base=h('div',{class:'brief-body'}),rest=h('div',{class:'brief-body'});
-    el.replaceChildren(note(),key,list,base,rest);
+    const over=h('div',{class:'trend-panel'});
+    el.replaceChildren(note(),key,list,h('h3',{class:'subhead'},'Over time'),trendNote(),over,base,rest);
     // The profiles need only the DGUID: start them while the geography list resolves the name; the request cache joins them.
     for(const geo of [app.state.geo,...(app.state.t.bench==='CA'?[CANADA]:[])])census(geo).catch(()=>{});
     slot(list,async t=>{
@@ -49,20 +52,10 @@ export function overview(el,app) {
       draw(null);
       try {const C=await cohort(g,app.placeList);if(a())draw(C);}catch(e){if(a())draw(null,e);}
     },{alive:a,context:'Findings'});
-    const recent=h('details',{class:'recent-detail'},h('summary',{},'Recent population estimates'),h('div',{class:'recent-body'}));
-    let started=false;
-    recent.addEventListener('toggle',()=>{if(!recent.open||started)return;started=true;
-      slot(recent.lastChild,async t=>{const g=await app.resolved(),d=await populationSeries(g);if(!a())return;
-        const fin=d.values.filter(v=>v.value!=null),first=fin[0],last=fin.at(-1);
-        if(!first||!last)throw new Error('No annual population observations published.');
-        t.replaceChildren(chartCard({title:`${int(last.value)} residents in ${last.year}`,subtitle:`${d.geoName} · July 1 estimates, ${first.year}–${last.year}. Separate from Census counts above.`,
-          meta:{...tableMeta(d,{universe:'Total population, annual estimates'}),table:()=>({headers:['Year','Population'],rows:d.values.map(v=>[String(v.year),v.value]),numeric:new Set([1]),format:(v,i)=>i?int(v):v})}},
-          h('div',{class:'body'},lines({x:d.values.map(v=>String(v.year)),series:[{name:g.name,values:d.values.map(v=>v.value),color:PRIMARY,fmt:int}],fmt:int,height:240}))));
-      },{alive:a,context:'Recent population estimates'});
-    });
-    el.append(recent);
+    app.resolved().then(g=>{if(!a())return;const national=g.id===CANADA.id;
+      trendPanel(over,app,{g,alive:a,rows:async()=>national?[{...CANADA}]:[g,{...app.bench,bench:true}].filter((r,i)=>i===0||r.id!==g.id),cohort:()=>cohort(g,app.placeList)});});
   }
-  return {update(c){if(['geo','bench','refresh'].some(k=>c.has(k)))render();}};
+  return {update(c){if(['geo','bench','refresh','tm','yr'].some(k=>c.has(k)))render();}};
 }
 
 // Resident workers' sectors against the benchmark: the three most over-represented and the mix difference D.
@@ -132,7 +125,10 @@ export function compare(el,app) {
     const all=[...rows,...(b?[{...bench,p:b,bench:true}]:[])],m=measure(app.state.t.cm)??measure('employment'),ms=COLUMNS.map(measure);
     const chart=chartCard({title:`${m.label} · ${m.period}`,subtitle:why,meta:meta({name:all.map(r=>r.name).join('; ')},()=>rowTable(all,MEASURES))},
       h('div',{class:'body'},barList(all.map(r=>({label:`${r.name}${r.bench?' (benchmark)':''}`,value:r.p?m.of(r.p):null,text:r.p?show(m,m.of(r.p)):'Source unavailable'})),{max:m.unit==='%'?100:undefined})));
-    out.replaceChildren(chart,h('div',{class:'comparison-table'},dataTable(rowTable(all,ms))));
+    const over=h('div',{class:'trend-panel'});
+    out.replaceChildren(chart,h('div',{class:'comparison-table'},dataTable(rowTable(all,ms))),h('h3',{class:'subhead'},'Over time'),trendNote(),over);
+    // Canada's comparison lists the provinces and territories; Canada joins the annual view as their benchmark.
+    trendPanel(over,app,{g,alive:a,rows:async()=>[...all.map(r=>({id:r.id,type:r.type??g.type,name:r.name,bench:!!r.bench})),...(g.id===CANADA.id?[{...CANADA,bench:true}]:[])]});
     if(rows.some(r=>!r.p))out.prepend(h('p',{class:'notice'},'Some regions could not be retrieved. Their values are unavailable, not zero.'));
   }
   // Manual peers: search the same-level list; chips remove a peer.
@@ -144,5 +140,5 @@ export function compare(el,app) {
       h('div',{class:'peer-chips'},ids.map(id=>{const x=list.find(y=>y.id===id);return h('button',{type:'button',class:'peer-chip','aria-label':`Remove ${x?.name??id}`,
         onclick:()=>{app.set('peers',ids.filter(y=>y!==id).join(','));render();}},x?.name??id,' ×');})));
   }
-  return {update(c){if(['geo','bench','peers','cm','pm','refresh'].some(k=>c.has(k)))render();}};
+  return {update(c){if(['geo','bench','peers','cm','pm','refresh','tm','yr'].some(k=>c.has(k)))render();}};
 }

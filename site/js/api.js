@@ -192,16 +192,30 @@ export async function points(pid,coordinates,latestN=1) {
     const o=r.object;return [o.coordinate,(o.vectorDataPoint??[]).map(p=>({...p,value:p.value==null?null:numeric(p.value)*10**(p.scalarFactorCode??0)}))];
   }));
 }
-// One annual series. selector: {dimension name: RegExp for the member}; other dimensions take their root member.
-export async function annual(pid,geo,selector={},n=15) {
-  const m=await metadata(pid),g=geoMember(m.dimension[0],geo);
-  if(!g) throw new SourceError('unsupported','This table does not publish the selected geography.');
-  const chosen=m.dimension.map((d,i)=>{if(i===0)return g;const re=selector[d.dimensionNameEn];
+// Reference periods an annual table publishes, from its metadata: every year from the first to the last.
+export const periods=m=>Number(m.cubeEndDate.slice(0,4))-Number(m.cubeStartDate.slice(0,4))+1;
+// Members other than geography for a selector {dimension name or names "A|B": RegExp for the member}; a dimension
+// without an entry takes its root member.
+function members(m,selector) {
+  return m.dimension.slice(1).map(d=>{const k=Object.keys(selector).find(k=>k.split('|').includes(d.dimensionNameEn)),re=selector[k];
     const s=re?d.member.find(x=>re.test(x.memberNameEn)):d.member.find(x=>x.parentMemberId==null)??d.member[0];
     if(!s) throw new SourceError('unsupported',`The table does not publish the requested ${d.dimensionNameEn} category.`);return s;});
-  const key=coord(chosen.map(x=>x.memberId)),[data,{scale,unit}]=await Promise.all([points(pid,[key],n),units(chosen)]);
-  const values=(data.get(key)??[]).map(p=>({year:Number(p.refPer.slice(0,4)),refPer:p.refPer,value:p.value==null?null:p.value*scale}));
-  return {metadata:m,geoName:g.memberNameEn,values,pid,unit};
+}
+// One annual series over every published period.
+export async function annual(pid,geo,selector={}) {
+  const d=(await history(pid,[geo],selector)).get(geo.id);
+  if(!d) throw new SourceError('unsupported','This table does not publish the selected geography.');
+  return {metadata:d.metadata,geoName:d.name,values:d.values,pid:String(pid),unit:d.unit};
+}
+// The same annual series for many areas from one table, every published period, 250 areas per request.
+// Returns Map geo.id → {name, values: [{year, refPer, value}], unit, metadata} for the areas the table publishes.
+export async function history(pid,geos,selector={}) {
+  const m=await metadata(pid),c=members(m,selector),G=geos.map(g=>[g,geoMember(m.dimension[0],g)]).filter(([,x])=>x);
+  if(!G.length)return new Map();
+  const key=x=>coord([x.memberId,...c.map(y=>y.memberId)]);
+  const [data,{scale,unit}]=await Promise.all([points(pid,G.map(([,x])=>key(x)),periods(m)),units([G[0][1],...c])]);
+  return new Map(G.map(([g,x])=>[g.id,{name:x.memberNameEn,unit,metadata:m,
+    values:(data.get(key(x))??[]).map(p=>({year:Number(p.refPer.slice(0,4)),refPer:p.refPer,value:p.value==null?null:p.value*scale}))}]));
 }
 // Data points report scalarFactorCode 0 for series published "in thousands"; the member's unit of measure says so.
 const codeSets=()=>request(`${WDS}/getCodeSets`);
@@ -209,6 +223,33 @@ export async function units(members) {
   const code=members.map(m=>m.memberUomCode).filter(c=>c!=null).at(-1);if(code==null)return {scale:1,unit:''};
   const unit=(await codeSets()).object?.uom?.find(u=>u.memberUomCode===code)?.memberUomEn??'';
   return {unit,scale:/in thousands$|^Thousands of/i.test(unit)?1e3:/in millions$|^Millions of/i.test(unit)?1e6:1};
+}
+
+// ---------- OECD Regional Statistics ----------
+
+export const OECD='https://sdmx.oecd.org/public/rest/data/OECD.CFE.EDS';
+export const oecdExplorer=flow=>`https://data-explorer.oecd.org/vis?df[ds]=dsDisseminateFinalDMZ&df[id]=${encodeURIComponent(flow)}&df[ag]=OECD.CFE.EDS`;
+// OECD region code: Canada CAN; a province or territory (TL2) or census division (TL3) CA + its Census code.
+export const oecdArea=g=>g.id===CANADA.id?'CAN':['PR','CD'].includes(g.type)?`CA${g.id.slice(9)}`:null;
+// The Northwest Territories and Nunavut on current boundaries exist from 1999; the OECD fills earlier years with 0
+// marked as normal values (checked 2026-10-26 in income and homicides), so those years are not observations.
+const BORN={CA61:1999,CA62:1999};
+// Quoted CSV fields may hold commas; the OECD's CSV has no embedded newlines.
+const fields=line=>{const v=[];let cur='',q=false;for(const c of line){if(c==='"')q=!q;else if(c===','&&!q){v.push(cur);cur='';}else cur+=c;}v.push(cur);return v;};
+// One OECD regional series for many areas, every published year: key gives the dimensions after
+// TERRITORIAL_TYPE. Values are scaled by UNIT_MULT. One request; the API answers bursts with HTTP 429, so at most
+// two run at a time. Returns Map geo.id → {name, values: [{year, value}], base} (base: price reference year).
+export async function oecdHistory(flow,key,geos) {
+  const G=geos.map(g=>[g,oecdArea(g)]).filter(([,c])=>c);if(!G.length)return new Map();
+  const codes=[...new Set(G.map(([,c])=>c))].sort();
+  const [head,...lines]=(await request(`${OECD},${flow},/A..${codes.join('+')}..${key}?dimensionAtObservation=AllDimensions&format=csvfile`,
+    {accept:'text/csv',parse:'text',limit:1})).trim().split(/\r?\n/);
+  const H=fields(head),at=k=>H.indexOf(k),by=new Map();
+  for(const l of lines){const v=fields(l),x=numeric(v[at('OBS_VALUE')]),y=Number(v[at('TIME_PERIOD')].slice(0,4));
+    if(x==null||(BORN[v[at('REF_AREA')]]??0)>y)continue;
+    const s=by.get(v[at('REF_AREA')])??by.set(v[at('REF_AREA')],{values:[],base:v[at('REF_YEAR_PRICE')]??''}).get(v[at('REF_AREA')]);
+    s.values.push({year:y,value:x*10**(numeric(v[at('UNIT_MULT')])??0)});}
+  return new Map(G.filter(([,c])=>by.has(c)).map(([g,c])=>[g.id,{name:g.name,...by.get(c),values:by.get(c).values.sort((p,q)=>p.year-q.year)}]));
 }
 
 export async function seph(geo,level='4') {
@@ -226,21 +267,25 @@ export async function seph(geo,level='4') {
     value:get(g.memberId,n,year),previous:get(g.memberId,n,year-5),national:get(ca.memberId,n,year)}))};
 }
 
-// Payroll jobs by NAICS sector (SEPH 14-10-0202) for geo and Canada, in year `from` and the latest annual period.
-// The 20 sectors partition the industrial aggregate excluding unclassified businesses [11-91N]; SEPH covers
-// forestry and logging [11N], not agriculture. Suppressed cells stay null.
-export async function sephSectors(geo,from=2019) {
+// Payroll jobs by NAICS sector (SEPH 14-10-0202) for geo and Canada, every published year: e and E map year →
+// jobs here and in Canada. The 20 sectors partition the industrial aggregate excluding unclassified businesses
+// [11-91N]; SEPH covers forestry and logging [11N], not agriculture. Suppressed cells stay null.
+export async function sephSectors(geo) {
   const m=await metadata('14100202'),[gd,ed,nd]=m.dimension,g=geoMember(gd,geo),ca=geoMember(gd,CANADA);
   if(!g) throw new SourceError('unsupported','SEPH industry employment is published for Canada, provinces and territories only.');
   const employee=ed.member.find(x=>x.memberNameEn==='All employees'),aggregate=nd.member.find(x=>x.classificationCode==='11-91N');
   const code=x=>(x.classificationCode??'').split(',')[0].replace(/N$/,'');
-  const sectors=nd.member.filter(x=>x!==aggregate&&SECTORS[code(x)]),year=Number(m.cubeEndDate.slice(0,4));
+  const sectors=nd.member.filter(x=>x!==aggregate&&SECTORS[code(x)]);
   const key=(gi,n)=>coord([gi,employee.memberId,n.memberId]);
-  const data=await points(m.productId,[g.memberId,ca.memberId].flatMap(gi=>[aggregate,...sectors].map(n=>key(gi,n))),year-from+1);
-  const at=(gi,n,y)=>data.get(key(gi,n))?.find(p=>p.refPer.startsWith(String(y)))?.value??null;
-  const four=n=>({e0:at(g.memberId,n,from),e1:at(g.memberId,n,year),E0:at(ca.memberId,n,from),E1:at(ca.memberId,n,year)});
-  return {metadata:m,year,from,geoName:g.memberNameEn,agg:four(aggregate),
-    rows:sectors.map(n=>({code:code(n),name:n.memberNameEn.replace(/ \[[^\]]+\]$/,''),...four(n)}))};
+  const data=await points(m.productId,[g.memberId,ca.memberId].flatMap(gi=>[aggregate,...sectors].map(n=>key(gi,n))),periods(m));
+  const S=(gi,n)=>new Map((data.get(key(gi,n))??[]).map(p=>[Number(p.refPer.slice(0,4)),p.value]));
+  const pair=n=>({e:S(g.memberId,n),E:S(ca.memberId,n)});
+  return {metadata:m,geoName:g.memberNameEn,agg:pair(aggregate),rows:sectors.map(n=>({code:code(n),name:n.memberNameEn.replace(/ \[[^\]]+\]$/,''),...pair(n)}))};
+}
+// The values shift-share reads, e0, e1, E0, E1, for base year `from` and end year `to`.
+export function sephAt(d,from,to) {
+  const four=({e,E})=>({e0:e.get(from)??null,e1:e.get(to)??null,E0:E.get(from)??null,E1:E.get(to)??null});
+  return {from,year:to,agg:four(d.agg),rows:d.rows.map(r=>({code:r.code,name:r.name,...four(r)}))};
 }
 
 export async function businessSlice(t,geo,level='4') {

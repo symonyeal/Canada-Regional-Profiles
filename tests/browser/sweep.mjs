@@ -6,7 +6,7 @@ const [base='http://127.0.0.1:8772/',out,...only]=process.argv.slice(2);
 if(!out)throw Error('Provide an evidence report path.');
 const geos=['2021A000011124',...['60','61','62','59','48','47','46','35','24','13','12','11','10'].map(c=>`2021A0002${c}`),
   '2021A00054611040','2021A00034611','2021S0503505','2021S05004650','2021S05100091'];
-const b=await chromium.launch({executablePath:process.env.BROWSER??'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true}),R=[];
+const b=await chromium.launch({executablePath:process.env.BROWSER??'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true}),R=[];
 for(const g of geos.filter(g=>!only.length||only.includes(g))){
   const p=await b.newPage({viewport:{width:1440,height:1000}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
   await p.goto(`${base}?geo=${g}`,{waitUntil:'domcontentloaded'});
@@ -17,7 +17,12 @@ for(const g of geos.filter(g=>!only.length||only.includes(g))){
     views[k]=await p.locator(`#${k}`).evaluate(e=>({loading:e.querySelectorAll('.state.loading').length,failures:[...e.querySelectorAll('.state.failure')].map(x=>x.textContent),
       values:[...e.querySelectorAll('.finding-value,.kpi-value,.rank-value>span')].slice(0,4).map(x=>x.textContent),rows:e.querySelectorAll('.bar-row,tbody tr').length,text:e.innerText.slice(-350)}));
   }
-  R.push({geo:g,place:await p.locator('#place-name').textContent(),views,errors});console.log(g,R.at(-1).place,JSON.stringify(Object.fromEntries(Object.entries(views).map(([k,v])=>[k,{loading:v.loading,failures:v.failures.length,rows:v.rows}]))));
+  // The annual panel: the default measure's title and the years published for every area shown, or its notice.
+  await p.locator('#section-links a[href="#overview"]').click();
+  await p.waitForFunction(()=>document.querySelector('#overview .trend-panel .chart-card,#overview .trend-panel .notice,#overview .trend-panel .state.failure'),undefined,{timeout:90000}).catch(()=>{});
+  const trend=await p.locator('#overview .trend-panel').evaluate(e=>({title:e.querySelector('h4')?.textContent??null,range:e.querySelector('.trend-range .field-label')?.textContent??null,
+    notice:e.querySelector('.notice,.state.failure')?.textContent??null,measures:e.querySelectorAll('option').length}));
+  R.push({geo:g,place:await p.locator('#place-name').textContent(),views,trend,errors});console.log(g,R.at(-1).place,JSON.stringify(Object.fromEntries(Object.entries(views).map(([k,v])=>[k,{loading:v.loading,failures:v.failures.length,rows:v.rows}]))),trend.title??trend.notice,trend.range??'');
   fs.writeFileSync(out,JSON.stringify({base,results:R},null,2));await p.close();
 }
 await b.close();if(R.some(r=>r.errors.length))process.exitCode=1;

@@ -1,5 +1,18 @@
 # Decisions
 
+## 2026-10-26: years beyond Census 2021
+
+The owner asked why only 2021 data was shown and asked for the longest history common to the places compared, shown as a selectable range, including sources outside Statistics Canada.
+
+- **Census measures stay single-year.** The Census Profile SDMX service publishes only the 2021 cycle (14 dataflows, all 2021), and earlier profiles use other boundaries. Findings and Compare keep their Census cross-sections and say so.
+- **Annual measures come from tables that publish every year.** Population, median age and the share aged 65 and over (July 1 estimates), immigrants per 1,000 residents (components of change), employment and unemployment rates (Labour Force Survey), median census family income and the CFLIM-AT low-income rate (tax data), and two-bedroom rent (CMHC). Each table is read over all its published years, found from its metadata, instead of the earlier fixed 12, 15 or 16 periods. Sub-provincial population and components tables are on 2021 boundaries, the same as the Census geography; the economic-region estimates moved from the inactive 2016-boundary table 17-10-0137, which ends in 2022, to 17-10-0150.
+- **The OECD adds measures Statistics Canada does not publish annually by region in one place.** Real GDP and real disposable income per person, life expectancy and homicides (provinces and territories) and mean air temperature (provinces and census divisions). OECD region codes are the Census codes behind a CA prefix, so no lookup table is needed. The OECD compiles the Canadian economic and demographic figures from Statistics Canada data; the temperature series is ERA5. ECCC's homogenized station climate data (GeoMet) and IRCC's open data were inspected and not used: stations are points, not areas, and IRCC files start in 2015 while the components tables cover immigration from 2001 at more levels.
+- **The range is the intersection of published years.** For the areas shown (the place and its benchmark in Findings; the place, its comparison set and the benchmark in Compare), the years in which every area has a finite value. An area that publishes nothing for a measure is named and left out instead of emptying the range; suppression and gaps are never zero. Cohort ranks use the cohort's areas with both ends of the range published and state how many that is.
+- **Change matches the measure.** Counts and dollars change in per cent with a compound annual rate; rates in percentage points; temperature as the least-squares trend per decade over every year in the range, because single years differ by a degree or more and an endpoint comparison would mostly measure weather.
+- **Charts index counts to the range's first year** when areas of different size share an axis; the table keeps the published values. Other areas in a comparison are grey context lines, the selected area green and the benchmark copper.
+- **Payroll shift-share takes any base and end year** with published totals for the area and Canada (2001–2025), defaulting to 2019 and the latest year.
+- Measure and range are shared in the address (`tm`, `yr`, `py`); a range snaps to the nearest common years when the selection changes.
+
 ## 2026-10-26: findings instead of inventories
 
 The owner asked to simplify the site and give concrete insight; logistics and similar inventories did not explain a place. A list of airports, roads or enrolments, or a table of values beside a benchmark, leaves the reader to judge whether a difference matters. Each view now answers a question with a ranked, sourced statement.

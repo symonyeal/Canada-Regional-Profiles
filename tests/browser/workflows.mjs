@@ -4,7 +4,7 @@ import {chromium} from 'playwright-core';
 import fs from 'node:fs';
 const [base='http://127.0.0.1:8772/',out]=process.argv.slice(2);
 if(!out)throw new Error('Provide a report path in the working evidence folder.');
-const b=await chromium.launch({executablePath:process.env.BROWSER??'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
+const b=await chromium.launch({executablePath:process.env.BROWSER??'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true});
 const R=[];
 // Reuse successful public responses in this test process; the application still exercises its real adapters.
 const responses=new Map(process.env.PUBLIC_RESPONSES?JSON.parse(fs.readFileSync(process.env.PUBLIC_RESPONSES,'utf8')):[]),key=r=>`${r.method()}:${r.url()}:${r.postData()??''}`;
@@ -52,6 +52,36 @@ await check('provincial payroll change is decomposed into national, mix and regi
   await p.goto(`${base}?geo=2021A000246#industries`);await until(p,()=>/payroll jobs from 2019 to/.test(document.querySelector('#industries .economy-cards')?.textContent??''));
   const text=await p.locator('#industries .economy-cards').textContent();if(!/At Canada’s rate/.test(text)||!/Regional shift/i.test(text))throw Error('Decomposition missing');
   return {headline:await p.locator('#industries .economy-cards h4').first().textContent()};
+});
+// The Over time range is the full intersection of the published years, not a fixed window.
+const span=p=>p.evaluate(()=>{const e=[...document.querySelectorAll('#overview .trend-range .range-ends span, #compare .trend-range .range-ends span')].map(x=>Number(x.textContent));return e;});
+await check('province history spans every year published for it and Canada, and the range is shared',async p=>{
+  await p.goto(`${base}?geo=2021A000246`);await until(p,()=>document.querySelector('#overview .trend-panel .chart-card'));
+  const [a,c]=await span(p);if(!(a<=1971&&c>=2025))throw Error(`Population range ${a}-${c}`);
+  // The summary names the place and the benchmark; no area name or empty slot renders as undefined or null.
+  const sub=await p.locator('#overview .trend-panel .card-sub').first().textContent(),panel=await p.locator('#overview .trend-panel').innerText();
+  if(!/^Manitoba: [\d,]+ in \d{4}/.test(sub)||!/Canada: /.test(sub)||/\b(undefined|null)\b/.test(panel))throw Error(`Summary: ${sub}`);
+  const raw=await p.evaluate(async()=>{const {populationSeries}=await import('./js/tools/common.js');const d=await populationSeries({id:'2021A000246',type:'PR'});return d.values.filter(v=>v.value!=null).length;});
+  await p.selectOption('#overview [aria-label="Annual measure"]','unemployment');await until(p,()=>/Unemployment rate, \d{4}–\d{4}/.test(document.querySelector('#overview .trend-panel h4')?.textContent??''));
+  await p.goto(`${base}?geo=2021A000246&tm=unemployment&yr=2015-2020`);await until(p,()=>/Unemployment rate, 2015–2020/.test(document.querySelector('#overview .trend-panel h4')?.textContent??''));
+  return {population:[a,c],years:raw};
+});
+await check('a municipality is ranked on change over its common years among its cohort',async p=>{
+  await p.goto(`${base}?geo=2021A00054602044`);await until(p,()=>/among Manitoba municipalities/.test(document.querySelector('#overview .trend-panel')?.textContent??''),120000);
+  const [a,c]=await span(p);if(!(a<=2001&&c>=2025))throw Error(`Municipal range ${a}-${c}`);
+  return {range:[a,c],subtitle:await p.locator('#overview .trend-panel .card-sub').first().textContent()};
+});
+await check('economic regions read 2021-boundary estimates and Compare intersects every shown area',async p=>{
+  const pids=[];p.on('request',r=>{const m=/"productId":"?(\d{8})/.exec(r.postData()??'');if(m)pids.push(m[1]);});
+  await p.goto(`${base}?geo=2021S05004610`);await until(p,()=>document.querySelector('#overview .trend-panel .chart-card'));
+  if(pids.includes('17100137')||!pids.includes('17100150'))throw Error(`Population table ${[...new Set(pids)]}`);
+  await p.goto(`${base}?tm=employment#compare`);await until(p,()=>document.querySelector('#compare .trend-panel .chart-card,#compare .trend-panel .notice'));
+  return {compare:await p.locator('#compare .trend-panel').innerText().then(t=>t.slice(0,300))};
+});
+await check('payroll shift-share takes a chosen base year from the published SEPH years',async p=>{
+  await p.goto(`${base}?geo=2021A000246&py=2015-2024#industries`);await until(p,()=>/payroll jobs from 2015 to 2024/.test(document.querySelector('#industries .economy-cards')?.textContent??''));
+  const [a]=await p.evaluate(()=>[...document.querySelectorAll('#industries .trend-range .range-ends span')].map(x=>Number(x.textContent)));
+  return {first:a};
 });
 await check('legacy industry link opens the consolidated view with its filter',async p=>{
   await p.goto(`${base}?geo=2021A000246&li=traded#largest`);await until(p,()=>document.querySelector('#industries .industry-name'));

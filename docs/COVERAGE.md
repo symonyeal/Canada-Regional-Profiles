@@ -1,6 +1,6 @@
 # Coverage and comparison with the reference
 
-The current interface has four views: Findings, Economy, Compare and Detail ([Decisions](DECISIONS.md), 2026-10-26). Optional maps contain the distribution explorer and community finder. Logistics, enrolments and climate are no longer shown.
+The current interface has four views: Findings, Economy, Compare and Detail ([Decisions](DECISIONS.md), 2026-10-26). Optional maps contain the distribution explorer and community finder. Logistics, enrolments and station climate normals are no longer shown. Findings and Compare include annual measures over a chosen range; the years below are the first published, as of 2026-10-26.
 
 | Exhibit | Canada | Province/territory | CMA/CA | CSD | CD | ER | Population centre |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -10,6 +10,14 @@ The current interface has four views: Findings, Economy, Compare and Detail ([De
 | Most similar areas | no (all provinces listed) | yes | yes | yes | yes | yes | yes |
 | Neighbours | no | no | no | yes, within the province | yes, within the province | no | no |
 | Detailed industries | SEPH | SEPH | Business Register estimates | Business Register estimates | not published | not published | not published |
+| Over time: population | 1971– | 1971– | 2001– | 2001– | 2001– | 2001– | no |
+| Over time: median age, 65+ share | 1971– | 1971– | 2001– | no | 2001– | 2001– | no |
+| Over time: immigrants per 1,000 | 1971– | 1971– | 2001– | no | 2001– | 2001– | no |
+| Over time: employment, unemployment (LFS) | 1976– | 1976–, provinces only | CMAs 2011–, not CAs | no | no | 2011– | no |
+| Over time: family income, low income (tax) | 2000– | 2000– | 2000– (some CAs later) | no | no | no | no |
+| Over time: two-bedroom rent (CMHC) | no | no | 1992– | no | no | no | no |
+| Over time: real GDP, real disposable income, life expectancy, homicides (OECD) | yes | yes (Yukon life expectancy to 2015) | no | no | no | no | no |
+| Over time: mean air temperature (OECD, ERA5) | 1981– | 1981– | no | no | 1981– | no | no |
 
 The matrix below is the historical nine-tool reference comparison, retained to document sources and differences. It does not describe the current navigation or claim that retired views remain visible.
 

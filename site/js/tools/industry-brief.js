@@ -1,32 +1,45 @@
 // Economy view. Legend: d = source dataset; r = industry or sector row; v = view; x = displayed measure;
 // z = bar scale; F = shift-share result. Payroll and size-class estimates stay distinct.
-import {sephSectors,table} from '../api.js';
+import {sephSectors,sephAt,table,SourceError} from '../api.js';
+import {commonYears,parseRange,clampRange,rangeText} from '../trend-model.js';
 import {CANADA,int,pct,signed} from '../model.js';
 import {industryRows,shiftShare,sectorBase} from '../regional-model.js';
-import {h,segmented,exhibitMenu,loading,failure,chartCard,dataTable} from '../ui.js';
+import {h,segmented,exhibitMenu,loading,failure,chartCard,dataTable,rangeSlider} from '../ui.js';
 import {industryCache} from './industries.js';
 import {insights} from './insights.js';
 import {lifetime,slot,sharedPair,censusMeta} from './common.js';
 
 const BASE=2019;
-// Payroll job change since 2019 by sector, decomposed into national growth, industry mix and regional shift.
-function payrollChange(el,g,alive) {
+const yearly=M=>[...M].map(([year,value])=>({year,value}));
+// Payroll job change by sector over a chosen range, decomposed into national growth, industry mix and regional
+// shift. The range runs over years with payroll totals here and in Canada; by default from 2019 to the latest year.
+function payrollChange(el,g,app,alive) {
   slot(el,async t=>{
-    const d=await sephSectors(g,BASE),F=shiftShare(d.rows,d.agg);if(!alive())return;
-    const national=g.id===CANADA.id,rows=F.rows.filter(r=>r.change!=null).sort((x,y)=>national?y.change-x.change:y.RS-x.RS);
-    const k=v=>`${signed(v)} jobs`,share=d.agg.e0?100*F.change/d.agg.e0:null;
-    const title=F.change==null?`Payroll jobs, ${d.from}–${d.year}`:`${national?'Canada':g.name} ${F.change>=0?'added':'lost'} ${int(Math.abs(F.change))} payroll jobs from ${d.from} to ${d.year} (${share>=0?'+':''}${pct(share)})`;
-    const lead=national||F.NS==null?`Sectors ranked by job change. ${F.published} of ${d.rows.length} sectors are published.`
-      :`At Canada’s rate (${pct(100*F.G)}) it would have ${F.NS>=0?'added':'lost'} ${int(Math.abs(F.NS))}. Its sector mix accounts for ${k(F.IM)}; sectors growing faster or slower than the same sectors nationally account for ${k(F.RS)}${F.unattributed&&Math.abs(F.unattributed)>=1?`; suppressed sectors, ${k(F.unattributed)}`:''}.`;
-    const named=(list,word)=>list.length?h('p',{},h('strong',{},word),' ',list.map(r=>`${r.name} (${signed(r.RS)})`).join(', '),'.'):null;
-    const tbl=()=>({headers:['Sector',`${d.from} jobs`,`${d.year} jobs`,'Change','Change (%)',...(national?[]:['National growth','Sector mix','Regional shift'])],
-      rows:[...rows,...F.rows.filter(r=>r.change==null)].map(r=>[r.name,r.e0,r.e1,r.change,r.change==null?null:100*r.change/r.e0,...(national?[]:[r.NS,r.IM,r.RS])]),numeric:new Set([1,2,3,4,5,6,7]),format:(v,i)=>i===0?v:i===4?pct(v):i>=3?signed(v):int(v)});
-    t.replaceChildren(chartCard({title,subtitle:lead,meta:{source:'Statistics Canada, table 14-10-0202: Employment by industry, annual (SEPH)',url:table('14100202'),geo:d.geoName,
-      period:`${d.from} and ${d.year} annual averages`,universe:'All employees on payrolls; 20 NAICS sectors of the industrial aggregate excluding unclassified businesses (forestry and logging, not agriculture)',
-      notes:'Shift-share (Dunn 1960): national growth = jobs in the base year × Canada’s growth rate; sector mix = base jobs × (the sector’s national growth − Canada’s growth); regional shift = base jobs × (the sector’s growth here − its national growth). The base year 2019 precedes the pandemic.',table:tbl}},
-      national?null:named(rows.filter(r=>r.RS>0).slice(0,3),'Ahead of the same sectors nationally:'),
-      national?null:named(rows.filter(r=>r.RS<0).slice(-3).reverse(),'Behind:'),
-      h('details',{class:'remaining-sectors'},h('summary',{},`All ${d.rows.length} sectors`),dataTable(tbl()))));
+    const all=await sephSectors(g);if(!alive())return;
+    const Y=commonYears([yearly(all.agg.e),yearly(all.agg.E)]);
+    if(!Y.length) throw new SourceError('empty','SEPH publishes no year with payroll totals for both this area and Canada.');
+    const card=h('div'),w=clampRange(Y,parseRange(app.state.t.py)??[BASE,Y.at(-1)]);
+    const slider=Y.length>1?rangeSlider({n:Y.length,lo:Y.indexOf(w[0]),hi:Y.indexOf(w[1]),label:'Payroll years',ends:[String(Y[0]),String(Y.at(-1))],
+      describe:(x,y)=>rangeText([Y[x],Y[y]]),onchange:(x,y)=>{app.set('py',`${Y[x]}-${Y[y]}`);draw([Y[x],Y[y]]);}}):null;
+    t.replaceChildren(...[slider?h('div',{class:'trend-range'},h('span',{class:'field-label'},`Base and end year, ${rangeText([Y[0],Y.at(-1)])} published`),slider.el,slider.out):null,card].filter(Boolean));
+    const draw=([from,to])=>{
+      const d={...sephAt(all,from,to),geoName:all.geoName,metadata:all.metadata},F=shiftShare(d.rows,d.agg);
+      const national=g.id===CANADA.id,rows=F.rows.filter(r=>r.change!=null).sort((x,y)=>national?y.change-x.change:y.RS-x.RS);
+      const k=v=>`${signed(v)} jobs`,share=d.agg.e0?100*F.change/d.agg.e0:null;
+      const title=F.change==null?`Payroll jobs, ${d.from}–${d.year}`:`${national?'Canada':g.name} ${F.change>=0?'added':'lost'} ${int(Math.abs(F.change))} payroll jobs from ${d.from} to ${d.year} (${share>=0?'+':''}${pct(share)})`;
+      const lead=national||F.NS==null?`Sectors ranked by job change. ${F.published} of ${d.rows.length} sectors are published.`
+        :`At Canada’s rate (${pct(100*F.G)}) it would have ${F.NS>=0?'added':'lost'} ${int(Math.abs(F.NS))}. Its sector mix accounts for ${k(F.IM)}; sectors growing faster or slower than the same sectors nationally account for ${k(F.RS)}${F.unattributed&&Math.abs(F.unattributed)>=1?`; suppressed sectors, ${k(F.unattributed)}`:''}.`;
+      const named=(list,word)=>list.length?h('p',{},h('strong',{},word),' ',list.map(r=>`${r.name} (${signed(r.RS)})`).join(', '),'.'):null;
+      const tbl=()=>({headers:['Sector',`${d.from} jobs`,`${d.year} jobs`,'Change','Change (%)',...(national?[]:['National growth','Sector mix','Regional shift'])],
+        rows:[...rows,...F.rows.filter(r=>r.change==null)].map(r=>[r.name,r.e0,r.e1,r.change,r.change==null?null:100*r.change/r.e0,...(national?[]:[r.NS,r.IM,r.RS])]),numeric:new Set([1,2,3,4,5,6,7]),format:(v,i)=>i===0?v:i===4?pct(v):i>=3?signed(v):int(v)});
+      card.replaceChildren(chartCard({title,subtitle:lead,meta:{source:'Statistics Canada, table 14-10-0202: Employment by industry, annual (SEPH)',url:table('14100202'),geo:d.geoName,
+        period:`${d.from} and ${d.year} annual averages`,universe:'All employees on payrolls; 20 NAICS sectors of the industrial aggregate excluding unclassified businesses (forestry and logging, not agriculture)',
+        notes:'Shift-share (Dunn 1960): national growth = jobs in the base year × Canada’s growth rate; sector mix = base jobs × (the sector’s national growth − Canada’s growth); regional shift = base jobs × (the sector’s growth here − its national growth). The default base year, 2019, precedes the pandemic; the range runs over every year SEPH publishes for this area and Canada.',table:tbl}},
+        national?null:named(rows.filter(r=>r.RS>0).slice(0,3),'Ahead of the same sectors nationally:'),
+        national?null:named(rows.filter(r=>r.RS<0).slice(-3).reverse(),'Behind:'),
+        h('details',{class:'remaining-sectors'},h('summary',{},`All ${d.rows.length} sectors`),dataTable(tbl()))));
+    };
+    draw(w);
   },{alive,context:'Payroll job change'});
 }
 // Resident labour force by sector (Census 2021) against the benchmark, every geography level.
@@ -51,7 +64,7 @@ export function industries(el,app) {
   async function cards() {
     const a=life.next(),g=await app.resolved();if(!a())return;
     const pay=h('div'),res=h('div');top.replaceChildren(pay,res);
-    if(g.type==='PR')payrollChange(pay,g,a);else pay.remove();
+    if(g.type==='PR')payrollChange(pay,g,app,a);else pay.remove();
     residentSectors(res,g,app.bench,a);
   }
   const rank=lifetime(root);
@@ -96,5 +109,5 @@ export function industries(el,app) {
     }
     table.append(thead,tbody);body.append(h('div',{class:'table-wrap'},table),h('p',{class:'period-note'},`${d.suppressed} of ${d.count} industries are suppressed or not published. Rankings cover published values only. ${d.estimate?'Employee estimates use class midpoints and 500 for the open 500+ class; they have no finite upper bound when that class is present.':''}`));
   }
-  return {update(c){if(c.has('refresh'))industryCache.clear();detail.update(c);if(['geo','refresh','bench'].some(k=>c.has(k)))cards();if(['geo','refresh','iv','is','view'].some(k=>c.has(k)))render();},destroy:()=>detail.destroy()};
+  return {update(c){if(c.has('refresh'))industryCache.clear();detail.update(c);if(['geo','refresh','bench','py'].some(k=>c.has(k)))cards();if(['geo','refresh','iv','is','view'].some(k=>c.has(k)))render();},destroy:()=>detail.destroy()};
 }

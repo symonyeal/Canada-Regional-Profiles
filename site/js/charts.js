@@ -85,6 +85,7 @@ export function stacked(rows,categories,colors) {
 }
 
 // ---------- line and column series ----------
+// series: [{name, values, color, fmt?, width?, markers?}], drawn in order; markers: false draws a context line.
 export function lines({x,series,fmt=compact,height=260,markers=true}) {
   const el=h('div',{class:'chart-svg',style:{height:`${height}px`},role:'img','aria-label':series.map(s=>`${s.name}: ${x.map((t,i)=>`${t} ${fmt(s.values[i])}`).join(', ')}`).join('. ')});
   return responsive(el,(w,H)=>{
@@ -92,9 +93,10 @@ export function lines({x,series,fmt=compact,height=260,markers=true}) {
     const yt=niceTicks(Math.min(0,...vals),Math.max(...vals),4),L=54,R=12,T=10,B=26,pw=w-L-R,ph=H-T-B,n=x.length;
     const X=i=>L+(n<2?pw/2:i/(n-1)*pw),Y=v=>T+ph-(v-yt[0])/(yt.at(-1)-yt[0])*ph,s=svg('svg',{width:w,height:H});
     for(const t of yt)s.append(svg('line',{x1:L,x2:w-R,y1:Y(t),y2:Y(t),stroke:'#e2e7df'}),svg('text',{x:L-8,y:Y(t)+4,'text-anchor':'end',class:'axis'},fmt(t)));
-    const step=Math.ceil(n/Math.max(2,Math.floor(pw/56)));x.forEach((t,i)=>{if(i%step===0||i===n-1)s.append(svg('text',{x:X(i),y:H-6,'text-anchor':'middle',class:'axis'},t));});
+    const step=Math.ceil(n/Math.max(2,Math.floor(pw/56)));x.forEach((t,i)=>{if(i%step===0&&n-1-i>=step/2||i===n-1)s.append(svg('text',{x:X(i),y:H-6,'text-anchor':'middle',class:'axis'},t));});
     for(const sr of series){let d='';sr.values.forEach((v,i)=>{if(v==null){d+=' ';return;}d+=`${d&&!d.endsWith(' ')?'L':'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`;});
-      s.append(svg('path',{d:d.replace(/ /g,''),fill:'none',stroke:sr.color,'stroke-width':2}));
+      const path=svg('path',{d:d.replace(/ /g,''),fill:'none',stroke:sr.color,'stroke-width':sr.width??2});s.append(path);
+      if(sr.markers===false){tipOn(path,`<b>${esc(sr.name)}</b>`);continue;}
       if(markers)sr.values.forEach((v,i)=>{if(v==null)return;const c=svg('circle',{cx:X(i),cy:Y(v),r:3.5,fill:'#fff',stroke:sr.color,'stroke-width':1.6,tabindex:0,'aria-label':`${sr.name} ${x[i]}: ${fmt(v)}`});
         tipOn(c,`<b>${esc(sr.name)}</b><br>${esc(x[i])}: ${esc(sr.fmt?.(v)??fmt(v))}`);s.append(c);});}
     el.replaceChildren(s);

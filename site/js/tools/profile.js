@@ -45,7 +45,7 @@ function seriesKpi(target,{title,ctx,load,fallback,kind='area',format,universe})
     try {
       const d=await load();if(!ctx.alive())return;const last=d.values.filter(v=>v.value!=null).at(-1);
       if(!last) throw new Error('No observations published for this geography.');
-      t.replaceChildren(kpiCard({title,value:format(last.value),sub:`${d.geoName} · ${last.year} · trend ${d.values[0].year}–${last.year}`,spark:spark(d.values,kind),
+      t.replaceChildren(kpiCard({title,value:format(last.value),sub:`${d.geoName} · ${last.year} · trend ${d.values.find(v=>v.value!=null).year}–${last.year}`,spark:spark(d.values,kind),
         meta:{...tableMeta(d,{universe}),table:()=>({headers:['Year',title],rows:d.values.map(v=>[String(v.year),v.value]),numeric:new Set([1]),format:(v,i)=>i?format(v):v})}}));
     } catch(e) {
       if(!fallback) throw e;
