@@ -1,10 +1,9 @@
 // Exhibits drawn at their measured size. Each returns an element; a ResizeObserver redraws it on resize.
 import {h,svg,showTip,hideTip,esc} from './ui.js';
-import {niceTicks,luminance,int,compact,pct} from './model.js';
-import {PRIMARY,COMPARE,FILL} from './palette.js';
+import {niceTicks,luminance,int,compact,pct,PRIMARY,COMPARE,FILL} from './model.js';
 
 // Redraw draw(width,height) into el whenever its box changes; disconnects when el leaves the document.
-export function responsive(el,draw) {
+function responsive(el,draw) {
   let w=0,hgt=0;
   const ro=new ResizeObserver(([e])=>{
     if(!el.isConnected){ro.disconnect();return;}

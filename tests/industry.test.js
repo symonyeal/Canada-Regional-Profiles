@@ -1,18 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {clearCache,coord} from '../site/js/api.js';
-import {industryCache} from '../site/js/tools/industries.js';
-import {businessMatrix,businessIndustry,clearBusiness} from '../site/js/tools/business.js';
+import {coord,industryData,businessMatrix,businessIndustry} from '../site/js/api.js';
+import {clearCache} from '../site/js/transport.js';
 
 test('an omitted business series is zero only when its published classified total is zero',()=>{
-  const matched=[1,2,3].map(i=>({g:{id:String(i),name:`Area ${i}`},mem:{memberId:i}}));
+  const matched=[1,2,3].map(i=>({g:{id:String(i),name:`Area ${i}`},member:{memberId:i}}));
   const points=new Map([1,2,3].map((i,j)=>[coord([i,1,1]),[{value:[10,0,12][j]}]]));
   points.set(coord([3,1,2]),[{value:5}]);
   assert.deepEqual([...businessMatrix(matched,points,2,1).values()].map(r=>r.values[0]),[null,0,5]);
 });
 
 test('business-count specialization requires complete denominators',async()=>{
-  const real=globalThis.fetch;clearCache();clearBusiness();
+  const real=globalThis.fetch;clearCache();
   const t={productId:1,cubeTitleEn:'Canadian Business Counts, with employees, June 2026',releaseTime:'2026-08-01'};
   const m={dimension:[
     {member:[{memberId:1,classificationCode:'46'},{memberId:2,classificationCode:'11124'}]},
@@ -36,11 +35,11 @@ test('business-count specialization requires complete denominators',async()=>{
   try {
     const d=await businessIndustry({id:'2021A000246',type:'PR',name:'Manitoba'},'1111');
     assert.equal(d.current,20);assert.equal(d.lq,null);
-  } finally {globalThis.fetch=real;clearCache();clearBusiness();}
+  } finally {globalThis.fetch=real;clearCache();}
 });
 
 test('suppressed industry rows cannot create a partial LQ denominator when the total is missing',async()=>{
-  const real=globalThis.fetch;clearCache();industryCache.clear();
+  const real=globalThis.fetch;clearCache();
   const m={productId:'14100202',cubeEndDate:'2025-01-01',dimension:[
     {member:[{memberId:1,classificationCode:'46'},{memberId:2,classificationCode:'11124'}]},
     {member:[{memberId:1,memberNameEn:'All employees'}]},
@@ -61,8 +60,8 @@ test('suppressed industry rows cannot create a partial LQ denominator when the t
     return new Response(JSON.stringify(value));
   };
   try {
-    const d=await industryCache.data({id:'2021A000246',type:'PR'});
+    const d=await industryData({id:'2021A000246',type:'PR'});
     assert.equal(d.rows.length,1);assert.equal(d.suppressed,1);
     assert.equal(d.rows[0].value,20);assert.equal(d.rows[0].lq,null);
-  } finally {globalThis.fetch=real;clearCache();industryCache.clear();}
+  } finally {globalThis.fetch=real;clearCache();}
 });

@@ -1,9 +1,10 @@
 // Distribution maps (consumers, dwellings, businesses): rail, filter cards and map.
 import {FILTERS} from '../census.js';
-import {h,rail,exhibitMenu,failure} from '../ui.js';
-import {lifetime} from './common.js';
-import {CANADA} from '../model.js';
-import {filterData,filterCards,parseSelection,serializeSelection,mapPanel,mapTable,shapes,scopeOf} from './choropleth.js';
+import {h,rail,exhibitMenu,failure,lifetime} from '../ui.js';
+import {CANADA,provinceOf} from '../model.js';
+import {filterCards,parseSelection,serializeSelection,mapPanel,mapTable} from './choropleth.js';
+import {filterData} from '../api.js';
+import {shapes} from '../geo.js';
 
 const MARKET=[['consumers','Consumers','household'],['dwellings','Dwellings','dwelling'],['businesses','Businesses','store']];
 
@@ -19,7 +20,7 @@ function groupView(el,app,group,keys,alive) {
   let state={key:mapKey,data:null,sel:null};
   app.resolved().then(async place=>{
     if(!alive()||place.id!==app.state.geo.id)return;
-    const shapesP=shapes(scopeOf(place));shapesP.catch(()=>{});
+    const shapesP=shapes(provinceOf(place));shapesP.catch(()=>{});
     const load=async key=>{
       state={key,data:null,sel:null};
       filterCards(cards,{group,open:key,sel:null,onopen:open});
@@ -35,7 +36,7 @@ function groupView(el,app,group,keys,alive) {
       filterCards(cards,{group,open:key,sel,names:data.names,onopen:open,onchange:next=>{state.sel=next;app.set(keys.sel,serializeSelection(data.spec,next));draw(place,shapesP);}});
       panel.draw({data,sel,place,group,shapes:shapesP}).then(()=>{
         const tools=mapBox.querySelector('.map-tools')??mapBox.querySelector('.map-wrap').appendChild(h('div',{class:'map-tools'}));
-        tools.replaceChildren(exhibitMenu({title:`${g.title}: ${data.spec.label.replace('by ','')}`,...data.source,geo:`${place.name} (card); census subdivisions of ${scopeOf(place)?'the province or territory':'Canada'} (map)`,
+        tools.replaceChildren(exhibitMenu({title:`${g.title}: ${data.spec.label.replace('by ','')}`,...data.source,geo:`${place.name} (card); census subdivisions of ${provinceOf(place)?'the province or territory':'Canada'} (map)`,
           notes:'The selected bins of one Census distribution are summed; different filters are not combined into a joint count. Map classes are natural breaks.',table:()=>mapTable(panel.rows)}));
       });
     };

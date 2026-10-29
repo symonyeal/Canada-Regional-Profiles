@@ -13,7 +13,9 @@ const until=(p,fn,t=90000)=>p.waitForFunction(fn,undefined,{timeout:t});
 const nav=(p,k)=>p.locator(`#section-links a[href="#${k}"]`).click();
 async function check(name,fn){
   if(process.env.WORKFLOW_FILTER&&!name.includes(process.env.WORKFLOW_FILTER))return;
-  const p=await b.newPage({viewport:{width:1440,height:1000}}),errors=[];
+  const p=await b.newPage({viewport:{width:1440,height:1000}}),errors=[],resources=[];
+  p.on('requestfailed',r=>{if(r.url().startsWith(base))resources.push({url:r.url(),error:r.failure()?.errorText});});
+  p.on('console',m=>{if(m.type()==='error')resources.push({console:m.text()});});
   await p.route(/https:\/\/(api|www150)\.statcan\.gc\.ca\//,r=>{
     const cached=responses.get(key(r.request()));return cached?r.fulfill(cached):r.continue();
   });
@@ -21,8 +23,8 @@ async function check(name,fn){
     try{responses.set(key(r.request()),{status:200,contentType:r.headers()['content-type']??'application/json',headers:{'access-control-allow-origin':'*'},body:await r.body()});}catch{}});
   p.on('pageerror',e=>errors.push(e.message));
   try{const detail=await fn(p);if(errors.length)throw Error(errors.join('; '));R.push({name,pass:true,detail});console.log('PASS',name);}
-  catch(e){const state=await p.locator('main').innerText().catch(()=>''),requests=await p.evaluate(async()=>{const {journal}=await import('./js/api.js');return journal.slice(-12);}).catch(()=>[]);
-    R.push({name,pass:false,error:e.message.split('\n')[0],errors,state:state.slice(0,2000),requests});console.log('FAIL',name,e.message.split('\n')[0]);}
+  catch(e){const state=await p.locator('main').innerText().catch(()=>''),requests=await p.evaluate(async()=>{const {journal}=await import('./js/transport.js');return journal.slice(-12);}).catch(()=>[]);
+    R.push({name,pass:false,error:e.message.split('\n')[0],errors,resources,state:state.slice(0,2000),requests});console.log('FAIL',name,e.message.split('\n')[0]);}
   finally{await p.close();fs.writeFileSync(out,JSON.stringify({base,mode,results:R},null,2));}
 }
 await check('findings rank six measures among comparable areas, four destinations, no map requests',async p=>{
@@ -41,7 +43,7 @@ await check('latest annual values lead the findings, ranked among provinces in t
   await until(p,()=>[...document.querySelectorAll('#overview .findings.recent .finding')].some(e=>/Unemployment rate/.test(e.textContent)&&/of 10 provinces and territories publishing it/.test(e.textContent)));
   const card=p.locator('#overview .findings.recent .finding',{hasText:'Unemployment rate'}),year=Number(await card.locator('.finding-period').textContent());
   const shown=await card.locator('.finding-value').textContent();
-  const raw=await p.evaluate(async()=>{const {trendSeries}=await import('./js/tools/common.js'),{trend}=await import('./js/trend-model.js');
+  const raw=await p.evaluate(async()=>{const {trendSeries}=await import('./js/api.js'),{trend}=await import('./js/trend-model.js');
     return (await trendSeries(trend('unemployment'),[{id:'2021A000246',type:'PR',name:'Manitoba'}])).get('2021A000246').values.filter(v=>v.value!=null).at(-1);});
   if(year<2024||raw.year!==year||shown!==`${raw.value.toFixed(1)}%`)throw Error(`Card ${shown} ${year}, adapter ${raw.value} ${raw.year}`);
   const first=await p.locator('#overview h3.subhead').first().textContent();if(first!=='Latest published year')throw Error(`First heading ${first}`);
@@ -79,7 +81,7 @@ await check('province history spans every year published for it and Canada, and 
   // The summary names the place and the benchmark; no area name or empty slot renders as undefined or null.
   const sub=await p.locator('#overview .trend-panel .card-sub').first().textContent(),panel=await p.locator('#overview .trend-panel').innerText();
   if(!/^Manitoba: [\d,]+ in \d{4}/.test(sub)||!/Canada: /.test(sub)||/\b(undefined|null)\b/.test(panel))throw Error(`Summary: ${sub}`);
-  const raw=await p.evaluate(async()=>{const {populationSeries}=await import('./js/tools/common.js');const d=await populationSeries({id:'2021A000246',type:'PR'});return d.values.filter(v=>v.value!=null).length;});
+  const raw=await p.evaluate(async()=>{const {populationSeries}=await import('./js/api.js');const d=await populationSeries({id:'2021A000246',type:'PR'});return d.values.filter(v=>v.value!=null).length;});
   await p.selectOption('#overview [aria-label="Annual measure"]','unemployment');await until(p,()=>/Unemployment rate, \d{4}–\d{4}/.test(document.querySelector('#overview .trend-panel h4')?.textContent??''));
   await p.goto(`${base}?geo=2021A000246&tm=unemployment&yr=2015-2020`);await until(p,()=>/Unemployment rate, 2015–2020/.test(document.querySelector('#overview .trend-panel h4')?.textContent??''));
   return {population:[a,c],years:raw};
@@ -177,6 +179,13 @@ await check('optional maps open on demand and closing clears shared state',async
   await p.goto(`${base}?geo=2021A000246`);await p.locator('#explore-map').click();await until(p,()=>document.querySelector('.map-dialog .map'));
   if(!p.url().includes('map=market'))throw Error('Map state not shared');await p.keyboard.press('Escape');await until(p,()=>!document.querySelector('.map-dialog'));
   if(p.url().includes('map='))throw Error('Map URL not cleared');return {closed:true};
+});
+// The industry Location tab is a second map entry point: it must load the map library itself.
+await check('industry location map draws without the explore dialog having opened',async p=>{
+  await p.goto(`${base}?geo=2021A000246&ins=6221&inst=location#industries`);
+  await until(p,()=>document.querySelector('.overlay .maplibregl-canvas')||/could not load/.test(document.querySelector('.overlay')?.textContent??''));
+  if(!await p.locator('.overlay .maplibregl-canvas').count())throw Error('Location map did not draw');
+  return {kpi:await p.locator('.overlay .map-kpi b').textContent()};
 });
 for(const width of [1440,768,390])await check(`four views fit ${width}px and labels remain readable`,async p=>{
   await p.setViewportSize({width,height:900});await p.goto(`${base}?geo=2021A000246`);await until(p,()=>document.querySelector('#overview .finding-value'));

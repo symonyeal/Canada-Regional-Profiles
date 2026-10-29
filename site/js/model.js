@@ -13,6 +13,8 @@ export const PT=[
   ['11','PE','Prince Edward Island'],['10','NL','Newfoundland and Labrador'],
 ];
 export const CANADA={id:'2021A000011124',name:'Canada',type:'PR',province:''};
+export const provinceName=code=>PT.find(p=>p[0]===code)?.[2]??'';
+export const provinceGeo=code=>({id:`2021A0002${code}`,type:'PR',name:provinceName(code),province:code});
 
 // Census 2021 DGUID schemas (vintage 2021, type A administrative / S statistical, schema code).
 const SCHEMAS={A0000:'PR',A0002:'PR',A0003:'CD',A0005:'CSD',S0503:'CMACA',S0504:'CMACA',S0505:'CMACA',S0506:'CMACA',S0500:'ER',S0510:'POPCNTR'};
@@ -26,8 +28,8 @@ export const numeric=x=>x===''||x==null||!Number.isFinite(Number(x))?null:Number
 export const completeSum=values=>values.length&&values.every(Number.isFinite)?values.reduce((a,v)=>a+v,0):null;
 
 // Business Register size classes: lower and upper bounds; the open 500+ class is counted at 500.
-export const LOWER=[1,5,10,20,50,100,200,500],UPPER=[4,9,19,49,99,199,499,Infinity];
-export const MID=LOWER.map((x,i)=>i===7?x:(x+UPPER[i])/2);
+const LOWER=[1,5,10,20,50,100,200,500],UPPER=[4,9,19,49,99,199,499,Infinity];
+const MID=LOWER.map((x,i)=>i===7?x:(x+UPPER[i])/2);
 export function estimate(N) {
   if(N.length!==8||N.some(v=>v==null||!Number.isFinite(v))) return {value:null,lower:null,upper:null};
   const dot=a=>N.reduce((s,n,i)=>s+n*a[i],0);
@@ -44,16 +46,28 @@ export function reconcileCounts(input,subtotals=[]) {
 export function locationQuotient(e,t,E,T) {
   return [e,t,E,T].some(v=>v==null)||t<=0||E<=0||T<=0?null:(e/t)/(E/T);
 }
-export function change(current,previous) {
-  return {absolute:current==null||previous==null?null:current-previous,
-    relative:current==null||previous==null||previous===0?null:current/previous-1};
-}
 // Rank rows by a metric; t and T default to the complete partition when no published aggregate is given.
+// absolute and relative compare value with previous; a zero or missing base has no relative change.
 export function rankIndustries(rows,metric='value',totals={}) {
   const complete=rows.every(r=>r.value!=null&&r.national!=null);
   const t=totals.total??(complete?rows.reduce((s,r)=>s+r.value,0):null),T=totals.nationalTotal??(complete?rows.reduce((s,r)=>s+r.national,0):null);
-  return rows.map(r=>({...r,lq:locationQuotient(r.value,t,r.national,T),...change(r.value,r.previous)}))
+  return rows.map(r=>{const known=r.value!=null&&r.previous!=null;
+    return {...r,lq:locationQuotient(r.value,t,r.national,T),absolute:known?r.value-r.previous:null,relative:known&&r.previous!==0?r.value/r.previous-1:null};})
     .filter(r=>r[metric]!=null).sort((a,b)=>b[metric]-a[metric]||a.code.localeCompare(b.code));
+}
+// The rows an industry view shows after the traded/local filter: the 20 largest by value or LQ, or the ten
+// largest gains and ten largest losses.
+export function industryRows(rows,view,set='all') {
+  const a=rows.filter(r=>set==='all'||(set==='traded'?r.traded===true:r.traded===false));
+  const order=k=>(x,y)=>y[k]-x[k]||x.code.localeCompare(y.code);
+  if(view==='change'){
+    const known=a.filter(r=>r.absolute!=null);
+    const gains=known.filter(r=>r.absolute>=0).sort(order('absolute')).slice(0,10);
+    const losses=known.filter(r=>r.absolute<0).sort((x,y)=>x.absolute-y.absolute||x.code.localeCompare(y.code)).slice(0,10);
+    return [...gains,...losses];
+  }
+  const k=view==='specialized'?'lq':'value';
+  return a.filter(r=>r[k]!=null).sort(order(k)).slice(0,20);
 }
 export function matchesProvince(g,province) {
   if(!province) return true;
@@ -75,6 +89,8 @@ export class Profile {
   sum(ids,gender='1') {return completeSum(ids.map(id=>this.value(id,gender)));}
   children(id) {return [...this.chars.values()].filter(c=>c.parent===String(id)).sort((a,b)=>a.order-b.order);}
   name(id) {return this.chars.get(String(id))?.name??null;}
+  // The name without its leading classification code: "44-45 Retail trade" is "Retail trade".
+  label(id) {return this.name(id)?.replace(/^\d+(-\d+)? /,'')??null;}
 }
 
 export function csv(rows) {
@@ -84,21 +100,15 @@ export function csv(rows) {
   }).join(',')).join('\r\n');
 }
 
-// Traded/local: share of a code's US 2017 six-digit descendants in Delgado-Porter-Stern traded clusters.
+// Traded/local: share of a code's US 2017 six-digit descendants in Delgado-Porter-Stern traded clusters, on the
+// longest prefix with descendants. A code is traded when at least half are; null when no prefix matches.
 export function tradedShare(code,US,traded) {
   const T=new Set(traded),sector=({'41':'42','91':'92'})[code.slice(0,2)]??code.slice(0,2);
   for(const prefix of [code.slice(0,5),code.slice(0,4),code.slice(0,3),sector]) {
     const matched=US.filter(c=>c.startsWith(prefix));if(matched.length)return matched.filter(c=>T.has(c)).length/matched.length;
   }return null;
 }
-export function classifyTrade(code,national,US,traded) {
-  const [a,b]=code.split('-');
-  const rows=national.filter(r=>b?r.code.slice(0,2)>=a&&r.code.slice(0,2)<=b:r.code.startsWith(code));
-  if(!rows.length||rows.some(r=>r.value==null))return null;
-  const values=rows.map(r=>tradedShare(r.code,US,traded));if(values.some(v=>v==null))return null;
-  const total=rows.reduce((s,r)=>s+r.value,0),weights=rows.map(r=>total?r.value:1),w=weights.reduce((s,v)=>s+v,0);
-  return values.reduce((s,v,i)=>s+v*weights[i],0)/w>=.5;
-}
+export const isTraded=(code,US,traded)=>{const s=tradedShare(code,US,traded);return s==null?null:s>=.5;};
 
 // Selected bins of one marginal distribution: total and target need every component.
 export function binCounts(values,on) {
@@ -148,7 +158,7 @@ export const signed=v=>v==null?'–':(v>0?'+':'')+nf(0).format(Math.round(v));
 
 // Linear sRGB interpolation between hex colours; ramp(n) returns n evenly spaced colours.
 const hex=c=>[1,3,5].map(i=>parseInt(c.slice(i,i+2),16));
-export function mix(a,b,t) {const p=hex(a),q=hex(b);return '#'+p.map((v,i)=>Math.round(v+(q[i]-v)*t).toString(16).padStart(2,'0')).join('');}
+function mix(a,b,t) {const p=hex(a),q=hex(b);return '#'+p.map((v,i)=>Math.round(v+(q[i]-v)*t).toString(16).padStart(2,'0')).join('');}
 export function ramp(stops,n) {
   if(n<=1)return [stops[0]];
   return Array.from({length:n},(_,i)=>{const t=i/(n-1)*(stops.length-1),k=Math.min(stops.length-2,Math.floor(t));return mix(stops[k],stops[k+1],t-k);});
@@ -167,3 +177,11 @@ export const SECTORS={'11':'Agriculture, forestry, fishing and hunting','21':'Mi
   '56':'Administrative and support, waste management and remediation services','61':'Educational services',
   '62':'Health care and social assistance','71':'Arts, entertainment and recreation','72':'Accommodation and food services',
   '81':'Other services (except public administration)','91':'Public administration'};
+
+// Chart fills use hex colours for interpolation and contrast; CSS holds the matching interface tokens.
+export const PRIMARY='#205547',COMPARE='#a35334',FILL='#e7efe4';
+export const SEQUENTIAL=['#205547','#386d59','#54856b','#7b9f7e','#a2b89a','#c4d2b8','#e7efe0'];
+export const MAP_SCALE=['#e8efdf','#bdd0b2','#89ad87','#518364','#205547'];
+
+// The province or territory holding an area (the first, for an area spanning two); Canada for Canada.
+export const parentProvince=place=>place.id===CANADA.id?CANADA:provinceGeo(provinceOf(place));

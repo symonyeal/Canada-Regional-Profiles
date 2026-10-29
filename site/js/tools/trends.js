@@ -1,13 +1,12 @@
 // Annual measures over the years every shown area publishes, with a chosen range. Legend: m = annual measure;
 // R = shown areas [{id, type, name, bench}]; D = Map id → series; Y = common years; [a, c] = chosen range;
 // C = cohort {label, areas} for ranks; E = Map id → cohort series; Q = cohort changes over [a, c].
-import {CANADA} from '../model.js';
+import {CANADA,PRIMARY,COMPARE} from '../model.js';
 import {TRENDS,commonYears,parseRange,clampRange,rangeText,change,changeText,valueText,calendar} from '../trend-model.js';
 import {standing,rankText} from '../regional-model.js';
 import {h,chartCard,dataTable,loading,failure,rangeSlider} from '../ui.js';
 import {lines,legend} from '../charts.js';
-import {PRIMARY,COMPARE} from '../palette.js';
-import {trendSeries,levelOf} from './common.js';
+import {trendSeries,levelOf} from '../api.js';
 
 const relative=m=>m.unit==='people'||m.unit.startsWith('$');
 const span=s=>{const v=s.values.filter(p=>p.value!=null);return v.length?rangeText([v[0].year,v.at(-1).year]):'';};

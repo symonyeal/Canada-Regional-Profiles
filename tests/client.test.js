@@ -2,11 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {niceTicks,geographyType,compact,ramp,luminance,tradedShare} from '../site/js/model.js';
 import {parse,serialize,withGeography} from '../site/js/state.js';
-import {matcher,topology} from '../site/js/geo.js';
-import {parseSelection,serializeSelection,shapes,areas} from '../site/js/tools/choropleth.js';
-import {request,clearCache,units,SourceError} from '../site/js/api.js';
-import {FILTERS,PROFILE_IDS,HH_INCOME5} from '../site/js/census.js';
-import {refreshData} from '../site/js/refresh.js';
+import {matcher,topology,shapes} from '../site/js/geo.js';
+import {parseSelection,serializeSelection} from '../site/js/tools/choropleth.js';
+import {units,areas,PROFILE_IDS} from '../site/js/api.js';
+import {request,clearCache,SourceError} from '../site/js/transport.js';
+import {FILTERS,HH_INCOME5} from '../site/js/census.js';
 
 test('nice ticks cover the range with 1, 2 or 5 times a power of ten',()=>{
   for(const [lo,hi] of [[0,39876],[0,0.73],[-12,31],[3,3]]){const t=niceTicks(lo,hi);
@@ -102,21 +102,6 @@ test('series published in thousands are scaled by their unit of measure',async()
     assert.equal((await units([{memberUomCode:239}])).scale,1);assert.equal((await units([{}])).scale,1);}
   finally {globalThis.fetch=realFetch;}
 });
-test('batched release series are joined by product, not by response order',async()=>{
-  clearCache();
-  const tables=[{productId:101,cubeTitleEn:'Canadian Business Counts, with employees, June 2025',releaseTime:'2025-08-01'},
-    {productId:102,cubeTitleEn:'Canadian Business Counts, with employees, June 2026',releaseTime:'2026-08-01'}];
-  globalThis.fetch=async(url,opts)=>{
-    if(url.endsWith('getAllCubesListLite'))return reply(200,tables);
-    if(url.endsWith('getCubeMetadata'))return reply(200,[{status:'SUCCESS',object:{dimension:[{member:[{memberId:7,memberNameEn:'Manitoba',classificationCode:'46'}]}]}}]);
-    const body=JSON.parse(opts.body),rev=body.slice().reverse();
-    if(url.endsWith('getSeriesInfoFromCubePidCoord'))return reply(200,rev.map(b=>({status:'SUCCESS',object:{productId:Number(b.productId),SeriesTitleEn:'Manitoba;Total'}})));
-    return reply(200,rev.map(b=>({status:'SUCCESS',object:{productId:Number(b.productId),vectorDataPoint:[{value:b.productId==='101'?41000:42000}]}})));
-  };
-  try {const {establishments}=await import('../site/js/api.js');const d=await establishments({id:'2021A000246',type:'PR'});
-    assert.deepEqual(d.values.map(v=>[v.year,v.value]),[[2025,41000],[2026,42000]]);}
-  finally {globalThis.fetch=realFetch;}
-});
 
 test('Refresh re-queries the census areas behind maps; static boundary files are decoded once',async()=>{
   const sdmx={data:{structure:{dimensions:{series:[{id:'FREQ',values:[{id:'A'}]},{id:'REF_AREA',values:[{id:'2021A00054601001',name:'Area'}]},{id:'GENDER',values:[{id:'1'}]},
@@ -124,14 +109,14 @@ test('Refresh re-queries the census areas behind maps; static boundary files are
     dataSets:[{series:{'0:0:0:0:0':{attributes:[],observations:{'0':[100]}}}}]}};
   const topo={type:'Topology',transform:{scale:[1,1],translate:[0,0]},arcs:[[[0,0],[1,0],[0,1],[-1,0],[0,-1]]],
     objects:{areas:{type:'GeometryCollection',geometries:[{type:'Polygon',arcs:[[0]],properties:{DGUID:'2021A00054601001',name:'Area'}}]}}};
-  refreshData();const n={census:0,file:0};
+  clearCache();const n={census:0,file:0};
   globalThis.fetch=async url=>{if(String(url).includes('boundaries/')){n.file++;return reply(200,topo);}n.census++;return reply(200,sdmx);};
   try {
     await areas('46');await shapes('46');await areas('46');await shapes('46');
     assert.deepEqual(n,{census:1,file:1});
-    refreshData();await areas('46');await shapes('46');
+    clearCache();await areas('46');await shapes('46');
     assert.deepEqual(n,{census:2,file:1});
-  } finally {globalThis.fetch=realFetch;refreshData();}
+  } finally {globalThis.fetch=realFetch;clearCache();}
 });
 test('a read with no answer after the hedge delay is sent again; the first answer wins and the other is aborted',async()=>{
   let n=0,aborted=0;

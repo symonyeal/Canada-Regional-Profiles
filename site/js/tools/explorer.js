@@ -1,9 +1,8 @@
 // Community explorer: search and municipal-type filters, a community list and a boundary map with coordinated selection.
 import {geographies,censusMany} from '../api.js';
-import {CANADA,PT,int,pct,fmt,matchesProvince} from '../model.js';
-import {h,icon,showTip,hideTip,esc,failure,loading} from '../ui.js';
+import {PT,int,fmt,matchesProvince,provinceOf} from '../model.js';
+import {h,icon,showTip,hideTip,esc,failure,loading,lifetime} from '../ui.js';
 import {createMap,subdivisions,bbox,centroid,setLayer,fit} from '../geo.js';
-import {lifetime} from './common.js';
 
 const PAGE=25;
 const initials=name=>name.replace(/\(.*\)/,'').split(/[\s-]+/).filter(w=>/^[A-ZÀ-Ý]/.test(w)).slice(0,2).map(w=>w[0]).join('')||name[0];
@@ -18,7 +17,7 @@ export function explorer(el,app) {
 
   async function render() {
     const alive=life.next(),place=await app.resolved();if(!alive()||place.id!==app.state.geo.id)return;
-    const pr=place.id===CANADA.id?'':String(place.province).split('_')[0];
+    const pr=provinceOf(place);
     search.value=app.state.t.exq;loading(listEl,'Loading official communities…');panel.hidden=true;note.hidden=true;shown=PAGE;
     try {
       const all=(await geographies('CSD')).filter(g=>matchesProvince(g,pr));if(!alive())return;
@@ -85,7 +84,7 @@ export function explorer(el,app) {
       panel.replaceChildren(h('h5',{},g.name),h('p',{class:'card-sub'},`${g.municipalType||'Census subdivision'} · CSD ${id.slice(9)}`),
         h('dl',{},h('dt',{},'Population, 2021'),h('dd',{},int(p.value('1'))),h('dt',{},'Change since 2016'),h('dd',{},p.value('3')==null?'Not available':`${fmt(p.value('3'))}%`),
           h('dt',{},'Density per km²'),h('dd',{},fmt(p.value('6'))),h('dt',{},'Median age'),h('dd',{},fmt(p.value('40')))),
-        h('button',{type:'button',class:'btn',onclick:()=>app.choose({id,type:'CSD'},'profile')},'Open community profile',icon('chevronRight',15)));
+        h('button',{type:'button',class:'btn',onclick:()=>app.choose({id,type:'CSD'})},'Open community profile',icon('chevronRight',15)));
     } catch(e) {if(selected===id)failure(panel,e,()=>select(id,false),'Indicators unavailable');}
   }
   return {update(changed){if(['geo','refresh','ext'].some(k=>changed.has(k))||(changed.has('exq')&&!changed.has('geo')))render();},destroy:()=>{life.next();m?.destroy();}};
