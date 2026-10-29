@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {decodeSDMX, memoRequest, tablePair, geoMember} from '../site/js/api.js';
-import {completeSum,estimate, locationQuotient, change, Profile, rankIndustries, csv, matchesProvince, tradedShare, classifyTrade, validGeographyId, reconcileCounts, fmt, jenks, binCounts} from '../site/js/model.js';
+import {decodeSDMX,tablePair,geoMember} from '../site/js/api.js';
+import {memoRequest} from '../site/js/transport.js';
+import {completeSum,estimate,locationQuotient,Profile,rankIndustries,csv,matchesProvince,tradedShare,isTraded,validGeographyId,reconcileCounts,fmt,jenks,binCounts} from '../site/js/model.js';
 
 test('group totals require every published component, including genuine zeros',()=>{
   assert.equal(completeSum([0,6,3]),9);
@@ -38,9 +39,10 @@ test('midpoints and infinite upper bound preserve the original Python estimator'
   assert.equal(estimate([1,null,0,0,0,0,0,0]).value,null);
 });
 test('growth never divides by zero or ranks missing history as zero growth', () => {
-  assert.deepEqual(change(20,10),{absolute:10,relative:1});
-  assert.deepEqual(change(20,0),{absolute:20,relative:null});
-  assert.deepEqual(change(20,null),{absolute:null,relative:null});
+  const [a,b,c]=rankIndustries([{code:'1',value:20,previous:10},{code:'2',value:20,previous:0},{code:'3',value:20,previous:null}]);
+  assert.deepEqual([a.absolute,a.relative],[10,1]);
+  assert.deepEqual([b.absolute,b.relative],[20,null]);
+  assert.deepEqual([c.absolute,c.relative],[null,null]);
 });
 test('location quotient uses totals across the complete same-level partition', () => {
   assert.equal(locationQuotient(20,100,100,1000),2);
@@ -77,12 +79,13 @@ test('concurrent requests share a promise; failures are evicted so retry can suc
   await assert.rejects(memoRequest(cache,'b',async()=>{throw Error('offline');}));
   assert.equal(await memoRequest(cache,'b',f),9);
 });
-test('traded classification uses longest matching prefix and national employment weights',()=>{
+test('traded classification uses the longest matching prefix and a one-half threshold',()=>{
   const codes=['111111','111121','112111'],traded=['111111','112111'];
   assert.equal(tradedShare('111110',codes,traded),1);
   assert.equal(tradedShare('111199',codes,traded),.5);
-  assert.equal(classifyTrade('11',[{code:'111111',value:10},{code:'111121',value:90},{code:'112111',value:0}],codes,traded),false);
-  assert.equal(classifyTrade('11',[{code:'111111',value:90},{code:'111121',value:10}],codes,traded),true);
+  assert.equal(isTraded('111199',codes,traded),true);
+  assert.equal(isTraded('11112',codes,traded),false);
+  assert.equal(isTraded('9999',codes,traded),null);
 });
 test('shared links accept official six-digit provincial identifiers as well as municipal DGUIDs',()=>{
   assert.equal(validGeographyId('2021A000246'),true);

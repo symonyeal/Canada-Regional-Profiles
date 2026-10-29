@@ -1,7 +1,7 @@
 // Spatial services and the shared map. All observations still come from the tools; this module draws them.
 import {request,memoRequest,SourceError} from './transport.js';
 import {h,icon} from './ui.js';
-import {CANADA} from './model.js';
+import {CANADA,provinceOf} from './model.js';
 
 const STYLE='https://tiles.openfreemap.org/styles/positron';
 
@@ -37,6 +37,8 @@ export async function boundaryOf(geo) {
   return {type:'FeatureCollection',features};
 }
 export const subdivisions=province=>file(`csd-${province}`);
+// Areas of g's type (CSD or CD) sharing a border with it, from neighbours-<pr>.json built by tools/boundaries.
+export const neighbours=g=>request(`boundaries/neighbours-${provinceOf(g)}.json`,{cache:'default',hedge:0}).then(N=>N[g.id]??[]);
 export const provinces=()=>file('pr');
 export function bbox(fc) {
   let a=[180,90,-180,-90];
@@ -56,6 +58,17 @@ export function centroid(f) {
 }
 
 // ---------- the map ----------
+// MapLibre loads on first use; the page itself makes no map requests. A failed load can be retried.
+let library=null;
+export function mapLibrary() {
+  if(window.maplibregl)return Promise.resolve();
+  return library??=new Promise((resolve,reject)=>{
+    const css=h('link',{rel:'stylesheet',href:'https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css',crossorigin:'anonymous'});
+    const js=h('script',{src:'https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js',crossorigin:'anonymous'});
+    js.onload=resolve;js.onerror=()=>{library=null;js.remove();css.remove();reject(new Error('Map library unavailable. Close this view and try again.'));};
+    document.head.append(css,js);
+  });
+}
 let styleJSON;
 async function baseStyle() {
   styleJSON??=request(STYLE,{attempts:1,timeout:10000}).then(s=>{
@@ -110,3 +123,5 @@ export function removeLayer(map,id) {
   for(const l of map.getStyle().layers.filter(l=>l.source===id))map.removeLayer(l.id);
   if(map.getSource(id))map.removeSource(id);
 }
+
+export const shapes=scope=>scope?subdivisions(scope):provinces();

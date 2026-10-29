@@ -7,6 +7,7 @@
 //   s, S      sector shares of resident workers here and in the benchmark; LQ = s/S
 //   e, E      payroll jobs here and in Canada; 0 base year, 1 latest year; G national growth rate
 import {int,pct,fmt,geographyType,CANADA} from './model.js';
+import {INDUSTRY} from './census.js';
 
 const v=id=>p=>p.value(id);
 const share=(a,t)=>p=>{const x=p.value(a),n=p.value(t);return x==null||n==null||n<=0?null:100*x/n;};
@@ -96,15 +97,14 @@ export function similar(P,i,k=5) {
   return out.sort((a,c)=>a.distance-c.distance).slice(0,k);
 }
 
-// Economic base from the Census labour force by industry sector (NAICS 2017, 20 sectors under total 2261):
+// Economic base from the Census labour force by industry sector (INDUSTRY: 20 NAICS 2017 sectors and their total):
 // shares s and S, LQ = s/S, and the workers beyond the benchmark's share, e − t·S. D = ½ Σ|s − S| is the share of
 // workers who would have to change sector for the mix to match the benchmark (Krugman 1991); null if any sector is
 // unpublished.
-export const SECTOR_IDS=Array.from({length:20},(_,i)=>String(2262+i));
 export function sectorBase(p,b) {
-  const t=p.value('2261'),T=b?.value('2261');
-  const rows=SECTOR_IDS.map(id=>{const e=p.value(id),E=b?.value(id),s=e!=null&&t>0?e/t:null,S=E!=null&&T>0?E/T:null;
-    return {id,name:(p.name(id)??id).replace(/^\d+(-\d+)? /,''),e,s,S,lq:s!=null&&S>0?s/S:null,excess:s!=null&&S!=null?e-t*S:null};});
+  const t=p.value(INDUSTRY.total),T=b?.value(INDUSTRY.total);
+  const rows=INDUSTRY.groups.map(([,[id]])=>{const e=p.value(id),E=b?.value(id),s=e!=null&&t>0?e/t:null,S=E!=null&&T>0?E/T:null;
+    return {id,name:p.label(id)??id,e,s,S,lq:s!=null&&S>0?s/S:null,excess:s!=null&&S!=null?e-t*S:null};});
   const D=rows.every(r=>r.s!=null&&r.S!=null)?rows.reduce((a,r)=>a+Math.abs(r.s-r.S),0)/2:null;
   return {rows,t,D};
 }
@@ -128,16 +128,4 @@ export function shiftShare(rows,agg) {
 // A peer must have the selected geography level; Canada is a benchmark, not a provincial peer.
 export function peerIds(text,geo) {
   return [...new Set(String(text).split(','))].filter(id=>id!==geo.id&&id!==CANADA.id&&geographyType(id)===geo.type).slice(0,3);
-}
-export function industryRows(rows,view,set='all') {
-  const a=rows.filter(r=>set==='all'||(set==='traded'?r.traded===true:r.traded===false));
-  const order=k=>(x,y)=>y[k]-x[k]||x.code.localeCompare(y.code);
-  if(view==='change'){
-    const known=a.filter(r=>r.absolute!=null);
-    const gains=known.filter(r=>r.absolute>=0).sort(order('absolute')).slice(0,10);
-    const losses=known.filter(r=>r.absolute<0).sort((x,y)=>x.absolute-y.absolute||x.code.localeCompare(y.code)).slice(0,10);
-    return [...gains,...losses];
-  }
-  const k=view==='specialized'?'lq':'value';
-  return a.filter(r=>r[k]!=null).sort(order(k)).slice(0,20);
 }

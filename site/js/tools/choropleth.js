@@ -1,11 +1,10 @@
-// Target-group maps shared by Market, Workforce catchment and the Resident/Household dashboards.
+// Target-group maps shared by the Market map and the industry Location tab.
 // One active filter defines the target: a contiguous interval of ordered bins, or any subset of categories.
 // The card reports the selected area's own published counts; the map shows census subdivisions for context.
-import {census,censusMany,geographies,catalog,tablePair,metadata,geoMember,points,coord,table,memoRequest} from '../api.js';
-import {CANADA,binCounts,jenks,ramp,int,pct,matchesProvince} from '../model.js';
+import {CANADA,binCounts,jenks,ramp,int,pct} from '../model.js';
 import {FILTERS} from '../census.js';
 import {h,icon,rangeSlider,toggle,showTip,hideTip,esc} from '../ui.js';
-import {createMap,subdivisions,provinces,boundaryOf,bbox,setLayer,removeLayer,fit} from '../geo.js';
+import {createMap,boundaryOf,bbox,setLayer,removeLayer,fit} from '../geo.js';
 
 // ---------- selections ----------
 export function parseSelection(spec,text,n) {
@@ -17,63 +16,6 @@ export function parseSelection(spec,text,n) {
 }
 export const serializeSelection=(spec,on)=>{const idx=on.flatMap((v,i)=>v?[i]:[]);
   return spec.kind==='range'?(idx.length?`${idx[0]}-${idx.at(-1)}`:''):(idx.length?idx.join('.'):'-');};
-
-// ---------- data ----------
-const cache=new Map();
-const memo=(key,fn)=>memoRequest(cache,key,fn);
-export const clearChoropleth=()=>cache.clear();
-export const scopeOf=place=>place.id===CANADA.id?'':String(place.province).split('_')[0];
-
-// Areas of the map scope: provinces and territories for Canada, census subdivisions for a province.
-export function areas(scope) {
-  return memo(`areas:${scope}`,async()=>{
-    const type=scope?'CSD':'PR',list=(await geographies(type)).filter(g=>g.id!==CANADA.id&&matchesProvince(g,scope));
-    return {type,list};
-  });
-}
-export const shapes=scope=>memo(`shapes:${scope}`,()=>scope?subdivisions(scope):provinces());
-
-async function censusMatrix(scope,spec) {
-  const {type,list}=await areas(scope);
-  const profiles=await memo(`census:${scope}:${spec.total}:${spec.bins.map(b=>b.id).join('+')}`,
-    ()=>censusMany(type,list.map(g=>g.id),[spec.total,...spec.bins.map(b=>b.id)]));
-  return new Map(list.map(g=>{const p=profiles.get(g.id);return [g.id,{name:g.name,total:p?.value(spec.total)??null,values:spec.bins.map(b=>p?.value(b.id)??null)}];}));
-}
-// Business Counts by sector: the national table for Canada and provinces, the local table for CSDs and CMAs.
-export function businessBins(local) {
-  return memo(`bizmeta:${local}`,async()=>{
-    const pair=tablePair(await catalog(),local),m=await metadata(pair.current.productId);
-    const naics=m.dimension[2].member,subtotal=naics.find(x=>x.classificationCode==='3');
-    return {table:pair.current,metadata:m,subtotal,bins:naics.filter(x=>/^\d{2}(?:-\d{2})?$/.test(x.classificationCode??''))
-      .map(s=>({id:String(s.memberId),name:s.memberNameEn.replace(/ \[[\d-]+\]$/,''),code:s.classificationCode}))};
-  });
-}
-async function businessRows(geos,local) {
-  const {metadata:m,bins,subtotal,table:t}=await businessBins(local);
-  const matched=geos.map(g=>({g,member:geoMember(m.dimension[0],g)})).filter(x=>x.member);
-  const keys=matched.flatMap(({member})=>[coord([member.memberId,1,subtotal.memberId]),...bins.map(b=>coord([member.memberId,1,Number(b.id)]))]);
-  const data=await points(t.productId,keys),at=k=>data.get(k)?.at(-1)?.value??null;
-  return new Map(matched.map(({g,member})=>{
-    let values=bins.map(b=>at(coord([member.memberId,1,Number(b.id)])));const total=at(coord([member.memberId,1,subtotal.memberId]));
-    // Omitted sector series are zero only when the published classified subtotal reconciles the row.
-    if(total!=null&&values.reduce((s,v)=>s+(v??0),0)===total)values=values.map(v=>v??0);
-    return [g.id,{name:g.name,total,values}];}));
-}
-export async function filterData(place,group,mapKey) {
-  const spec=FILTERS[group].maps[mapKey],scope=scopeOf(place);
-  if(spec.source==='business'){
-    const {bins,table:t}=await businessBins(!!scope),{list}=await areas(scope);
-    const national=place.type==='PR',local=['CSD','CMACA'].includes(place.type);
-    const [matrix,own]=await Promise.all([memo(`biz:${scope}`,()=>businessRows(list,!!scope)),
-      national?businessRows([place],false):local?businessRows([place],true):Promise.resolve(new Map())]);
-    return {spec:{...spec,bins},scope,matrix,own:own.get(place.id)??null,names:bins.map(b=>b.name),
-      source:{source:`Statistics Canada, ${t.cubeTitleEn}`,url:table(t.productId),universe:spec.universe,period:t.cubeTitleEn.match(/(June|December) \d{4}$/)?.[0]}};
-  }
-  const [matrix,p]=await Promise.all([censusMatrix(scope,spec),census(place)]);
-  return {spec,scope,matrix,own:{name:place.name,total:p.value(spec.total),values:spec.bins.map(b=>p.value(b.id))},
-    names:spec.bins.map(b=>b.name??p.name(b.id)?.replace(/^\d+(-\d+)? /,'')??b.id),
-    source:{source:'Statistics Canada, Census Profile 2021',url:'https://www12.statcan.gc.ca/census-recensement/2021/dp-pd/prof/index.cfm',universe:spec.universe,period:'Census 2021'}};
-}
 
 // ---------- filter accordion ----------
 // Renders the group's filter cards into el. open: active map key; sel: boolean array for it.

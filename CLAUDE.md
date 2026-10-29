@@ -20,17 +20,18 @@ not break. Codex reads the same file through [AGENTS.md](AGENTS.md).
 
 ## The live model is written once
 
-The website is `site/index.html`, `site/style.css` and ES modules in `site/js/`: `transport.js` (shared request cache,
-concurrency, retries and errors), `api.js` (Census SDMX, WDS and OECD adapters), `model.js`, `regional-model.js`
-and `trend-model.js` (pure calculation: findings, ranks, annual periods, similarity, sector base, shift-share), `census.js` (characteristic
-identifiers per exhibit), `state.js` (URL state), `geo.js` (boundary files, maps, spatial services),
-`ui.js` and `charts.js` (components and exhibits, each with a data table and CSV), and one module
-per tool in `site/js/tools/`. `app.js` owns geography, history and lazy mounting. Docs/REFERENCE.md
-is the visual and behavioural specification. Never relabel provincial observations as local values.
+The runtime is `site/index.html`, `site/style.css` and ES modules in `site/js/`. `transport.js` owns request caching,
+concurrency, retries and errors; `api.js` owns source formats, series, cohorts and industry reads. Views do not
+cache derived source results and hold no table coordinates or members. `model.js`, `regional-model.js` and
+`trend-model.js` are pure calculations; `model.js` also owns province identifiers (`provinceGeo`, `provinceOf`).
+`census.js` defines characteristic identifiers and bins and imports no model. `ui.js` owns DOM components, icons,
+async slots and keyboard search; `charts.js` draws exhibits; `geo.js` owns maps and every file in
+`site/boundaries/`; `state.js` validates URLs. View modules live in `tools/`; `profile.js` includes resident-sector exhibits. `app.js` owns navigation,
+geography and lazy mounting. Never relabel provincial observations as local values.
 
-`tools/business.js` owns industry Business Counts reads and missing-cell rules; `tools/sectors.js` renders
-resident-sector exhibits from plain profiles. Promise caches use `transport.memoRequest`: an old failed read
-must not remove a replacement created by Refresh. Annual charts and their tables retain omitted calendar years.
+Refresh clears the request cache before updating views. Pending-request caches use `transport.memoRequest`:
+an old failure cannot remove a replacement. Annual charts and their tables retain omitted calendar years.
+Docs/REFERENCE.md records the original reference; later interface decisions are in docs/DECISIONS.md.
 
 `site/boundaries/` is quantized TopoJSON built by `tools/boundaries` (Rust) from the 2021 cartographic boundary
 service; it holds geometry, DGUIDs and names only. `neighbours-<pr>.json` is derived from those files by the `neighbours`

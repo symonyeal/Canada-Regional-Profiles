@@ -1,18 +1,17 @@
-// Findings and peer comparisons. Legend: g = geography; p,b = selected/benchmark Census profiles;
+// Findings and peer comparisons. Legend: g = geography; p, b = selected and benchmark Census profiles;
 // C = cohort {label, areas, P}; m = measure; r = finding row; a = live render generation.
-import {census,censusMany,request} from '../api.js';
-import {CANADA,PT,int,pct,compact} from '../model.js';
+import {census,censusMany,sharedPair,censusMeta,cohort,cohortAreas,trendSeries} from '../api.js';
+import {neighbours} from '../geo.js';
+import {CANADA,PT,compact,PRIMARY,COMPARE,provinceOf,provinceGeo,provinceName} from '../model.js';
 import {MEASURES,MEASURE_IDS,SIMILAR,measure,show,difference,findings,standing,rankText,similar,peerIds} from '../regional-model.js';
 import {latest,valueText,changeText,calendar} from '../trend-model.js';
-import {h,chartCard,dataTable,loading,failure,segmented} from '../ui.js';
+import {h,chartCard,dataTable,loading,failure,segmented,lifetime,slot} from '../ui.js';
 import {barList,strip,legend,lines} from '../charts.js';
-import {PRIMARY,COMPARE} from '../palette.js';
+import {trendPanel,trendsFor} from './trends.js';
+import {sectorHighlights} from './profile.js';
 
 // The cohort's dots: PRIMARY at the strip's 16 % opacity over the page.
 const COHORT='#cfd8cd';
-import {lifetime,sharedPair,censusMeta,slot,cohort,cohortAreas,trendSeries,provinceName} from './common.js';
-import {trendPanel,trendsFor} from './trends.js';
-import {sectorHighlights} from './sectors.js';
 
 const note=()=>h('p',{class:'period-note'},'Census 2021 · income refers to 2020. Same-period comparisons; a live request does not make the observations current.');
 const recentNote=()=>h('p',{class:'period-note'},'Annual series from Statistics Canada tables (population estimates, Labour Force Survey, tax data, CMHC rents) and the OECD regional database. Each card gives the latest year published for this area and compares the benchmark and comparable areas in that same year. Survey definitions differ from the Census measures below.');
@@ -179,12 +178,12 @@ export function compare(el,app) {
         rows=[i,...similar(C.P,i,5).map(s=>s.j)].map(j=>({...C.areas[j],p:C.P[j]}));
         why=`The five ${C.label} closest to ${g.name} on ${SIMILAR.map(id=>measure(id).label.toLowerCase()).join(', ')}, each standardised among the ${C.areas.length} areas.`;
       } else if(mode==='near'){
-        const pr=String(g.province??g.id.slice(9,11)).split('_')[0],N=(await request(`boundaries/neighbours-${pr}.json`))[g.id]??[];
+        const pr=provinceOf(g),N=await neighbours(g);
         const names=new Map((await app.placeList(g.type)).map(x=>[x.id,x])),P=await censusMany(g.type,[g.id,...N],MEASURE_IDS);
         rows=[g.id,...N].map(id=>({...(names.get(id)??{id,name:id}),p:P.get(id)?.rows.length?P.get(id):null}));
         why=N.length?`${g.name} and the ${N.length} ${g.type==='CSD'?'municipalities':'census divisions'} sharing a border with it in ${provinceName(pr)}.`:`${g.name} shares no border with another area of its type in ${provinceName(pr)}.`;
       } else {
-        const ids=peerIds(app.state.t.peers,g),list=national?PT.map(([c,,name])=>({id:`2021A0002${c}`,type:'PR',name})):await app.placeList(g.type);if(!a())return;
+        const ids=peerIds(app.state.t.peers,g),list=national?PT.map(([c])=>provinceGeo(c)):await app.placeList(g.type);if(!a())return;
         picker(controls,g,ids,list);
         const geos=[g,...ids.map(id=>list.find(x=>x.id===id)).filter(Boolean)],P=await Promise.allSettled(geos.map(census));
         rows=geos.map((x,i)=>({...x,p:P[i].status==='fulfilled'?P[i].value:null}));

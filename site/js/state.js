@@ -1,6 +1,6 @@
 // Shared-URL state. Every parameter has one validator and one default; defaults are omitted from URLs.
 // Legend: g = selected geography; v = benchmark key or identifier; pr = province code.
-import {CANADA,geographyType,validGeographyId,provinceOf} from './model.js';
+import {CANADA,geographyType,validGeographyId,provinceOf,provinceGeo} from './model.js';
 import {MEASURES} from './regional-model.js';
 import {TRENDS} from './trend-model.js';
 
@@ -28,9 +28,10 @@ export const SECTIONS=['overview','industries','compare','detail'];
 // A benchmark is Canada, a province, or another area of the selected level. Same-level choices may cross provinces.
 export function benchmarkFor(g,v) {
   const pr=provinceOf(g);
-  if(v==='PT'&&pr&&g.type!=='PR')return {id:`2021A0002${pr}`,type:'PR'};
+  if(v==='PT'&&pr&&g.type!=='PR')return provinceGeo(pr);
   const type=geographyType(v);
-  if(g.id!==CANADA.id&&v!==g.id&&type&&(type==='PR'||type===g.type))return {id:v,type};
+  if(g.id!==CANADA.id&&v!==g.id&&type==='PR')return provinceGeo(v.slice(9,11));
+  if(g.id!==CANADA.id&&v!==g.id&&type===g.type)return {id:v,type};
   return {...CANADA};
 }
 const validBench=(g,v)=>['CA','PT'].includes(v)?v:benchmarkFor(g,v).id===CANADA.id?'CA':v;

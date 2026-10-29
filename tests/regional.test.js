@@ -1,12 +1,15 @@
 // Legend: r = synthetic industry row; g = selected geography; m = Census measure; P = synthetic cohort profiles.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {industryRows,peerIds,MEASURES,MEASURE_IDS,difference,show,standing,rankText,findings,similar,sectorBase,shiftShare,SECTOR_IDS} from '../site/js/regional-model.js';
+import {peerIds,MEASURES,MEASURE_IDS,difference,show,standing,rankText,findings,similar,sectorBase,shiftShare} from '../site/js/regional-model.js';
+import {industryRows} from '../site/js/model.js';
 import {parse,serialize,withGeography,SECTIONS,benchmarkFor} from '../site/js/state.js';
-import {PROFILE_IDS} from '../site/js/census.js';
+import {INDUSTRY} from '../site/js/census.js';
+import {PROFILE_IDS} from '../site/js/api.js';
 
 // A profile from {characteristic: value}; names for sector characteristics.
-const profile=(v,names={})=>({value:id=>v[id]??null,name:id=>names[id]??null});
+const profile=(v,names={})=>({value:id=>v[id]??null,name:id=>names[id]??null,label:id=>names[id]?.replace(/^\d+(-\d+)? /,'')??null});
+const SECTOR_IDS=INDUSTRY.groups.map(([,[id]])=>id);
 
 test('custom benchmarks accept provinces and same-level areas, survive URLs and reject incompatible levels',()=>{
   const g={id:'2021A000246',type:'PR'},cd={id:'2021A00034611',type:'CD'};
@@ -62,7 +65,7 @@ test('legacy sections reach the consolidated view and retain relevant selections
   assert.equal(parse('','#talent').section,'overview');
 });
 test('every measure characteristic is requested with the single-area profile',()=>{
-  const ids=new Set(PROFILE_IDS);for(const id of [...MEASURE_IDS,...SECTOR_IDS,'2261'])assert.ok(ids.has(id),id);
+  const ids=new Set(PROFILE_IDS);for(const id of [...MEASURE_IDS,...SECTOR_IDS,INDUSTRY.total])assert.ok(ids.has(id),id);
 });
 test('standing counts published values only; ties share the better rank and half the mass',()=>{
   assert.deepEqual(standing(3,[1,2,3,3,5,null]),{q:.6,high:2,low:3,n:5});

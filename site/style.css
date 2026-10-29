@@ -133,14 +133,6 @@ p{margin:0}
 .cell>.state{flex:1}
 .map-cell .map-wrap{border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
 
-.dash.economic{grid-template-columns:1fr 1fr 1.08fr 1.82fr;grid-template-rows:minmax(148px,auto) repeat(3,minmax(min-content,1fr));grid-template-areas:"a b c s" "d d e s" "d d f s" "d d g s"}
-.dash.resident{grid-template-columns:1fr 1fr 1fr 1.82fr;grid-template-rows:minmax(148px,auto) minmax(min-content,1fr);grid-template-areas:"a b c s" "m m m s"}
-.dash.household{grid-template-columns:1fr 1fr 1fr 1.82fr;grid-template-rows:minmax(148px,auto) minmax(min-content,1.65fr) minmax(min-content,1fr);grid-template-areas:"a b c s" "m m m s" "m m m t"}
-.dash.dwelling{grid-template-columns:1.72fr 1fr;grid-template-rows:minmax(268px,auto) minmax(min-content,1fr);grid-template-areas:"a s" "b s"}
-.dash.workforce{grid-template-columns:1.72fr 1fr;grid-template-rows:repeat(2,minmax(min-content,1fr));grid-template-areas:"a s" "a t"}
-.dash.livability{grid-template-columns:1fr 1fr 1fr 1.82fr;grid-template-rows:minmax(128px,auto) minmax(min-content,1.35fr) minmax(min-content,1fr);grid-template-areas:"a b c s" "d d d s" "d d d t"}
-.dash [data-area=a]{grid-area:a}.dash [data-area=b]{grid-area:b}.dash [data-area=c]{grid-area:c}.dash [data-area=d]{grid-area:d}.dash [data-area=e]{grid-area:e}
-.dash [data-area=f]{grid-area:f}.dash [data-area=g]{grid-area:g}.dash [data-area=s]{grid-area:s}.dash [data-area=t]{grid-area:t}.dash [data-area=m]{grid-area:m}
 
 /* ---------- cards and exhibits ---------- */
 .card{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;display:flex;flex-direction:column;min-height:0;position:relative;box-shadow:var(--shadow)}
@@ -206,19 +198,12 @@ p{margin:0}
 .state.failure p{margin:2px 0 10px}
 .state.empty{border:1px dashed var(--line-2);border-radius:10px}
 .spinner{width:18px;height:18px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent)}
-@media (prefers-reduced-motion:no-preference){.spinner{animation:spin .9s linear infinite}.net,.option-card,.rail-item{transition:background .15s,border-color .15s}}
+@media (prefers-reduced-motion:no-preference){.spinner{animation:spin .9s linear infinite}.net,.rail-item{transition:background .15s,border-color .15s}}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* ---------- industries (option cards and exhibit card) ---------- */
 
-.option-card{display:flex;flex-direction:column;gap:8px;text-align:left;padding:16px;border:1px solid var(--line);border-radius:var(--r);background:#fff}
-.option-card:hover{border-color:var(--line-2)}
-.option-card[aria-pressed=true]{border-color:var(--accent);background:var(--tint);box-shadow:inset 3px 0 0 var(--accent)}
-.option-head{display:flex;align-items:center;gap:10px}
 .option-icon{display:grid;place-items:center;width:26px;height:26px;border-radius:7px;background:var(--track);color:var(--body)}
-.option-card[aria-pressed=true] .option-icon{background:#e9f0e7;color:var(--accent)}
-.option-title{font:650 15px/1.3 var(--ui);letter-spacing:-.015em;color:var(--ink)}
-.option-text{font-size:12px;color:var(--body);line-height:1.5}
 .exhibit{height:600px}
 .exhibit .card-head{margin-bottom:6px}
 .card-head .legend{border:0;padding:8px 0 0;margin:0;justify-content:flex-start}
@@ -307,14 +292,6 @@ th[aria-sort=descending] .sort-mark::after{content:'▼';font-size:8px}
 .cip small{display:block;font:600 9.5px var(--ui);letter-spacing:.06em;color:var(--body);text-transform:uppercase;text-align:right}
 
 /* ---------- insights ---------- */
-.insights-banner{position:relative;border-radius:16px;overflow:hidden;min-height:300px;display:flex;align-items:center;background:#173f35;color:#fff;padding:44px clamp(24px,5vw,72px)}
-.insights-banner::after{content:'';position:absolute;top:-80px;right:-40px;width:430px;height:430px;border:1px solid #5b7c6d;border-radius:50%;box-shadow:0 0 0 48px #ffffff06,0 0 0 96px #ffffff05,0 0 0 144px #ffffff03;pointer-events:none}
-.insights-banner h3{font:400 clamp(30px,3.4vw,48px)/1.1 var(--display);letter-spacing:-.02em}
-.insights-banner p{margin:16px 0 26px;max-width:600px;font-size:15px;color:#e0e8dc}
-.insights-banner .btn{height:46px;font-size:15px;position:relative;z-index:1}
-.insights-banner .btn.light{background:#fff;color:var(--accent);border-color:#fff}
-.insights-banner .btn.text{background:none;border-color:transparent;color:#fff}
-.banner-actions{display:flex;flex-wrap:wrap;gap:16px;position:relative;z-index:1}
 .overlay{position:fixed;inset:0;z-index:150;background:#f2f2f2;display:grid;grid-template-rows:56px minmax(0,1fr)}
 .overlay-bar{display:flex;justify-content:space-between;align-items:center;padding:0 16px;background:#f5f6f1;box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .overlay-body{display:grid;grid-template-columns:104px 300px minmax(0,1fr);max-width:1300px;width:100%;margin:0 auto;min-height:0;background:#fff}
@@ -354,10 +331,6 @@ th[aria-sort=descending] .sort-mark::after{content:'▼';font-size:8px}
   .wrap{padding:0 24px}
   
   .with-filters{grid-template-columns:84px 320px minmax(0,1fr)}
-  .dash.economic{grid-template-columns:1fr 1fr 1fr;grid-template-rows:148px 360px 148px 148px 148px 480px;grid-template-areas:"a b c" "d d d" "e e e" "f f f" "g g g" "s s s"}
-  .dash.resident,.dash.household,.dash.livability{grid-template-columns:1fr 1fr 1fr;grid-template-rows:148px 460px auto auto;grid-template-areas:"a b c" "m m m" "s s s" "t t t"}
-  .dash.livability{grid-template-areas:"a b c" "d d d" "s s s" "t t t"}
-  .dash.dwelling,.dash.workforce{grid-template-columns:1fr;grid-template-rows:auto;grid-template-areas:"a" "b" "s" "t"}
   .with-rail.frame,.with-filters.frame{height:auto;min-height:var(--frame-h)}
   .dash{overflow:visible}
   
@@ -395,12 +368,7 @@ th[aria-sort=descending] .sort-mark::after{content:'▼';font-size:8px}
   .rail-item{flex:0 0 auto;padding:10px 10px;border-left:0;border-bottom:3px solid transparent}
   .rail-item[aria-current=true]{border-left:0;border-bottom-color:var(--accent)}
   .filters{border-right:0;border-bottom:1px solid var(--line);max-height:none}
-  .dash,.dash.economic,.dash.resident,.dash.household,.dash.livability,.dash.dwelling,.dash.workforce{grid-template-columns:1fr 1fr;grid-template-rows:auto;padding:12px;gap:10px;
-    grid-template-areas:"a b" "c c" "m m" "d d" "e e" "f f" "g g" "s s" "t t"}
-  .dash.dwelling,.dash.workforce{grid-template-areas:"a a" "b b" "s s" "t t"}
-  .dash .map-wrap{height:380px}
   .kpi-value{font-size:26px}
-  .dash [data-area=d] .chart-svg{height:280px!important}
   
   
   
@@ -409,7 +377,6 @@ th[aria-sort=descending] .sort-mark::after{content:'▼';font-size:8px}
   .explorer{grid-template-columns:1fr;grid-template-rows:auto 380px auto;height:auto}
   .explorer .map-wrap{grid-row:2;height:auto}
   .community-list{max-height:460px}
-  .insights-banner{min-height:300px;padding:32px 20px}
   .overlay-body{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}
   .overlay-body .rail{border-bottom:1px solid var(--line)}
   .overlay-main{grid-template-columns:1fr;padding:14px}
@@ -422,7 +389,6 @@ th[aria-sort=descending] .sort-mark::after{content:'▼';font-size:8px}
   .selected-panel{left:8px;bottom:8px;width:calc(100% - 16px)}
 }
 @media (max-width:420px){
-  .dash,.dash.economic,.dash.resident,.dash.household,.dash.livability{grid-template-columns:1fr;grid-template-areas:"a" "b" "c" "m" "d" "e" "f" "g" "s" "t"}
   .section-head h2{font-size:28px}
 }
 @media print{.topbar,.section-nav,.geo-bar,.map-controls,.kebab,.footer{display:none}.frame{height:auto;break-inside:avoid}}
@@ -474,7 +440,7 @@ input:hover,select:hover{border-color:#89a494}
   .section-nav a{padding:16px 4px 14px}.section-nav ul{gap:18px}
   .tool-section{padding:36px 0 8px}.section-head{gap:16px;align-items:flex-start;flex-direction:column;margin-bottom:20px}
   .section-head p{max-width:540px;margin-left:30px}
-  .side-title{font-size:26px}.insights-banner{min-height:280px}
+  .side-title{font-size:26px}
 }
 @media(max-width:520px){
   
@@ -488,7 +454,7 @@ input:hover,select:hover{border-color:#89a494}
   .section-head p{margin-left:28px}.section-nav ul{gap:16px}
   .section-nav a{font-size:11px}
   .card{padding:16px}.dash{padding:12px;gap:12px}.kpi-value{font-size:32px}
-  .insights-banner::after{right:-300px}.footer-inner{gap:24px}
+  .footer-inner{gap:24px}
 }
 @media(prefers-reduced-motion:no-preference){
   a,button,input,select{transition:background-color .16s ease-out,border-color .16s ease-out,color .16s ease-out}

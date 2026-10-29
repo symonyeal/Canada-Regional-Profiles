@@ -2,6 +2,28 @@
 
 What was checked, how, and the result. Runtime checks of the website are separate from the historical offline pipeline's records. Evidence files (browser reports, captures, recorded reference responses) are kept with the project's working files, outside this repository.
 
+## Module consolidation, second pass (2026-10-29)
+
+Baseline: `8b277d4` with the uncommitted "fewer, deeper modules" edits; on that tree 63 JavaScript tests and 27 of
+27 browser workflows passed. Changes are listed in [Decisions](DECISIONS.md).
+
+| Trigger | Previous result | Corrected result |
+| --- | --- | --- |
+| Industry detail, Location tab, before the Explore dialog has opened in the session | "The map library could not load"; no map | The map loads; new workflow fails on the baseline and passes now |
+| An industry import in `tools/industries.js` after `industryRows` moved | (introduced and caught in this pass by an import check) | Imported from `model.js` |
+
+- JavaScript: 62 tests passed, 0 failed (the `establishments` test went with the function; `classifyTrade` and
+  `change` assertions now test `isTraded` and `rankIndustries`). An import check finds every imported name
+  exported and used.
+- Browser workflows: 28 of 28 passed (local, live public sources).
+- Industry detail rendered parity, baseline against this tree with shared responses: Trends, Benchmarks and
+  Location for four place/industry pairs, 12 of 12 identical (cards, values, chart text).
+- Detail layout parity after removing the named-grid CSS: every dashboard cell's box for two places, three
+  widths (1440, 768, 390 px) and five dashboards, 30 of 30 identical.
+- Coverage sweep: 19 geographies × 4 views, no page errors; the three failure states are the unsupported-level
+  notices for a census division, an economic region and a population centre on Economy.
+- Python: ruff clean; `pytest -m "not slow"` 11 passed. Rust boundary tools unchanged and not run.
+
 ## Internal consistency and module audit (2026-10-29)
 
 Baseline: `9b9042b`, fetched from main before the audit; 56 JavaScript tests passed before changes.

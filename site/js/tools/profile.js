@@ -1,36 +1,35 @@
 // Detail: resident, workforce, household, dwelling and livability dashboards. Each card loads on its own; a failed
 // source affects only its card.
-import {int,pct,compact,fmt,ramp} from '../model.js';
+import {int,pct,compact,fmt,ramp,signed,PRIMARY,COMPARE,SEQUENTIAL} from '../model.js';
 import {KPI,AGE10,HH_INCOME5,HH_TYPE,HH_SIZE,TENURE,CONSTRUCTION,DWELLING,COMMUTE_MODE,PLACE_OF_WORK,COMMUTE_TIME,EDUCATION,OCCUPATION,INDUSTRY} from '../census.js';
-import {h,rail,kpiCard,chartCard} from '../ui.js';
+import {h,rail,kpiCard,chartCard,dataTable,lifetime,slot} from '../ui.js';
 import {spark,barList,legend,columns,stacked,shareBars} from '../charts.js';
-import {PRIMARY,COMPARE,SEQUENTIAL} from '../palette.js';
-import {lifetime,slot,sharedPair,censusMeta,populationSeries,incomeSeries,tableMeta} from './common.js';
+import {sharedPair,censusMeta,populationSeries,incomeSeries,tableMeta} from '../api.js';
+import {sectorBase} from '../regional-model.js';
 
-export const DASHBOARDS=[['resident','Residents','resident'],['workforce','Work and education','workforce'],['household','Households','household'],
+const DASHBOARDS=[['resident','Residents','resident'],['workforce','Work and education','workforce'],['household','Households','household'],
   ['dwelling','Housing stock','dwelling'],['livability','Costs and commuting','livability']];
 
-export function profile(el,app,{tabs=DASHBOARDS,key='dv'}={}) {
+export function profile(el,app) {
   const life=lifetime(el),frame=h('div',{class:'frame with-rail'});el.append(frame);
   function render() {
-    const alive=life.next(),dash=tabs.some(t=>t[0]===app.state.t[key])?app.state.t[key]:tabs[0][0];
+    const alive=life.next(),dash=DASHBOARDS.some(t=>t[0]===app.state.t.dv)?app.state.t.dv:DASHBOARDS[0][0];
     const body=h('div',{class:`dash ${dash}`});
-    frame.replaceChildren(rail(tabs.map(([key,label,icon])=>({key,label,icon})),dash,v=>{app.set(key,v);render();},'Profile views'),body);
+    frame.replaceChildren(rail(DASHBOARDS.map(([key,label,icon])=>({key,label,icon})),dash,v=>{app.set('dv',v);render();},'Profile views'),body);
     app.resolved().then(place=>{if(!alive()||place.id!==app.state.geo.id)return;
-      const ctx={place,bench:app.bench,alive,app};
+      const ctx={place,bench:app.bench,alive};
       ctx.base=sharedPair(place,ctx.bench);
       DASH[dash](body,ctx);});
   }
-  return {update(changed){if(changed.has('geo')||changed.has('bench')||changed.has(key)||changed.has('refresh'))render();}};
+  return {update(changed){if(changed.has('geo')||changed.has('bench')||changed.has('dv')||changed.has('refresh'))render();}};
 }
 
 // ---------- shared card builders ----------
-const area=(name,node)=>{node.dataset.area=name;return node;};
-const cell=(body,name)=>body.appendChild(area(name,h('div',{class:'cell'})));
+const cell=(body,name)=>body.appendChild(h('div',{class:'cell',dataset:{area:name}}));
 // Shares of a Census group for selected and benchmark profiles.
 function shares(p,group) {
   const total=p?.value(group.total);
-  return group.groups.map(([label,ids])=>{const v=p?.sum(ids);return {label:label??p?.name(ids[0])?.replace(/^\d+(-\d+)? /,'')?.replace(/ occupations?$/,''),count:v,value:v!=null&&total>0?100*v/total:null};});
+  return group.groups.map(([label,ids])=>{const v=p?.sum(ids);return {label:label??p?.label(ids[0])?.replace(/ occupations?$/,''),count:v,value:v!=null&&total>0?100*v/total:null};});
 }
 function shareCard(target,{title,subtitle,group,ctx,base,size='md'}) {
   slot(target,async t=>{const {p,b}=await base,rows=shares(p,group),bench=b?shares(b,group):null;
@@ -63,14 +62,13 @@ const money=v=>compact(v,'$'),moneyFull=v=>`$${int(v)}`;
 // ---------- dashboards ----------
 const DASH={
   resident(body,ctx) {
-    const {place,base}=ctx,[a,b,c,m,s]=['a','b','c','m','s'].map(n=>cell(body,n));
+    const {place,base}=ctx,[a,b,c,s]=['a','b','c','s'].map(n=>cell(body,n));
     seriesKpi(a,{title:'Population',ctx,load:()=>populationSeries(place),kind:'bars',format:v=>compact(v),universe:'Total population, July 1 estimates',
       fallback:async()=>({value:(await base).p.value(KPI.population),sub:`${place.name} · Census 2021`})});
     seriesKpi(b,{title:'Median individual income',ctx,load:()=>incomeSeries(place,'individual'),format:money,universe:'Tax filers and dependants with income',
       fallback:async()=>({value:(await base).p.value(KPI.medianIndividualIncome),sub:`${place.name} · 2020 income, Census 2021`,universe:'Income recipients aged 15+'})});
     censusKpi(c,{title:'Median age',id:KPI.medianAge,ctx,base,format:v=>fmt(v)});
     shareCard(s,{title:'Age distribution',subtitle:`Share of population by age band, ${place.name}${ctx.bench.id!==place.id?` vs ${ctx.bench.name}`:''}`,group:AGE10,ctx,base,size:'sm'});
-    m.remove();
   },
   household(body,ctx) {
     const {place,base}=ctx,[a,b,c,m,s,t]=['a','b','c','m','s','t'].map(n=>cell(body,n));
@@ -104,14 +102,13 @@ const DASH={
   },
   workforce(body,ctx) {workforceCards(body,ctx);},
   livability(body,ctx) {
-    const {place,base}=ctx,[a,b,c,d,s,t]=['a','b','c','d','s','t'].map(n=>cell(body,n));
+    const {place,base}=ctx,[a,b,c,s,t]=['a','b','c','s','t'].map(n=>cell(body,n));
     censusKpi(a,{title:'Median dwelling value',id:KPI.dwellingValue,ctx,base,format:v=>compact(v,'$'),sub:`${place.name} · owner households, Census 2021`});
     censusKpi(b,{title:'Median monthly tenant shelter costs',id:KPI.rent,ctx,base,format:moneyFull,sub:`${place.name} · tenant households, Census 2021`});
     slot(c,async el=>{const {p}=await base,v=p.sum(['2612','2613']),tot=p.value(COMMUTE_TIME.total),share=v!=null&&tot>0?100*v/tot:null;
       el.replaceChildren(kpiCard({title:'Commutes under 30 minutes',value:share==null?'Not available':pct(share),sub:`${place.name} · Census 2021`,
         meta:{...censusMeta(place,{universe:'Employed labour force with a usual place of work or no fixed address',notes:'The Census Profile publishes commuting duration in bands; it does not publish a mean commuting time.'}),
           table:()=>({headers:['Duration',place.name],rows:COMMUTE_TIME.groups.map(([l,ids])=>[l,p.sum(ids)]),numeric:new Set([1]),format:v=>int(v)})}}));},{alive:ctx.alive,context:'Commute duration'});
-    d.remove();
     shareCard(s,{title:'Mode of commuting',subtitle:`Commute to work, ${place.name}${ctx.bench.id!==place.id?` vs ${ctx.bench.name}`:''}`,group:COMMUTE_MODE,ctx,base,size:'sm'});
     shareCard(t,{title:'Place of work status',subtitle:`Employed labour force, ${place.name}${ctx.bench.id!==place.id?` vs ${ctx.bench.name}`:''}`,group:PLACE_OF_WORK,ctx,base,size:'sm'});
   },
@@ -139,4 +136,32 @@ function workforceCards(body,ctx) {
       meta:{...censusMeta(place,{universe:'Population aged 25 to 64 in private households',notes:'The four indicators are nested, not exclusive: a master’s degree also counts as bachelor’s or higher.'}),
         table:()=>({headers:['Credential','People','Share (%)'],rows:rows.map(r=>[r.label,r.count,r.value]),numeric:new Set([1,2]),format:(v,i)=>i===2?pct(v):int(v)})}},
       h('div',{class:'body'},shareBars(rows.map(r=>({label:r.label,value:r.value,count:r.count}))))));},{alive:ctx.alive,context:'Education levels'});
+}
+
+// Resident workers' sectors against the benchmark: the three most over-represented and the mix difference D.
+export function sectorHighlights(el,g,p,b,bench) {
+  if(!b){el.replaceChildren();return;}
+  const {rows,D}=sectorBase(p,b),top=rows.filter(r=>r.lq!=null&&r.s>=.02).sort((x,y)=>y.lq-x.lq).slice(0,3);
+  if(!top.length){el.replaceChildren();return;}
+  const t=()=>({headers:['Sector',`${g.name} workers`,`${g.name} share (%)`,`${bench.name} share (%)`,'LQ','Workers beyond benchmark share'],
+    rows:rows.map(r=>[r.name,r.e,r.s==null?null:100*r.s,r.S==null?null:100*r.S,r.lq,r.excess]),numeric:new Set([1,2,3,4,5]),
+    format:(v,i)=>i===0?v:i===2||i===3?pct(v):i===4?v.toFixed(2):int(v)});
+  el.replaceChildren(chartCard({title:'What residents work in',
+    subtitle:`Resident labour force by industry sector, Census 2021, against ${bench.name}.${D!=null?` ${pct(100*D,0)} of workers would have to change sector for the mix to match ${bench.name}.`:''}`,
+    meta:{...censusMeta(g,{notes:'LQ = sector share of the area’s labour force divided by the benchmark’s share. Workers beyond benchmark share = e − t·S. Mix difference D = ½ Σ |s − S| (Krugman 1991). Residents are counted where they live, not where they work.'}),table:t}},
+    h('ol',{class:'base-list'},top.map(r=>h('li',{},h('strong',{},r.name),
+      h('span',{},`${pct(100*r.s)} of resident workers, ${r.lq.toFixed(1)}× ${bench.name}’s share; ${int(r.excess)} more workers than that share implies.`))))));
+}
+
+export function residentSectors(el,g,p,b,bench) {
+  const {rows,D}=sectorBase(p,b),list=rows.filter(r=>r.e!=null).sort((x,y)=>b?(y.lq??0)-(x.lq??0):y.e-x.e);
+  const top=list.filter(r=>r.lq!=null).slice(0,3);
+  const tbl=()=>({headers:['Sector','Workers','Share (%)',...(b?[`${bench.name} share (%)`,'LQ','Workers beyond benchmark share']:[])],
+    rows:list.map(r=>[r.name,r.e,r.s==null?null:100*r.s,...(b?[r.S==null?null:100*r.S,r.lq,r.excess]:[])]),numeric:new Set([1,2,3,4,5]),
+    format:(v,i)=>i===0?v:i===2||i===3?pct(v):i===4?v.toFixed(2):i===5?signed(v):int(v)});
+  el.replaceChildren(chartCard({title:'Industry sectors of resident workers',subtitle:`Census 2021, by place of residence; ${b?`ranked by location quotient against ${bench.name}`:'ranked by workers'}.${D!=null?` Mix difference: ${pct(100*D,0)} of workers would have to change sector to match.`:''}`,
+    meta:{...censusMeta(g,{universe:'Labour force aged 15+ with an industry (NAICS 2017 sectors)',notes:'LQ = the sector’s share here divided by its benchmark share. Mix difference D = ½ Σ |s − S| (Krugman 1991).'}),table:tbl}},
+    top.length?h('p',{},h('strong',{},'Most over-represented:'),' ',top.map(r=>`${r.name} (${r.lq.toFixed(2)}×, ${signed(r.excess)} workers)`).join(', '),'.'):null,
+    b&&list.some(r=>r.lq==null)?h('p',{class:'notice'},'Some sector comparisons are unavailable because a share is unpublished or the benchmark share is zero.'):null,
+    h('details',{class:'remaining-sectors'},h('summary',{},`All ${list.length} sectors`),dataTable(tbl()))));
 }

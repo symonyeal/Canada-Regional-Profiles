@@ -1,5 +1,35 @@
 # Decisions
 
+## 2026-10-29: fewer, deeper modules
+
+The module boundaries follow the knowledge they hide: request policy, source formats, statistical calculations,
+DOM controls, chart geometry, maps, URL state and views. The three numerical models retain their distinct
+geography/industry, regional cross-section and annual-series calculations.
+
+- Source adapters formerly under `tools/` now belong to `api.js`, including cohorts, industry detail and map
+  observations. Request responses already share promises, so the extra industry, business, cohort, metadata
+  and map-data caches and their invalidation functions were removed. Decoded static geometry remains cached.
+- Profile and resident-sector exhibits share `profile.js`; icons are private to `ui.js`; colour constants sit
+  beside the pure colour calculations. The separate refresh module and transport re-exports were removed.
+- Geography and benchmark search share one combobox component. The app supplies matching, ordering and region
+  descriptions; UI owns pending-result cancellation, keyboard focus and selection.
+- Unused UI helpers, icon entries, component variants and their CSS were removed. The existing observation
+  definitions, numerical algorithms, filters, thresholds and URL parameters remain unchanged.
+- Views hold no table coordinates or members. Industry detail reads its provincial specialization
+  (`industryShares`) and its subdivision map (`industryMap`) from `api.js`; Compare reads neighbours through
+  `geo.js`, which owns every file built by `tools/boundaries`. Every SEPH read takes the "All employees" member
+  from one frame; one rule strips classification codes from member and characteristic names.
+- One concept has one name: `provinceGeo`, `provinceName`, `provinceOf` and `parentProvince` in `model.js`
+  replace nine inline DGUID constructions and five inline province-code parsers (`scopeOf` is gone). Sector
+  identifiers come from `census.INDUSTRY`; `api.PROFILE_IDS` joins exhibit and measure characteristics, so
+  `census.js` no longer imports a model. `industryRows` sits with `rankIndustries`.
+- Removed as unreachable: `establishments`, `classifyTrade`, the second `change` in `model.js`, the
+  `.dash.economic` layout and the named grid areas that `.tool-section .dash` overrides. Navigation calls name
+  real sections, so `app.choose` no longer maps aliases.
+- `geo.mapLibrary` loads MapLibre on first use for every map. It previously lived in `app.js` and ran only for
+  the Explore dialog, so the industry Location tab showed "The map library could not load" unless that dialog
+  had been opened earlier in the session.
+
 ## 2026-10-29: shared request and missing-data rules
 
 - Request policy lives in `transport.js`; source adapters remain in `api.js`. Errors, retries and request limits

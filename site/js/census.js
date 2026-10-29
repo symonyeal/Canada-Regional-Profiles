@@ -1,7 +1,6 @@
 // Census Profile 2021 characteristic identifiers (codelist CL_CHARACTERISTIC) behind each exhibit.
 // These are classification identifiers and bin edges, not observations. Groups sum published components only.
-import {MAP_SCALE} from './palette.js';
-import {MEASURE_IDS} from './regional-model.js';
+import {MAP_SCALE} from './model.js';
 
 const ids=(a,b)=>Array.from({length:b-a+1},(_,i)=>String(a+i));
 const money=v=>v==null?'+':`$${v.toLocaleString('en-CA')}`;
@@ -69,9 +68,9 @@ export const FILTERS={
   }},
 };
 
-// Every characteristic an exhibit reads: one request per area instead of the 2,600-characteristic profile.
-export const PROFILE_IDS=(()=>{
-  const s=new Set(Object.values(KPI).concat(['2225','2226'],MEASURE_IDS));
+// Every characteristic the Detail exhibits and maps read.
+export const EXHIBIT_IDS=(()=>{
+  const s=new Set(Object.values(KPI).concat(['2225','2226']));
   for(const g of [AGE10,HH_INCOME5,HH_TYPE,HH_SIZE,TENURE,CONSTRUCTION,DWELLING,COMMUTE_MODE,PLACE_OF_WORK,COMMUTE_TIME,EDUCATION,OCCUPATION,INDUSTRY]){s.add(g.total);for(const [,ids] of g.groups)ids.forEach(i=>s.add(i));}
   for(const group of Object.values(FILTERS))for(const m of Object.values(group.maps)){if(m.total)s.add(m.total);for(const b of m.bins??[])s.add(b.id);}
   return [...s].sort((a,b)=>a-b);

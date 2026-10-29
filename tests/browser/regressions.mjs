@@ -17,7 +17,7 @@ async function check(name,fn){
 }
 await check('suppressed benchmark sectors leave the resident-sector table available',async p=>{
   await p.evaluate(async()=>{
-    const {industries}=await import('./js/tools/industry-brief.js'),{industryCache}=await import('./js/tools/industries.js');
+    const {industries}=await import('./js/tools/industries.js');
     const {parse}=await import('./js/state.js');
     const g={id:'2021A00054602044',type:'CSD',name:'Selected'},bench={id:'2021A00054611040',type:'CSD',name:'Benchmark'};
     // Drive the view through its actual pair/adapters, including a valid profile with suppressed benchmark cells.
@@ -31,7 +31,6 @@ await check('suppressed benchmark sectors leave the resident-sector table availa
         `0:0:${i}:0`,{observations:{0:[values[i]]}}
       ]))}]}}));
     };
-    industryCache.data=async()=>({rows:[],count:0,suppressed:0,year:2025,prior:2020,source:{}});
     const el=document.createElement('div');document.body.append(el);
     const app={state:parse(`?geo=${g.id}`,'#industries'),bench,resolved:async()=>g,set(){}};
     industries(el,app).update(new Set(['geo']));
@@ -72,6 +71,24 @@ await check('line charts preserve missing observations and use the series units 
   await p.waitForFunction(()=>document.querySelector('.chart-svg circle'));
   const chart=await p.locator('.chart-svg').getAttribute('aria-label'),point=await p.locator('circle').getAttribute('aria-label');
   if(!chart.includes('2000 Not available')||!chart.includes('$1234')||!point.includes('$1234'))throw Error(`${chart}; ${point}`);
+});
+await check('shared search ignores stale results, cancels on Escape and selects by keyboard',async p=>{
+  await p.evaluate(async()=>{
+    const {h,combobox}=await import('./js/ui.js'),input=h('input',{id:'search'}),list=h('ul',{id:'matches',hidden:true});
+    document.body.append(input,list);window.searches=new Map();window.chosen='';
+    combobox(input,list,{load:q=>new Promise(resolve=>searches.set(q,resolve)),choose:r=>{window.chosen=r.name;},
+      describe:r=>[r.name,''],pending:'Loading',empty:'No matches',error:'Search unavailable'});
+  });
+  const input=p.locator('#search');await input.fill('old');await input.fill('new');
+  await p.evaluate(()=>searches.get('new')([{name:'Latest'}]));
+  await p.getByRole('option',{name:'Latest',exact:true}).waitFor();
+  await p.evaluate(()=>searches.get('old')([{name:'Stale'}]));
+  if(await p.getByRole('option',{name:'Stale',exact:true}).count())throw Error('Stale results replaced the current search');
+  await input.press('ArrowDown');await input.press('Enter');
+  if(await p.evaluate(()=>chosen)!=='Latest')throw Error('Keyboard selection failed');
+  await p.evaluate(()=>{window.chosen='';});await input.fill('cancelled');await input.press('Enter');await input.press('Escape');
+  await p.evaluate(()=>searches.get('cancelled')([{name:'Cancelled'}]));
+  if(await p.evaluate(()=>chosen!==''||!document.querySelector('#matches').hidden))throw Error('Pending search survived cancellation');
 });
 await b.close();fs.writeFileSync(out,JSON.stringify({base,results},null,2));
 if(results.some(r=>!r.pass))process.exitCode=1;

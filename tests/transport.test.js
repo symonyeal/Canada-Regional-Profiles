@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {memoRequest,request,clearCache,points} from '../site/js/api.js';
+import {points} from '../site/js/api.js';
+import {memoRequest,request,clearCache} from '../site/js/transport.js';
 
 test('a rejected request from before Refresh cannot evict its replacement',async()=>{
   const store=new Map();let reject;

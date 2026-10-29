@@ -39,7 +39,7 @@ Each is queried from the visitor's browser when the exhibit is shown. All were c
 | Delgado, M., Porter, M. E. and Stern, S., "Defining clusters of related industries", *Journal of Economic Geography* 16(1), 2016 | traded/local classification | cited; traded six-digit list below |
 | milocortes/InvESt_complexity (GitHub, commit fd4d430), `porter_transables_cluster_clases_NAICS_2017.md` | the 668 NAICS US 2017 codes in traded clusters (`site/classification.json`) | inspected 2026-10-22 |
 | US Census Bureau, `2-6 digit_2017_Codes.xlsx` | all 1,057 NAICS US 2017 six-digit codes (`site/classification.json`) | inspected 2026-10-22 |
-| Lucide icons v0.460.0 (ISC licence) | interface icons (`site/js/icons.js`) | inspected |
+| Lucide icons v0.460.0 (ISC licence) | interface icons (`site/js/ui.js`) | inspected |
 | Snyder, J. P., *Map Projections: A Working Manual*, USGS Professional Paper 1395, 1987 | Lambert conformal conic in the historical `analysis/geo.py` | cited; worked example reproduced in `tests/test_geo.py` |
 | Visvalingam, M. and Whyatt, J. D., "Line generalisation by repeated elimination of points", *The Cartographic Journal* 30(1), 1993 | boundary simplification (`tools/boundaries/src/simplify.rs`), with the monotone area correction of Bostock's topojson | cited; removal order and monotonicity tested |
 | Bostock, M., [TopoJSON specification](https://github.com/topojson/topojson-specification) and topojson-server join/cut | shared-arc topology, quantized delta-encoded arcs (`tools/boundaries`, `site/js/geo.js`) | inspected 2026-10-24 |
