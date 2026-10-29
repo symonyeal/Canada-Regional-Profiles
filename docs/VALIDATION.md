@@ -2,6 +2,45 @@
 
 What was checked, how, and the result. Runtime checks of the website are separate from the historical offline pipeline's records. Evidence files (browser reports, captures, recorded reference responses) are kept with the project's working files, outside this repository.
 
+## Internal consistency and module audit (2026-10-29)
+
+Baseline: `9b9042b`, fetched from main before the audit; 56 JavaScript tests passed before changes.
+
+Confirmed defects and corrections:
+
+| Trigger | Previous result | Corrected result |
+| --- | --- | --- |
+| A request fails after Refresh replaces its cache entry | The old failure deletes the new entry | Eviction checks the promise identity; tools share this policy |
+| The same endpoint is read as text and JSON | The second caller receives the first caller's representation | Separate response-mode cache entries |
+| WDS sends an empty or nonnumeric observation with a scale factor | Numeric conversion returns null, then multiplication converts it to zero | Missing remains null; genuine zero and finite values still scale |
+| A business-industry series is omitted while its classified total is positive | The map displays zero | Missing stays unavailable; a published zero total still establishes zero |
+| Suppressed industries are removed before an absent total is estimated, or summed as zero | LQ uses an incomplete denominator; the synthetic regression gives 10 | LQ is unavailable unless totals or complete partitions support it |
+| Benchmark resident sectors have suppressed or zero shares | The summary calls `toFixed` on null and hides the table | Published rows remain; only available LQs enter the summary |
+| Annual observations omit interior years | Charts compress the calendar and draw across missing years | A full calendar axis retains gaps; the data table includes the missing years |
+| A temperature cohort series lacks a selected endpoint but has three interior values | It enters a rank described as requiring both endpoints | The change remains unavailable for that range |
+| A line chart has gaps or uses a different axis and series formatter | Accessible text can throw on null or give different units from tooltips | Missing is named; markers and accessible text use the series formatter |
+
+Request policy moved to `transport.js`, industry Business Counts to `tools/business.js`, and resident-sector
+presentation to `tools/sectors.js`. Pure models remain separate from requests and DOM code. No dependencies were
+added, and no observations or boundary files were regenerated.
+
+- JavaScript: 63 tests passed, 0 failed. New cache, WDS, industry and calendar tests cover the corrected seams;
+  existing slope tests now include missing endpoints. The cache, WDS, industry and slope regressions were observed
+  failing with the prior behavior. Reinstating the former Business Counts policies made their two tests fail.
+- Deterministic browser regressions: 3 of 3 passed. The resident-sector and calendar cases failed before their
+  corrections. The calendar check inspects SVG path segments and the actual data-table years, including gaps.
+- Live browser workflows: 27 of 27 passed in both full runs, covering navigation, history, shared URLs, custom
+  benchmarks, exports, source-failure recovery, industry details and 1440/768/390 px layouts.
+- Map/chart regressions: 6 of 6 passed, covering delayed map CSS, offline basemaps, map disposal, phone viewports,
+  province selection, independent annual sources and Census ranking values.
+- Geography sweep: 19 geographies, four views each, zero page exceptions. Only three industry failure panels
+  appeared, each stating an intentionally unpublished level (census division, economic region, population centre).
+  Some annual slots were still loading at the snapshots; this is a navigation and scope smoke check, not proof
+  that every upstream series completed. Local samples do not certify every municipality.
+- Required remaining gates: 10 Rust tests and 11 Python tests passed; six historical slow Python checks were
+  deselected. Ruff and the installed-dependency check passed. The slow download-dependent pipeline was unchanged.
+- No exhaustive cross-geography numerical parity, performance improvement or full accessibility audit is claimed.
+
 ## Configurable benchmarks (2026-10-27)
 
 - 56 JavaScript tests passed, including a new benchmark case covering same-level and provincial choices, cross-province counties, invalid levels, self-comparisons, URL round trips and changes of geography. Eleven Python tests passed (six historical slow checks deselected), plus Ruff and the dependency check.

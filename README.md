@@ -57,6 +57,8 @@ npm install
 node tests/browser/workflows.mjs http://localhost:8765/ <evidence-folder>/workflows.json
 node tests/browser/visuals.mjs http://localhost:8765/ <evidence-folder>/visuals.json
 node tests/browser/sweep.mjs http://localhost:8765/ <evidence-folder>/sweep.json
+node tests/browser/regressions.mjs http://localhost:8765/ <evidence-folder>/regressions.json
+node tests/browser/visuals.mjs http://localhost:8765/ <evidence-folder>/maps.json
 ```
 
 The browser checks use `playwright-core` with an installed Chromium-based browser; set `BROWSER` to its path if it is not Edge at the default Windows location.

@@ -1,10 +1,15 @@
 // Legend: s = synthetic annual series; Y = common years; m = annual measure.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {TRENDS,trend,combine,commonYears,parseRange,clampRange,rangeText,change,changeText,latest} from '../site/js/trend-model.js';
+import {TRENDS,trend,combine,commonYears,parseRange,clampRange,rangeText,change,changeText,latest,calendar} from '../site/js/trend-model.js';
 import {parse,serialize,withGeography} from '../site/js/state.js';
 
 const s=(from,values)=>values.map((value,i)=>({year:from+i,value}));
+
+test('annual calendar keeps omitted years, zeros and suppression at their own positions',()=>{
+  assert.deepEqual(calendar([{year:2004,value:4},{year:2000,value:0},{year:2002,value:NaN}],[2000,2004]),s(2000,[0,null,null,null,4]));
+  assert.deepEqual(calendar([],[2000,2000]),s(2000,[null]));
+});
 
 test('common years intersect finite observations, keep interior gaps out, and ignore areas publishing nothing',()=>{
   const a=s(2001,[1,2,3,4,5]),b=s(2003,[7,null,9,10]),none=s(2001,[null,null]);
@@ -65,6 +70,9 @@ test('a slope fit is the least-squares trend per decade over the finite years in
   const spike=s(2000,[5,5,5,5,5,5,9]),k=change(spike,[2000,2006],'°C','slope');
   assert.ok(k.d<change(spike,[2000,2006],'°C').d*10/6);
   assert.equal(change(s(2000,[1,2]),[2000,2001],'°C','slope').d,null);
+  // Cohort ranks cover the same endpoints; an interior fit cannot substitute for a missing endpoint.
+  assert.equal(change(s(2000,[null,1,2,3]),[2000,2003],'°C','slope').d,null);
+  assert.equal(change(s(2000,[1,2,3,null]),[2000,2003],'°C','slope').d,null);
 });
 test('the latest standing compares every area in the selected area’s last year and measures change over at most k years',()=>{
   const m=trend('unemployment'),x=s(2018,[6,7,null,5,4]),b=s(2018,[5,5,5,5]),S=[s(2022,[3]),null,s(2018,[9,9,9,9,9])];

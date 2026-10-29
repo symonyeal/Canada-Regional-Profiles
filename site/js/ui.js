@@ -1,7 +1,7 @@
 // DOM components shared by every tool. Components return elements; callers own their state.
 import {ICONS} from './icons.js';
 import {csv,int} from './model.js';
-import {MESSAGES} from './api.js';
+import {MESSAGES} from './transport.js';
 
 const SVGNS='http://www.w3.org/2000/svg';
 export function h(tag,props={},...children) {

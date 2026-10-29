@@ -2,8 +2,8 @@
 // C = cohort {label, areas, P}; m = measure; r = finding row; a = live render generation.
 import {census,censusMany,request} from '../api.js';
 import {CANADA,PT,int,pct,compact} from '../model.js';
-import {MEASURES,MEASURE_IDS,SIMILAR,measure,show,difference,findings,standing,rankText,similar,sectorBase,peerIds} from '../regional-model.js';
-import {latest,valueText,changeText} from '../trend-model.js';
+import {MEASURES,MEASURE_IDS,SIMILAR,measure,show,difference,findings,standing,rankText,similar,peerIds} from '../regional-model.js';
+import {latest,valueText,changeText,calendar} from '../trend-model.js';
 import {h,chartCard,dataTable,loading,failure,segmented} from '../ui.js';
 import {barList,strip,legend,lines} from '../charts.js';
 import {PRIMARY,COMPARE} from '../palette.js';
@@ -12,6 +12,7 @@ import {PRIMARY,COMPARE} from '../palette.js';
 const COHORT='#cfd8cd';
 import {lifetime,sharedPair,censusMeta,slot,cohort,cohortAreas,trendSeries,provinceName} from './common.js';
 import {trendPanel,trendsFor} from './trends.js';
+import {sectorHighlights} from './sectors.js';
 
 const note=()=>h('p',{class:'period-note'},'Census 2021 · income refers to 2020. Same-period comparisons; a live request does not make the observations current.');
 const recentNote=()=>h('p',{class:'period-note'},'Annual series from Statistics Canada tables (population estimates, Labour Force Survey, tax data, CMHC rents) and the OECD regional database. Each card gives the latest year published for this area and compares the benchmark and comparable areas in that same year. Survey definitions differ from the Census measures below.');
@@ -57,8 +58,8 @@ function recentFinding(m,r,{C,bench,national,g,S}) {
 // A visible history next to each current finding. Gaps stay gaps; the source menu keeps the plotted values.
 function recentHistory(m,s,g) {
   if(!s)return null;
-  const last=s.values.filter(v=>v.value!=null).at(-1)?.year;
-  const V=s.values.filter(v=>v.year>=last-14&&v.year<=last);
+  const years=s.values.filter(v=>v.value!=null).map(v=>v.year),last=Math.max(...years);
+  const V=years.length?calendar(s.values,[Math.max(Math.min(...years),last-14),last]):[];
   if(V.filter(v=>v.value!=null).length<2)return h('p',{class:'finding-history'},'Only one year published.');
   const period=`${V[0].year}–${V.at(-1).year}`,fmt=v=>m.unit==='people'?compact(v):m.unit.startsWith('$')?`$${compact(v)}`:valueText(m.unit,v);
   return h('div',{class:'finding-history'},chartCard({title:`${g.name} · ${period}`,
@@ -130,7 +131,7 @@ export function overview(el,app) {
         if(C)key.replaceChildren(keyFor(g,b?bench:null,C,national));
         t.replaceChildren(...F.headline.map(r=>finding(r,{C,bench:national?CANADA:bench,national})));
         if(error)t.append(h('li',{class:'notice'},`Ranks unavailable: ${error.message}`));
-        if(!national)sectorCard(base,g,p,b,bench);
+        if(!national)sectorHighlights(base,g,p,b,bench);
         cohortCharts(across,g,C,national?null:bench,b);
         measureTable(rest,g,F,C,national?null:bench,national);
       };
@@ -141,21 +142,6 @@ export function overview(el,app) {
       trendPanel(over,app,{g,alive:a,rows:async()=>national?[{...CANADA}]:[g,{...app.bench,bench:true}].filter((r,i)=>i===0||r.id!==g.id),cohort:()=>cohort(g,app.placeList)});});
   }
   return {update(c){if(['geo','bench','refresh','tm','yr'].some(k=>c.has(k)))render();}};
-}
-
-// Resident workers' sectors against the benchmark: the three most over-represented and the mix difference D.
-function sectorCard(el,g,p,b,bench) {
-  if(!b){el.replaceChildren();return;}
-  const {rows,D}=sectorBase(p,b),top=rows.filter(r=>r.lq!=null&&r.s>=.02).sort((x,y)=>y.lq-x.lq).slice(0,3);
-  if(!top.length){el.replaceChildren();return;}
-  const t=()=>({headers:['Sector',`${g.name} workers`,`${g.name} share (%)`,`${bench.name} share (%)`,'LQ','Workers beyond benchmark share'],
-    rows:rows.map(r=>[r.name,r.e,r.s==null?null:100*r.s,r.S==null?null:100*r.S,r.lq,r.excess]),numeric:new Set([1,2,3,4,5]),
-    format:(v,i)=>i===0?v:i===2||i===3?pct(v):i===4?v.toFixed(2):int(v)});
-  el.replaceChildren(chartCard({title:'What residents work in',
-    subtitle:`Resident labour force by industry sector, Census 2021, against ${bench.name}.${D!=null?` ${pct(100*D,0)} of workers would have to change sector for the mix to match ${bench.name}.`:''}`,
-    meta:meta(g,t,'LQ = sector share of the area’s labour force divided by the benchmark’s share. Workers beyond benchmark share = e − t·S. Mix difference D = ½ Σ |s − S| (Krugman 1991). Residents are counted where they live, not where they work.')},
-    h('ol',{class:'base-list'},top.map(r=>h('li',{},h('strong',{},r.name),
-      h('span',{},`${pct(100*r.s)} of resident workers, ${r.lq.toFixed(1)}× ${bench.name}’s share; ${int(r.excess)} more workers than that share implies.`))))));
 }
 
 function measureTable(el,g,F,C,bench,national) {

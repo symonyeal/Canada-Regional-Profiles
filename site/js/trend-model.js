@@ -60,6 +60,13 @@ export function combine(m,x,n) {
 
 const finite=s=>new Map((s??[]).filter(p=>Number.isFinite(p.value)).map(p=>[p.year,p.value]));
 
+// A calendar axis has one slot per year, including years the source omits entirely.
+// Used by annual charts and their tables so missing periods cannot be compressed or bridged.
+export function calendar(s,[a,c]) {
+  const v=finite(s);
+  return Array.from({length:c-a+1},(_,i)=>({year:a+i,value:v.get(a+i)??null}));
+}
+
 // Years in which every series that publishes anything has a finite value. Cost O(Σ|s|).
 export function commonYears(S) {
   const F=S.map(finite).filter(m=>m.size);if(!F.length)return [];
@@ -81,12 +88,12 @@ export const rangeText=([a,c])=>a===c?String(a):`${a}–${c}`;
 
 // Change of a series from a to c. Counts and money: percentage change and its compound annual rate;
 // rates and shares: percentage points; ages: years.
-// fit 'slope': d is the least-squares slope per decade over the finite years in [a, c] (at least three), for
+// fit 'slope': d is the least-squares slope per decade over the finite years in [a, c] (at least three and both endpoints published), for
 // series whose single years are dominated by noise.
 export function change(s,[a,c],unit,fit) {
   const v=finite(s),x0=v.get(a)??null,x1=v.get(c)??null;
   if(fit==='slope'){
-    const P=[...v].filter(([y])=>y>=a&&y<=c),n=P.length;if(n<3)return {x0,x1,d:null,rate:null};
+    const P=[...v].filter(([y])=>y>=a&&y<=c),n=P.length;if(n<3||x0==null||x1==null)return {x0,x1,d:null,rate:null};
     const ty=P.reduce((t,[y])=>t+y,0)/n,tx=P.reduce((t,[,x])=>t+x,0)/n;
     const sxy=P.reduce((t,[y,x])=>t+(y-ty)*(x-tx),0),syy=P.reduce((t,[y])=>t+(y-ty)**2,0);
     return {x0,x1,d:10*sxy/syy,rate:null,fit};

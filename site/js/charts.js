@@ -87,7 +87,7 @@ export function stacked(rows,categories,colors) {
 // ---------- line and column series ----------
 // series: [{name, values, color, fmt?, width?, markers?}], drawn in order; markers: false draws a context line.
 export function lines({x,series,fmt=compact,height=260,markers=true}) {
-  const el=h('div',{class:'chart-svg',style:{height:`${height}px`},role:'img','aria-label':series.map(s=>`${s.name}: ${x.map((t,i)=>`${t} ${fmt(s.values[i])}`).join(', ')}`).join('. ')});
+  const el=h('div',{class:'chart-svg',style:{height:`${height}px`},role:'img','aria-label':series.map(s=>`${s.name}: ${x.map((t,i)=>`${t} ${s.values[i]==null?'Not available':(s.fmt??fmt)(s.values[i])}`).join(', ')}`).join('. ')});
   return responsive(el,(w,H)=>{
     const vals=series.flatMap(s=>s.values).filter(Number.isFinite);if(!vals.length){el.replaceChildren();return;}
     const yt=niceTicks(Math.min(0,...vals),Math.max(...vals),4),L=Math.max(54,Math.min(112,Math.max(...yt.map(v=>fmt(v).length))*7+12)),R=16,T=10,B=26,pw=w-L-R,ph=H-T-B,n=x.length;
@@ -97,7 +97,7 @@ export function lines({x,series,fmt=compact,height=260,markers=true}) {
     for(const sr of series){let d='';sr.values.forEach((v,i)=>{if(v==null){d+=' ';return;}d+=`${d&&!d.endsWith(' ')?'L':'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`;});
       const path=svg('path',{d:d.replace(/ /g,''),fill:'none',stroke:sr.color,'stroke-width':sr.width??2});s.append(path);
       if(sr.markers===false){tipOn(path,`<b>${esc(sr.name)}</b>`);continue;}
-      if(markers)sr.values.forEach((v,i)=>{if(v==null)return;const c=svg('circle',{cx:X(i),cy:Y(v),r:3.5,fill:'#fff',stroke:sr.color,'stroke-width':1.6,tabindex:0,'aria-label':`${sr.name} ${x[i]}: ${fmt(v)}`});
+      if(markers)sr.values.forEach((v,i)=>{if(v==null)return;const c=svg('circle',{cx:X(i),cy:Y(v),r:3.5,fill:'#fff',stroke:sr.color,'stroke-width':1.6,tabindex:0,'aria-label':`${sr.name} ${x[i]}: ${(sr.fmt??fmt)(v)}`});
         tipOn(c,`<b>${esc(sr.name)}</b><br>${esc(x[i])}: ${esc(sr.fmt?.(v)??fmt(v))}`);s.append(c);});}
     el.replaceChildren(s);
   });

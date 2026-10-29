@@ -1,7 +1,7 @@
 // Target-group maps shared by Market, Workforce catchment and the Resident/Household dashboards.
 // One active filter defines the target: a contiguous interval of ordered bins, or any subset of categories.
 // The card reports the selected area's own published counts; the map shows census subdivisions for context.
-import {census,censusMany,geographies,catalog,tablePair,metadata,geoMember,points,coord,table} from '../api.js';
+import {census,censusMany,geographies,catalog,tablePair,metadata,geoMember,points,coord,table,memoRequest} from '../api.js';
 import {CANADA,binCounts,jenks,ramp,int,pct,matchesProvince} from '../model.js';
 import {FILTERS} from '../census.js';
 import {h,icon,rangeSlider,toggle,showTip,hideTip,esc} from '../ui.js';
@@ -20,7 +20,7 @@ export const serializeSelection=(spec,on)=>{const idx=on.flatMap((v,i)=>v?[i]:[]
 
 // ---------- data ----------
 const cache=new Map();
-const memo=(key,fn)=>{if(!cache.has(key))cache.set(key,fn().catch(e=>{cache.delete(key);throw e;}));return cache.get(key);};
+const memo=(key,fn)=>memoRequest(cache,key,fn);
 export const clearChoropleth=()=>cache.clear();
 export const scopeOf=place=>place.id===CANADA.id?'':String(place.province).split('_')[0];
 

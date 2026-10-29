@@ -3,11 +3,12 @@
 import {sephSectors,sephAt,table,SourceError} from '../api.js';
 import {commonYears,parseRange,clampRange,rangeText} from '../trend-model.js';
 import {CANADA,int,pct,signed} from '../model.js';
-import {industryRows,shiftShare,sectorBase} from '../regional-model.js';
+import {industryRows,shiftShare} from '../regional-model.js';
 import {h,segmented,exhibitMenu,loading,failure,chartCard,dataTable,rangeSlider} from '../ui.js';
 import {industryCache} from './industries.js';
 import {insights} from './insights.js';
-import {lifetime,slot,sharedPair,censusMeta} from './common.js';
+import {lifetime,slot,sharedPair} from './common.js';
+import {residentSectors} from './sectors.js';
 
 const BASE=2019;
 const yearly=M=>[...M].map(([year,value])=>({year,value}));
@@ -42,21 +43,6 @@ function payrollChange(el,g,app,alive) {
     draw(w);
   },{alive,context:'Payroll job change'});
 }
-// Resident labour force by sector (Census 2021) against the benchmark, every geography level.
-function residentSectors(el,g,bench,alive) {
-  slot(el,async t=>{
-    const {p,b}=await sharedPair(g,bench);if(!alive())return;
-    const {rows,D}=sectorBase(p,b),list=rows.filter(r=>r.e!=null).sort((x,y)=>b?(y.lq??0)-(x.lq??0):y.e-x.e);
-    const tbl=()=>({headers:['Sector','Workers','Share (%)',...(b?[`${bench.name} share (%)`,'LQ','Workers beyond benchmark share']:[])],
-      rows:list.map(r=>[r.name,r.e,r.s==null?null:100*r.s,...(b?[r.S==null?null:100*r.S,r.lq,r.excess]:[])]),numeric:new Set([1,2,3,4,5]),
-      format:(v,i)=>i===0?v:i===2||i===3?pct(v):i===4?v.toFixed(2):i===5?signed(v):int(v)});
-    t.replaceChildren(chartCard({title:'Industry sectors of resident workers',subtitle:`Census 2021, by place of residence; ${b?`ranked by location quotient against ${bench.name}`:'ranked by workers'}.${D!=null?` Mix difference: ${pct(100*D,0)} of workers would have to change sector to match.`:''}`,
-      meta:{...censusMeta(g,{universe:'Labour force aged 15+ with an industry (NAICS 2017 sectors)',notes:'LQ = the sector’s share here divided by its benchmark share. Mix difference D = ½ Σ |s − S| (Krugman 1991).'}),table:tbl}},
-      b?h('p',{},h('strong',{},'Most over-represented:'),' ',list.slice(0,3).map(r=>`${r.name} (${r.lq.toFixed(2)}×, ${signed(r.excess)} workers)`).join(', '),'.'):null,
-      h('details',{class:'remaining-sectors'},h('summary',{},`All ${list.length} sectors`),dataTable(tbl()))));
-  },{alive,context:'Resident workers by sector'});
-}
-
 const VIEWS=[['largest','Largest'],['change','Job gains and losses'],['specialized','Specialization']];
 export function industries(el,app) {
   const life=lifetime(el),top=h('div',{class:'economy-cards'}),root=h('div',{class:'industry-brief'}),detailHost=h('div');
@@ -65,7 +51,8 @@ export function industries(el,app) {
     const a=life.next(),g=await app.resolved();if(!a())return;
     const pay=h('div'),res=h('div');top.replaceChildren(pay,res);
     if(g.type==='PR')payrollChange(pay,g,app,a);else pay.remove();
-    residentSectors(res,g,app.bench,a);
+    const bench=app.bench;
+    slot(res,async t=>{const {p,b}=await sharedPair(g,bench);if(a())residentSectors(t,g,p,b,bench);},{alive:a,context:'Resident workers by sector'});
   }
   const rank=lifetime(root);
   async function render() {

@@ -2,7 +2,7 @@
 // R = shown areas [{id, type, name, bench}]; D = Map id → series; Y = common years; [a, c] = chosen range;
 // C = cohort {label, areas} for ranks; E = Map id → cohort series; Q = cohort changes over [a, c].
 import {CANADA} from '../model.js';
-import {TRENDS,commonYears,parseRange,clampRange,rangeText,change,changeText,valueText} from '../trend-model.js';
+import {TRENDS,commonYears,parseRange,clampRange,rangeText,change,changeText,valueText,calendar} from '../trend-model.js';
 import {standing,rankText} from '../regional-model.js';
 import {h,chartCard,dataTable,loading,failure,rangeSlider} from '../ui.js';
 import {lines,legend} from '../charts.js';
@@ -44,13 +44,13 @@ export function trendPanel(el,app,{g,rows,cohort,alive,title='Over time'}) {
       describe:(x,y)=>rangeText([Y[x],Y[y]]),onchange:(x,y)=>{app.set('yr',`${Y[x]}-${Y[y]}`);draw();}}):null;
     body.replaceChildren(...[slider?h('div',{class:'trend-range'},h('span',{class:'field-label'},`Years published for every area shown: ${rangeText([Y[0],Y.at(-1)])}`),slider.el,slider.out):null,view].filter(Boolean));
     const draw=()=>{
-      const w=clampRange(Y,parseRange(app.state.t.yr)),[a,c]=w,X=Y.filter(y=>y>=a&&y<=c);
+      const w=clampRange(Y,parseRange(app.state.t.yr)),[a,c]=w,X=calendar([],w).map(p=>p.year);
       const K=shown.map(r=>({r,s:D.get(r.id),...change(D.get(r.id).values,w,m.unit,m.fit)}));
       const index=relative(m)&&shown.length>1,at=(s,y)=>s.values.find(p=>p.year===y)?.value??null;
       const fy=v=>index?v.toFixed(0):valueText(m.unit,v);
       const lead=K.find(k=>k.r.id===g.id)??null,bench=K.filter(k=>k.r.bench&&k!==lead),others=K.filter(k=>k!==lead&&!k.r.bench);
       const line=({r,s,x0},color,context)=>({name:r.name,color,width:context?1.25:2,markers:!context,fmt:v=>index?`${v.toFixed(1)} (${a} = 100)`:valueText(m.unit,v),
-        values:X.map(y=>{const v=at(s,y);return v==null?null:index?100*v/x0:v;})});
+        values:X.map(y=>{const v=at(s,y);return v==null?null:index?(x0>0?100*v/x0:null):v;})});
       const series=[...others.map(k=>line(k,OTHER,true)),...bench.map(k=>line(k,COMPARE)),...(lead?[line(lead,PRIMARY)]:[])];
       const ranked=K.filter(k=>k.d!=null).sort((p,q)=>q.d-p.d);
       const Q=E&&C.areas.map(x=>E.has(x.id)?change(E.get(x.id).values,w,m.unit,m.fit).d:null);
@@ -60,13 +60,14 @@ export function trendPanel(el,app,{g,rows,cohort,alive,title='Over time'}) {
         others.length>1&&ranked.length>2?`Among the areas shown, change runs from ${ranked.at(-1).r.name} (${changeText(m.unit,ranked.at(-1))}) to ${ranked[0].r.name} (${changeText(m.unit,ranked[0])}).`:'',
         rank?`${rankText(rank)[0].toUpperCase()}${rankText(rank).slice(1)} ${C.label} in change over ${rangeText(w)}.`:''].filter(Boolean).join(' ');
       const sources=[...new Map(K.map(k=>[k.s.source,k.s])).values()];
-      const full=()=>({headers:['Year',...K.map(k=>k.r.name)],rows:Y.map(y=>[String(y),...K.map(k=>at(k.s,y))]),numeric:new Set(K.map((_,i)=>i+1)),format:(v,i)=>i?valueText(m.unit,v):v});
+      const full=()=>({headers:['Year',...K.map(k=>k.r.name)],rows:calendar([],[Y[0],Y.at(-1)]).map(({year:y})=>[String(y),...K.map(k=>at(k.s,y))]),numeric:new Set(K.map((_,i)=>i+1)),format:(v,i)=>i?valueText(m.unit,v):v});
       const summary={headers:['Area','Source','Published years',String(a),String(c),'Change'],
         rows:K.map(k=>[k.r.name,short(k.s.source),span(k.s),k.x0,k.x1,changeText(m.unit,k)]),numeric:new Set([3,4]),format:(v,i)=>i===3||i===4?valueText(m.unit,v):v};
       view.replaceChildren(...[
         chartCard({title:`${m.label}, ${rangeText(w)}`,subtitle:said,meta:{source:sources.map(x=>x.source).join('; '),
           url:sources[0].url,geo:K.map(k=>k.r.name).join('; '),period:`${rangeText([Y[0],Y.at(-1)])}, every year published for all areas shown`,universe:m.survey,
           notes:[index?`Chart: index, ${a} = 100, so areas of different size share one axis; the table gives the published values.`:'',
+            index&&K.some(k=>k.x0<=0)?`Cannot index a zero or negative base: ${K.filter(k=>k.x0<=0).map(k=>k.r.name).join(', ')}. Published values remain in the table.`:'',
             missing.length?`Not published annually for ${missing.map(r=>r.name).join(', ')}.`:'',
             m.fit?'':relative(m)?'Change: per cent over the range and compound annual rate.':'Change: difference over the range.',
             m.unit.startsWith('$')&&!/constant prices/.test(m.survey)?'Current dollars, not adjusted for inflation.':'',m.note??''].filter(Boolean).join(' ')||null,table:full}},
