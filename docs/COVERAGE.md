@@ -1,5 +1,9 @@
 # Coverage and comparison with the reference
 
+The 2026-10-29 internal-consistency audit corrected WDS scaling of missing values, Business Counts map cells
+and specialization denominators, resident-sector summaries, and annual chart calendars. These changes preserve
+source definitions and geography coverage. See [Validation](VALIDATION.md) for the checks and sampling limits.
+
 The current interface has four views: Findings, Economy, Compare and Detail ([Decisions](DECISIONS.md), 2026-10-26). Optional maps contain the distribution explorer and community finder. Logistics, enrolments and station climate normals are no longer shown. Findings and Compare include annual measures over a chosen range; the years below are the first published, as of 2026-10-26.
 
 | Exhibit | Canada | Province/territory | CMA/CA | CSD | CD | ER | Population centre |

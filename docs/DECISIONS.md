@@ -1,5 +1,20 @@
 # Decisions
 
+## 2026-10-29: shared request and missing-data rules
+
+- Request policy lives in `transport.js`; source adapters remain in `api.js`. Errors, retries and request limits
+  retain their existing defaults. All refreshable promise caches use the same helper, which evicts a failure only
+  if it is still the cached promise. Text and JSON responses have separate cache identities.
+- Business Counts industry reads and map-cell rules live in `tools/business.js`; resident-sector exhibits live
+  in `tools/sectors.js`. The views consume shared definitions instead of owning separate cache policies.
+- Empty or nonnumeric WDS observations remain missing after scaling. A missing business-industry count becomes
+  zero only if the published classified total is zero. Specialization ratios need published totals or complete
+  partitions; filtering suppressed industries cannot establish a denominator.
+- Annual charts use a complete calendar axis inside the selected range. Omitted years remain gaps, and the
+  data table retains them. A series with a nonpositive base cannot be indexed; its published values remain in
+  the table. Temperature-change ranks require both range endpoints and at least three finite years, matching
+  the stated same-period cohort rule.
+
 ## 2026-10-27: configurable regional benchmarks
 
 The owner identified province-to-province and county-to-county configurability as vital before publication.

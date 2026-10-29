@@ -20,13 +20,17 @@ not break. Codex reads the same file through [AGENTS.md](AGENTS.md).
 
 ## The live model is written once
 
-The website is `site/index.html`, `site/style.css` and ES modules in `site/js/`: `api.js` (requests,
-retries, Census SDMX and WDS adapters), `model.js` and `regional-model.js` (pure calculation: findings, ranks,
-similarity, sector base, shift-share), `census.js` (characteristic
+The website is `site/index.html`, `site/style.css` and ES modules in `site/js/`: `transport.js` (shared request cache,
+concurrency, retries and errors), `api.js` (Census SDMX, WDS and OECD adapters), `model.js`, `regional-model.js`
+and `trend-model.js` (pure calculation: findings, ranks, annual periods, similarity, sector base, shift-share), `census.js` (characteristic
 identifiers per exhibit), `state.js` (URL state), `geo.js` (boundary files, maps, spatial services),
 `ui.js` and `charts.js` (components and exhibits, each with a data table and CSV), and one module
 per tool in `site/js/tools/`. `app.js` owns geography, history and lazy mounting. Docs/REFERENCE.md
 is the visual and behavioural specification. Never relabel provincial observations as local values.
+
+`tools/business.js` owns industry Business Counts reads and missing-cell rules; `tools/sectors.js` renders
+resident-sector exhibits from plain profiles. Promise caches use `transport.memoRequest`: an old failed read
+must not remove a replacement created by Refresh. Annual charts and their tables retain omitted calendar years.
 
 `site/boundaries/` is quantized TopoJSON built by `tools/boundaries` (Rust) from the 2021 cartographic boundary
 service; it holds geometry, DGUIDs and names only. `neighbours-<pr>.json` is derived from those files by the `neighbours`
@@ -35,6 +39,7 @@ output: deployment does not run the builder.
 
 Browser checks live in `tests/browser/` (`workflows.mjs`, `sweep.mjs`); they need `npm install`
 and a Chromium-based browser and are run locally, not in CI.
+`regressions.mjs` checks suppression and calendar gaps with synthetic inputs; `visuals.mjs` checks maps and charts.
 
 `analysis/` is the historical offline implementation. Its size-class formula and classification
 are comparison references; the live site does not run its fetch/build pipeline. Do not regenerate

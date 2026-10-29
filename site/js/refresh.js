@@ -1,4 +1,4 @@
-import {clearCache} from './api.js';
+import {clearCache} from './transport.js';
 import {clearChoropleth} from './tools/choropleth.js';
 import {clearCohorts} from './tools/common.js';
 

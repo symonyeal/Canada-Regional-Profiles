@@ -3,7 +3,7 @@
 // Legend: g = resolved geography; B = benchmark search matches; j = focused benchmark option.
 import {PT,CANADA,TYPES,provinceOf,matchesProvince,int} from './model.js';
 import {parse,serialize,withGeography,SECTIONS,KEYS,benchmarkFor} from './state.js';
-import {geographies,census,journal} from './api.js';
+import {geographies,census,journal,memoRequest} from './api.js';
 import {refreshData} from './refresh.js';
 import {h,dialog,dataTable} from './ui.js';
 import {profile} from './tools/profile.js';
@@ -24,7 +24,7 @@ let state=parse(location.search,location.hash),place=null,placeToken=0;
 const mounted=new Map();
 let mapDialog=null,mapTool=null;
 const lists=new Map();
-const placeList=type=>{if(!lists.has(type))lists.set(type,geographies(type).catch(e=>{lists.delete(type);throw e;}));return lists.get(type);};
+const placeList=type=>memoRequest(lists,type,()=>geographies(type));
 
 // Resolve name and province for a geography from the official list (or the profile when the list fails).
 async function resolve(geo) {

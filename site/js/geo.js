@@ -1,5 +1,5 @@
 // Spatial services and the shared map. All observations still come from the tools; this module draws them.
-import {request,memoRequest,SourceError} from './api.js';
+import {request,memoRequest,SourceError} from './transport.js';
 import {h,icon} from './ui.js';
 import {CANADA} from './model.js';
 

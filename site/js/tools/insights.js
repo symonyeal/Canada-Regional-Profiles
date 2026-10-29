@@ -1,10 +1,11 @@
 // Industry insights: a banner that opens a full-screen panel with industry selection, trends, benchmarks and location.
-import {metadata,geoMember,points,coord,table,catalog,tablePair,businessSlice,units,SourceError} from '../api.js';
-import {CANADA,PT,int,compact,fmt,pct,sectorOf,SECTORS,locationQuotient,estimate,ramp} from '../model.js';
+import {metadata,geoMember,points,coord,table,units,SourceError} from '../api.js';
+import {CANADA,PT,int,compact,fmt,pct,sectorOf,SECTORS,locationQuotient} from '../model.js';
 import {h,icon,rail,kpiCard,chartCard,exhibitMenu,loading,failure,dataTable} from '../ui.js';
 import {spark,lines,columns,barList,legend} from '../charts.js';
 import {PRIMARY,COMPARE,MAP_SCALE} from '../palette.js';
 import {lifetime,slot} from './common.js';
+import {businessIndustry,businessMatrix,clearBusiness} from './business.js';
 import {mapPanel,mapTable,areas,shapes,scopeOf,businessBins} from './choropleth.js';
 
 const TABS=[['selection','Industry selection','search'],['trends','Trends','economic'],['benchmarks','Benchmarks','benchmarks'],['location','Location','mapPin']];
@@ -92,10 +93,10 @@ export function insights(el,app,{banner:showBanner=true}={}) {
         notes:pr.id!==place.id?`SEPH is published for provinces and territories; this is ${a.geoName}, not ${place.name}.`:null,
         table:()=>({headers:['Year',a.geoName],rows:a.values.map(v=>[String(v.year),v.value]),numeric:new Set([1]),format:(v,i)=>i?int(v):v})}},
         h('div',{class:'body'},lines({x:years.map(String),series:[{name:a.geoName,values:years.map(y=>a.values.find(v=>v.year===y)?.value??null),color:PRIMARY,fmt:int}],fmt:compact,height:250})),legend([[a.geoName,PRIMARY]])));},{alive,context:'Employment'});
-    slot(cells[1],async t=>{const d=await establishments(place,ind.code);if(!alive())return;
+    slot(cells[1],async t=>{const d=await businessIndustry(place,ind.code);if(!alive())return;
       t.replaceChildren(kpiCard({title:'Number of establishments',value:d.current==null?'Not available':int(d.current),sub:`${d.geoName} · ${d.period}${d.previous!=null?` · ${d.previous<=d.current?'+':''}${int(d.current-d.previous)} since ${d.prior}`:''}`,
         meta:{source:`Statistics Canada, ${d.table.cubeTitleEn}`,url:table(d.table.productId),geo:d.geoName,period:d.period,universe:'Business locations with employees',table:()=>({headers:['Release','Locations'],rows:[[d.period,d.current],[d.prior??'',d.previous]],numeric:new Set([1]),format:v=>int(v)})}}));},{alive,context:'Establishments'});
-    slot(cells[2],async t=>{const d=await establishments(place,ind.code);if(!alive())return;
+    slot(cells[2],async t=>{const d=await businessIndustry(place,ind.code);if(!alive())return;
       t.replaceChildren(kpiCard({title:'Establishment location quotient',value:d.lq==null?'Not available':d.lq.toFixed(2),sub:`${d.geoName} vs Canada · ${d.period}`,
         meta:{source:`Statistics Canada, ${d.table.cubeTitleEn}`,url:table(d.table.productId),geo:d.geoName,period:d.period,notes:'Share of the area’s employer locations in this industry divided by the same share for Canada.',table:()=>({headers:['Measure','Value'],rows:[['Location quotient',d.lq]],numeric:new Set([1]),format:v=>v?.toFixed(2)})}}));},{alive,context:'Establishment LQ'});
     slot(cells[3],async t=>{if(pr.id===CANADA.id) throw new SourceError('unsupported','GDP by industry in this table is published for provinces and territories; choose one to see it.');
@@ -129,7 +130,7 @@ export function insights(el,app,{banner:showBanner=true}={}) {
 
   function location(main,place,ind,alive) {
     const cells=['span-2','span-4'].map(c=>main.appendChild(h('div',{class:c})));
-    slot(cells[0],async t=>{const d=await establishments(place,ind.code);if(!alive())return;
+    slot(cells[0],async t=>{const d=await businessIndustry(place,ind.code);if(!alive())return;
       t.replaceChildren(kpiCard({title:'Businesses in industry',value:d.current==null?'Not available':int(d.current),sub:`${d.geoName} · ${d.period}`,
         meta:{source:`Statistics Canada, ${d.table.cubeTitleEn}`,url:table(d.table.productId),geo:d.geoName,period:d.period,universe:'Business locations with employees',table:()=>({headers:['Measure','Value'],rows:[['Locations',d.current]],numeric:new Set([1]),format:v=>int(v)})}}));},{alive,context:'Businesses'});
     const mapCell=main.appendChild(h('div',{class:'span-6 map-cell',style:{height:'440px',display:'flex',position:'relative'}}));
@@ -137,44 +138,28 @@ export function insights(el,app,{banner:showBanner=true}={}) {
       const scope=scopeOf(place);if(!scope){mapCell.replaceChildren(h('p',{class:'notice'},'Choose a province or territory to map businesses in this industry by census subdivision.'));return;}
       const panel=mapPanel(mapCell,{unit:'n',label:'Businesses',onopen:id=>{close();app.choose({id,type:'CSD'},'insights');}});mapCell.querySelector('.map-wrap').style.flex='1';
       try {
-        const [{metadata:m,subtotal,table:t},{list},d]=await Promise.all([businessBins(true),areas(scope),establishments(place,ind.code)]);
+        const [{metadata:m,subtotal,table:t},{list},d]=await Promise.all([businessBins(true),areas(scope),businessIndustry(place,ind.code)]);
         const it=m.dimension[2].member.find(x=>x.classificationCode===ind.code);if(!it) throw new SourceError('unsupported','The local Business Counts table does not publish this industry.');
         const matched=list.map(g=>({g,mem:geoMember(m.dimension[0],g)})).filter(x=>x.mem);
         const keys=matched.flatMap(({mem})=>[coord([mem.memberId,1,it.memberId]),coord([mem.memberId,1,subtotal.memberId])]);
         const pts=await points(t.productId,keys);if(!alive())return;
         const v=k=>pts.get(k)?.at(-1)?.value??null;
-        // A missing series is zero only when the area publishes a classified total (the table omits zero series).
-        const matrix=new Map(matched.map(({g,mem})=>{const tot=v(coord([mem.memberId,1,subtotal.memberId])),n=v(coord([mem.memberId,1,it.memberId]));return [g.id,{name:g.name,total:tot,values:[n??(tot!=null?0:null)]}];}));
+        const matrix=businessMatrix(matched,pts,it.memberId,subtotal.memberId);
         const data={spec:{kind:'toggle',ramp:MAP_SCALE,bins:[{id:it.memberId}],unit:'Businesses'},matrix,own:{name:d.geoName,total:null,values:[d.current]}};
         await panel.draw({data,sel:[true],place,group:'businesses',shapes:shapes(scope)});
         mapCell.querySelector('.map-wrap').append(h('div',{class:'map-tools'},exhibitMenu({title:`Businesses in ${ind.name} by census subdivision`,source:`Statistics Canada, ${t.cubeTitleEn}`,url:table(t.productId),
           geo:'Census subdivisions published in the local Business Counts table',period:d.period,notes:'Share: this industry’s locations as a share of all classified employer locations in the area.',table:()=>mapTable(panel.rows)})));
       } catch(e) {if(alive())failure(mapCell,e,null,'Business map unavailable');}
     })();
-    slot(cells[1],async t=>{const d=await establishments(place,ind.code);if(!alive())return;
+    slot(cells[1],async t=>{const d=await businessIndustry(place,ind.code);if(!alive())return;
       t.replaceChildren(chartCard({title:'Businesses by number of employees',subtitle:`${ind.name} · ${d.geoName} · ${d.period}`,meta:{source:`Statistics Canada, ${d.table.cubeTitleEn}`,url:table(d.table.productId),geo:d.geoName,period:d.period,
         table:()=>({headers:['Employment size','Locations'],rows:d.sizes.map((s,i)=>[s,d.N[i]]),numeric:new Set([1]),format:v=>int(v)})}},
         h('div',{class:'body'},columns({categories:d.sizes.map(s=>s.replace(/ employees$/,'').replace(' to ','-').replace(' and over','+')),series:[{name:d.geoName,values:d.N,color:COMPARE}],fmt:v=>int(v),axisFmt:v=>int(v),height:220}))));},{alive,context:'Size classes'});
   }
 
-  // Business Counts row for the industry: national table for Canada and provinces, local table for CMAs and CSDs.
-  const estCache=new Map();
-  function establishments(place,code) {
-    const key=`${place.id}:${code}`;if(estCache.has(key))return estCache.get(key);
-    const p=(async()=>{
-      const local=['CSD','CMACA'].includes(place.type),geo=local||place.type==='PR'?place:provinceOf(place),cat=await catalog(),pair=tablePair(cat,local),nat=tablePair(cat,false);
-      const level=String(code.length);
-      const [cur,prev,ca]=await Promise.all([businessSlice(pair.current,geo,level),pair.previous?businessSlice(pair.previous,geo,level).catch(()=>null):null,businessSlice(nat.current,CANADA,level)]);
-      const row=cur.rows.find(r=>r.code===code),before=prev?.rows.find(r=>r.code===code),natRow=ca.rows.find(r=>r.code===code);
-      const tot=cur.rows.reduce((s,r)=>s+(r.locations??0),0),natTot=ca.rows.reduce((s,r)=>s+(r.locations??0),0);
-      return {geoName:local||place.type==='PR'?place.name:geo.name,table:pair.current,period:pair.current.cubeTitleEn.match(/(June|December) \d{4}$/)[0],prior:pair.previous?.cubeTitleEn.match(/(June|December) \d{4}$/)[0],
-        current:row?.locations??null,previous:before?.locations??null,N:row?.N??[],sizes:cur.sizes,lq:locationQuotient(row?.locations??null,tot,natRow?.locations??null,natTot)};
-    })();
-    estCache.set(key,p);p.catch(()=>estCache.delete(key));return p;
-  }
 
   return {open(code,from,tab='trends'){app.set('ins',code);app.set('inst',tab);open(code?tab:'selection',from);},destroy:close,update(changed){
-    if(changed.has('refresh'))estCache.clear();
+    if(changed.has('refresh'))clearBusiness();
     if((changed.has('geo')||changed.has('refresh'))&&overlay)open(app.state.t.inst);
     if(changed.has('ins')||changed.has('inst')){if(app.state.t.ins)open(app.state.t.inst);else if(overlay)close();}
     if(changed.has('geo')&&!overlay&&app.state.t.ins&&['insights','industries'].includes(app.state.section))open(app.state.t.inst);
