@@ -2,18 +2,18 @@
 
 [Open the dashboard](https://symonyeal.github.io/Canada-Regional-Profiles/)
 
-Where a Canadian place stands out, and why. Choose a province, territory, municipality, census division, metropolitan area, economic region or population centre; the page ranks it among comparable areas, decomposes its payroll job change, and finds its most similar places and its neighbours. The address bar keeps the selection and view for sharing.
+The dashboard compares Canadian provinces, territories, municipalities, census divisions, metropolitan areas, economic regions and population centres. It ranks places among comparable areas, decomposes payroll job change, and identifies similar places and neighbours. The address bar stores the selection and view in a shareable URL.
 
 The page queries Statistics Canada and the OECD when a view opens. It ships no downloaded observations and holds results only in the open tab. **Refresh data**, under **Data and sources**, queries the sources again. Two kinds of geometry are served with the page: a simplified copy of the 2021 cartographic boundaries, and each area's list of bordering areas derived from it. Neither contains observations.
 
-## Views
+## Dashboard views
 
 | View | What it answers |
 | --- | --- |
-| Findings | Where does this place stand now? The latest published year of every annual measure for its level, ranked among comparable areas in that same year, with the benchmark and the change over the preceding five years. Then, on which Census 2021 measures does it differ most from comparable areas? One finding per theme (population, work, income, housing, people, commuting), each with the value, its rank in the cohort, the benchmark and the cohort's distribution. For Canada: where provinces and territories differ most. Over time: how an annual measure changed over a chosen range of years, against the benchmark and ranked in the cohort. Also the sectors in which residents are over-represented. |
-| Economy | How did payroll jobs change over a chosen range of years (2019 to the latest by default), and how much of that is national growth, sector mix or regional performance (provinces and territories)? Which sectors employ residents more than the benchmark (all levels)? Detailed industries by specialization, size or change, with an industry detail. |
-| Compare | How does the place compare with its five most similar areas, its neighbours (municipalities and census divisions) or peers chosen by the reader, on the same measures and period, and on annual measures over the years all of them publish? |
-| Detail | Residents, work and education, households, housing stock, costs and commuting, each against the benchmark. |
+| Findings | Latest annual measures are ranked among comparable areas for the same year, with the benchmark and change over the preceding five years. Census 2021 findings cover population, work, income, housing, people and commuting; each reports the value, cohort rank, benchmark and cohort distribution. The Canada view ranks provinces and territories on the largest differences. Annual charts compare a selected period with the benchmark and cohort. Findings also show resident-sector shares. |
+| Economy | Payroll job changes from a chosen base year (2019 by default) to the latest year, split into national growth, sector mix and regional shift for provinces and territories. Resident-sector shares compared with the benchmark, at all geography levels. Detailed industries by specialization, size or change, with industry-level detail. |
+| Compare | Compares the place with its five most similar areas, its neighbours (municipalities and census divisions) or reader-selected peers. Annual comparisons use years published for every area shown. |
+| Detail | Residents, work and education, households, housing stock, costs and commuting compared with the benchmark. |
 
 **Explore map** opens distribution maps and the community finder on demand. Each exhibit has a source menu, data table and CSV export.
 
@@ -21,7 +21,7 @@ Each latest-year finding includes a line chart of up to fifteen recent years, wi
 
 **Benchmark** can be Canada, the selected area's province or territory, any named province or territory, or another region of the same geography type anywhere in Canada. Choose **Another region…** to search census divisions/counties, municipalities, metropolitan areas, economic regions or population centres at the selected area's level. The benchmark follows through profile findings, annual comparisons, regional ranking marks, resident-sector comparisons and Detail. Shared links and browser history retain it. Compare also accepts up to three manually chosen peers of the same level. Payroll shift-share and detailed-industry employment LQ retain their explicitly labelled Canada reference.
 
-## What the numbers are
+## Data and measures
 
 - Findings open with the latest published year of each annual measure below: the place, its benchmark and its cohort are compared in that same year, and change runs from the first published year in the five before it.
 - Census findings, comparisons and sector shares use Census 2021, with 2020 incomes. A live request does not make them current. Rate differences are percentage points (pp). The Census Profile service publishes only the 2021 cycle, so Census measures have one year.
