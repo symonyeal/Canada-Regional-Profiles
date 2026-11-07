@@ -39,7 +39,7 @@ binary of the same crate. Rebuild it only when the boundary vintage changes, and
 output: deployment does not run the builder.
 
 Browser checks live in `tests/browser/` (`workflows.mjs`, `sweep.mjs`); they need `npm install`
-and a Chromium-based browser and are run locally, not in CI.
+and a Chromium-based browser. Live-source workflows run locally; deterministic regressions also gate CI.
 `regressions.mjs` checks suppression and calendar gaps with synthetic inputs; `visuals.mjs` checks maps and charts.
 
 `analysis/` is the historical offline implementation. Its size-class formula and classification

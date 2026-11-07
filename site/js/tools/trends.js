@@ -13,6 +13,7 @@ const span=s=>{const v=s.values.filter(p=>p.value!=null);return v.length?rangeTe
 // The selected area is drawn in PRIMARY, the benchmark in COMPARE and other areas as grey context lines.
 const OTHER='#b4beb4';
 const short=t=>t.replace(/^Statistics Canada, table ([\d-]+).*/,'Statistics Canada $1').replace(/^OECD Regional Statistics.*/,'OECD');
+const reads=new WeakMap();
 
 // Measures with a source at the selected area's level; m falls back to the first of them.
 export const trendsFor=g=>TRENDS.filter(m=>m.source[levelOf(g)]);
@@ -20,6 +21,10 @@ export const trendsFor=g=>TRENDS.filter(m=>m.source[levelOf(g)]);
 // Draw the panel into el. rows() resolves R (selected area first); cohort(), when given, resolves C. The view
 // redraws on range changes without new requests; alive() guards every write.
 export function trendPanel(el,app,{g,rows,cohort,alive,title='Over time'}) {
+  reads.get(el)?.abort();
+  const stop=new AbortController();reads.set(el,stop);
+  const signal=alive.signal?AbortSignal.any([alive.signal,stop.signal]):stop.signal;
+  const current=()=>alive()&&!signal.aborted;
   const M=trendsFor(g);
   if(!M.length){el.replaceChildren(h('p',{class:'notice'},'No annual series is published for this geography level; the values above are Census 2021.'));return;}
   const m=M.find(x=>x.id===app.state.t.tm)??M[0];
@@ -30,9 +35,9 @@ export function trendPanel(el,app,{g,rows,cohort,alive,title='Over time'}) {
   loading(body,`Reading every published year of ${m.label.toLowerCase()}…`);
   (async()=>{
     let R,D;
-    try {R=await rows();D=await trendSeries(m,R);}
-    catch(e){if(alive())failure(body,e,()=>trendPanel(el,app,{g,rows,cohort,alive,title}),title);return;}
-    if(!alive())return;
+    try {R=await rows();D=await trendSeries(m,R,{signal});}
+    catch(e){if(current())failure(body,e,()=>trendPanel(el,app,{g,rows,cohort,alive,title}),title);return;}
+    if(!current())return;
     const shown=R.filter(r=>D.has(r.id)),missing=R.filter(r=>!D.has(r.id)),Y=commonYears(shown.map(r=>D.get(r.id).values));
     if(!shown.length||!Y.length){body.replaceChildren(h('p',{class:'notice'},shown.length
       ?`No year is published for every area shown: ${shown.map(r=>`${r.name} ${span(D.get(r.id))}`).join('; ')}.`
@@ -64,7 +69,8 @@ export function trendPanel(el,app,{g,rows,cohort,alive,title='Over time'}) {
         rows:K.map(k=>[k.r.name,short(k.s.source),span(k.s),k.x0,k.x1,changeText(m.unit,k)]),numeric:new Set([3,4]),format:(v,i)=>i===3||i===4?valueText(m.unit,v):v};
       view.replaceChildren(...[
         chartCard({title:`${m.label}, ${rangeText(w)}`,subtitle:said,meta:{source:sources.map(x=>x.source).join('; '),
-          url:sources[0].url,geo:K.map(k=>k.r.name).join('; '),period:`${rangeText([Y[0],Y.at(-1)])}, every year published for all areas shown`,universe:m.survey,
+          url:sources[0].url,sources:K.flatMap(k=>k.s.sources??[]),transformation:sources[0].transformation,
+          geo:K.map(k=>k.r.name).join('; '),period:`${rangeText([Y[0],Y.at(-1)])}, every year published for all areas shown`,universe:m.survey,
           notes:[index?`Chart: index, ${a} = 100, so areas of different size share one axis; the table gives the published values.`:'',
             index&&K.some(k=>k.x0<=0)?`Cannot index a zero or negative base: ${K.filter(k=>k.x0<=0).map(k=>k.r.name).join(', ')}. Published values remain in the table.`:'',
             missing.length?`Not published annually for ${missing.map(r=>r.name).join(', ')}.`:'',
@@ -78,9 +84,9 @@ export function trendPanel(el,app,{g,rows,cohort,alive,title='Over time'}) {
     draw();
     if(!cohort)return;
     try {
-      const c=await cohort(),e=await trendSeries(m,c.areas);if(!alive())return;
+      const c=await cohort(),e=await trendSeries(m,c.areas,{signal});if(!current())return;
       C=c;E=e;draw();
-    } catch(e){if(alive())view.append(h('p',{class:'notice'},`Ranks unavailable: ${e.message}`));}
+    } catch(e){if(current())view.append(h('p',{class:'notice'},`Ranks unavailable: ${e.message}`));}
   })();
 }
 

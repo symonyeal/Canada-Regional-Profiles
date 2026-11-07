@@ -62,7 +62,7 @@ function recentHistory(m,s,g) {
   if(V.filter(v=>v.value!=null).length<2)return h('p',{class:'finding-history'},'Only one year published.');
   const period=`${V[0].year}–${V.at(-1).year}`,fmt=v=>m.unit==='people'?compact(v):m.unit.startsWith('$')?`$${compact(v)}`:valueText(m.unit,v);
   return h('div',{class:'finding-history'},chartCard({title:`${g.name} · ${period}`,
-    meta:{source:s.source,url:s.url,geo:g.name,period,universe:m.survey,notes:m.note,
+    meta:{source:s.source,url:s.url,sources:s.sources,transformation:s.transformation,geo:g.name,period,universe:m.survey,notes:m.note,
       table:()=>({headers:['Year',`${m.label} (${m.unit})`],rows:V.map(v=>[String(v.year),v.value]),numeric:new Set([1]),format:(v,i)=>i?valueText(m.unit,v):v})}},
     lines({x:V.map(v=>String(v.year)),series:[{name:g.name,values:V.map(v=>v.value),color:PRIMARY,fmt:v=>valueText(m.unit,v)}],fmt,height:136,markers:false})),
     h('p',{class:'chart-source'},s.source));
@@ -73,14 +73,14 @@ function recentHistory(m,s,g) {
 async function recent(t,app,a,key) {
   const g=await app.resolved(),national=g.id===CANADA.id,bench=national?null:app.bench,M=trendsFor(g).filter(m=>!m.fit);if(!a())return;
   if(!M.length){t.replaceChildren(h('li',{class:'notice'},'No annual series is published for this geography level; the Census 2021 values follow.'));return;}
-  const C=await cohortAreas(g,app.placeList),R=[...new Map([g,...(bench?[bench]:[]),...C.areas].map(x=>[x.id,x])).values()];
+  const C=await cohortAreas(g,app.placeList,{signal:a.signal}),R=[...new Map([g,...(bench?[bench]:[]),...C.areas].map(x=>[x.id,x])).values()];
   if(!a())return;
   key.replaceChildren(keyFor(g,bench,C,national));
   // Independent slots: a slow OECD response must not hide already available Statistics Canada measures.
   const slots=M.map(()=>h('li',{class:'recent-slot'}));t.replaceChildren(...slots);
   M.forEach((m,i)=>{
     slot(slots[i],async host=>{
-      const S=await trendSeries(m,R);if(!a())return;
+      const S=await trendSeries(m,R,{signal:a.signal});if(!a())return;
       const r=latest(m,S.get(g.id)?.values,bench?S.get(bench.id)?.values:null,C.areas.map(x=>S.get(x.id)?.values));
       if(!r){host.replaceChildren(h('p',{class:'notice'},`${m.label}: no annual value published for ${g.name}.`));return;}
       host.replaceChildren(recentFinding(m,{...r,standing:national?null:standing(r.x,r.X)},{C,bench,national,g,S}));
@@ -122,9 +122,9 @@ export function overview(el,app) {
       h('h3',{class:'subhead'},'Across comparable areas'),across,h('h3',{class:'subhead'},'Over time'),trendNote(),over,base,rest);
     slot(latestList,t=>recent(t,app,a,key),{alive:a,context:'Latest published year'});
     // The profiles need only the DGUID: start them while the geography list resolves the name; the request cache joins them.
-    for(const geo of [app.state.geo,...(app.state.t.bench==='CA'?[CANADA]:[])])census(geo).catch(()=>{});
+    for(const geo of [app.state.geo,...(app.state.t.bench==='CA'?[CANADA]:[])])census(geo,{signal:a.signal}).catch(()=>{});
     slot(list,async t=>{
-      const g=await app.resolved(),bench=app.bench,national=g.id===CANADA.id,{p,b}=await sharedPair(g,bench);if(!a())return;
+      const g=await app.resolved(),bench=app.bench,national=g.id===CANADA.id,{p,b}=await sharedPair(g,bench,{signal:a.signal});if(!a())return;
       const draw=(C,error)=>{
         const F=findings(p,national?p:b,C?.P??null,{national});
         if(C)key.replaceChildren(keyFor(g,b?bench:null,C,national));
@@ -135,10 +135,10 @@ export function overview(el,app) {
         measureTable(rest,g,F,C,national?null:bench,national);
       };
       draw(null);
-      try {const C=await cohort(g,app.placeList);if(a())draw(C);}catch(e){if(a())draw(null,e);}
+      try {const C=await cohort(g,app.placeList,{signal:a.signal});if(a())draw(C);}catch(e){if(a())draw(null,e);}
     },{alive:a,context:'Findings'});
     app.resolved().then(g=>{if(!a())return;const national=g.id===CANADA.id;
-      trendPanel(over,app,{g,alive:a,rows:async()=>national?[{...CANADA}]:[g,{...app.bench,bench:true}].filter((r,i)=>i===0||r.id!==g.id),cohort:()=>cohort(g,app.placeList)});});
+      trendPanel(over,app,{g,alive:a,rows:async()=>national?[{...CANADA}]:[g,{...app.bench,bench:true}].filter((r,i)=>i===0||r.id!==g.id),cohort:()=>cohort(g,app.placeList,{signal:a.signal})});});
   }
   return {update(c){if(['geo','bench','refresh','tm','yr'].some(k=>c.has(k)))render();}};
 }
@@ -172,26 +172,26 @@ export function compare(el,app) {
     loading(out,'Comparing published Census profiles…');
     let rows,why;
     try {
-      if(g.id===CANADA.id){const C=await cohort(g,app.placeList);rows=C.areas.map((x,i)=>({...x,p:C.P[i]}));why='All provinces and territories, territories first.';}
+      if(g.id===CANADA.id){const C=await cohort(g,app.placeList,{signal:a.signal});rows=C.areas.map((x,i)=>({...x,p:C.P[i]}));why='All provinces and territories, territories first.';}
       else if(mode==='similar'){
-        const C=await cohort(g,app.placeList),i=C.areas.findIndex(x=>x.id===g.id);
+        const C=await cohort(g,app.placeList,{signal:a.signal}),i=C.areas.findIndex(x=>x.id===g.id);
         rows=[i,...similar(C.P,i,5).map(s=>s.j)].map(j=>({...C.areas[j],p:C.P[j]}));
         why=`The five ${C.label} closest to ${g.name} on ${SIMILAR.map(id=>measure(id).label.toLowerCase()).join(', ')}, each standardised among the ${C.areas.length} areas.`;
       } else if(mode==='near'){
         const pr=provinceOf(g),N=await neighbours(g);
-        const names=new Map((await app.placeList(g.type)).map(x=>[x.id,x])),P=await censusMany(g.type,[g.id,...N],MEASURE_IDS);
+        const names=new Map((await app.placeList(g.type,{signal:a.signal})).map(x=>[x.id,x])),P=await censusMany(g.type,[g.id,...N],MEASURE_IDS,{signal:a.signal});
         rows=[g.id,...N].map(id=>({...(names.get(id)??{id,name:id}),p:P.get(id)?.rows.length?P.get(id):null}));
         why=N.length?`${g.name} and the ${N.length} ${g.type==='CSD'?'municipalities':'census divisions'} sharing a border with it in ${provinceName(pr)}.`:`${g.name} shares no border with another area of its type in ${provinceName(pr)}.`;
       } else {
-        const ids=peerIds(app.state.t.peers,g),list=national?PT.map(([c])=>provinceGeo(c)):await app.placeList(g.type);if(!a())return;
+        const ids=peerIds(app.state.t.peers,g),list=national?PT.map(([c])=>provinceGeo(c)):await app.placeList(g.type,{signal:a.signal});if(!a())return;
         picker(controls,g,ids,list);
-        const geos=[g,...ids.map(id=>list.find(x=>x.id===id)).filter(Boolean)],P=await Promise.allSettled(geos.map(census));
+        const geos=[g,...ids.map(id=>list.find(x=>x.id===id)).filter(Boolean)],P=await Promise.allSettled(geos.map(x=>census(x,{signal:a.signal})));
         rows=geos.map((x,i)=>({...x,p:P[i].status==='fulfilled'?P[i].value:null}));
         why=ids.length?'Peers you added; links keep them.':'Add up to three peers of the same geography type.';
       }
     } catch(e) {if(a())failure(out,e,render,'Comparison unavailable');return;}
     if(!a())return;
-    const bench=g.id===CANADA.id?null:app.bench,b=bench?await census(bench).catch(()=>null):null;if(!a())return;
+    const bench=g.id===CANADA.id?null:app.bench,b=bench?await census(bench,{signal:a.signal}).catch(()=>null):null;if(!a())return;
     const all=rows.map(r=>({...r,bench:r.id===bench?.id}));
     if(b&&!all.some(r=>r.id===bench.id))all.push({...bench,p:b,bench:true});
     const m=measure(app.state.t.cm)??measure('employment'),ms=COLUMNS.map(measure);

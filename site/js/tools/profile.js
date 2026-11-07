@@ -18,7 +18,7 @@ export function profile(el,app) {
     frame.replaceChildren(rail(DASHBOARDS.map(([key,label,icon])=>({key,label,icon})),dash,v=>{app.set('dv',v);render();},'Profile views'),body);
     app.resolved().then(place=>{if(!alive()||place.id!==app.state.geo.id)return;
       const ctx={place,bench:app.bench,alive};
-      ctx.base=sharedPair(place,ctx.bench);
+      ctx.base=sharedPair(place,ctx.bench,{signal:alive.signal});
       DASH[dash](body,ctx);});
   }
   return {update(changed){if(changed.has('geo')||changed.has('bench')||changed.has('dv')||changed.has('refresh'))render();}};
@@ -63,16 +63,16 @@ const money=v=>compact(v,'$'),moneyFull=v=>`$${int(v)}`;
 const DASH={
   resident(body,ctx) {
     const {place,base}=ctx,[a,b,c,s]=['a','b','c','s'].map(n=>cell(body,n));
-    seriesKpi(a,{title:'Population',ctx,load:()=>populationSeries(place),kind:'bars',format:v=>compact(v),universe:'Total population, July 1 estimates',
+    seriesKpi(a,{title:'Population',ctx,load:()=>populationSeries(place,{signal:ctx.alive.signal}),kind:'bars',format:v=>compact(v),universe:'Total population, July 1 estimates',
       fallback:async()=>({value:(await base).p.value(KPI.population),sub:`${place.name} · Census 2021`})});
-    seriesKpi(b,{title:'Median individual income',ctx,load:()=>incomeSeries(place,'individual'),format:money,universe:'Tax filers and dependants with income',
+    seriesKpi(b,{title:'Median individual income',ctx,load:()=>incomeSeries(place,'individual',{signal:ctx.alive.signal}),format:money,universe:'Tax filers and dependants with income',
       fallback:async()=>({value:(await base).p.value(KPI.medianIndividualIncome),sub:`${place.name} · 2020 income, Census 2021`,universe:'Income recipients aged 15+'})});
     censusKpi(c,{title:'Median age',id:KPI.medianAge,ctx,base,format:v=>fmt(v)});
     shareCard(s,{title:'Age distribution',subtitle:`Share of population by age band, ${place.name}${ctx.bench.id!==place.id?` vs ${ctx.bench.name}`:''}`,group:AGE10,ctx,base,size:'sm'});
   },
   household(body,ctx) {
     const {place,base}=ctx,[a,b,c,m,s,t]=['a','b','c','m','s','t'].map(n=>cell(body,n));
-    seriesKpi(a,{title:'Median family income',ctx,load:()=>incomeSeries(place,'family'),format:money,universe:'Census families, median total income (tax data)',
+    seriesKpi(a,{title:'Median family income',ctx,load:()=>incomeSeries(place,'family',{signal:ctx.alive.signal}),format:money,universe:'Census families, median total income (tax data)',
       fallback:async()=>({title:'Median household income',value:(await base).p.value(KPI.medianHouseholdIncome),sub:`${place.name} · 2020 income, Census 2021`,universe:'Private households'})});
     censusKpi(b,{title:'Average household size',id:KPI.householdSize,ctx,base,format:v=>fmt(v,'ratio').replace(/(\.\d)\d$/,'$1')});
     censusKpi(c,{title:'Number of households',id:KPI.households,ctx,base,format:v=>compact(v)});

@@ -24,3 +24,44 @@ jobs:
       - run: python -m pytest -q -m "not slow"
       - run: python -m ruff check .
       - run: python -m pip check
+
+  browser:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: npm ci
+      - run: npx playwright-core install --with-deps chromium
+      - run: |
+          python -m http.server 8772 --bind 127.0.0.1 --directory site > browser-server.log 2>&1 &
+          server=$!
+          trap 'kill "$server"' EXIT
+          for attempt in $(seq 1 50); do
+            if curl --fail --silent http://127.0.0.1:8772/ > /dev/null; then break; fi
+            sleep 0.1
+          done
+          export BROWSER=$(node --input-type=module -e "import {chromium} from 'playwright-core'; console.log(chromium.executablePath())")
+          node tests/browser/regressions.mjs http://127.0.0.1:8772/ browser-regressions.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-evidence
+          path: browser-regressions.json
+          if-no-files-found: error
+
+  accepted:
+    needs: [checks, browser]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: accepted-site
+          path: site
+          if-no-files-found: error

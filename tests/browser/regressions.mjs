@@ -90,5 +90,23 @@ await check('shared search ignores stale results, cancels on Escape and selects 
   await p.evaluate(()=>searches.get('cancelled')([{name:'Cancelled'}]));
   if(await p.evaluate(()=>chosen!==''||!document.querySelector('#matches').hidden))throw Error('Pending search survived cancellation');
 });
+await check('source definitions and CSV retain ratio operands and source quality',async p=>{
+  await p.evaluate(async()=>{
+    const {exhibitMenu}=await import('./js/ui.js');
+    document.body.append(exhibitMenu({title:'Share',geo:'Manitoba',period:'2020',
+      sources:[{role:'numerator',source:'Numerator table',url:'https://example.test/x',observations:[{refPer:'2020',value:10,statusCode:1}]},
+        {role:'denominator',source:'Denominator table',url:'https://example.test/n',observations:[{refPer:'2020',value:100,qualityCode:2}]}],
+      transformation:{id:'ratio-v1',formula:'100*x/n'},table:()=>({headers:['Year','Share'],rows:[['2020',10]]})}));
+  });
+  await p.getByRole('button',{name:'Options for Share'}).click();
+  await p.getByRole('menuitem',{name:'Source and definitions'}).click();
+  const content=await p.locator('.source-block').innerText();
+  if(!content.includes('Numerator table')||!content.includes('Denominator table')||!content.includes('100*x/n')||!content.includes('status 1')||!content.includes('quality 2'))throw Error('Ratio receipt missing');
+  await p.getByRole('button',{name:'Close',exact:true}).click();
+  await p.getByRole('button',{name:'Options for Share'}).click();
+  const file=p.waitForEvent('download');await p.getByRole('menuitem',{name:'Download CSV'}).click();
+  const download=await file,stream=await download.createReadStream();let text='';for await(const chunk of stream)text+=chunk.toString();
+  if(!text.includes('Numerator table')||!text.includes('Denominator table')||!text.includes('100*x/n')||!text.includes('quality 2'))throw Error('CSV receipt missing');
+});
 await b.close();fs.writeFileSync(out,JSON.stringify({base,results},null,2));
 if(results.some(r=>!r.pass))process.exitCode=1;

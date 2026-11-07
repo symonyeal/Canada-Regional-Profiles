@@ -25,7 +25,7 @@ function groupView(el,app,group,keys,alive) {
       state={key,data:null,sel:null};
       filterCards(cards,{group,open:key,sel:null,onopen:open});
       try {
-        const data=await filterData(place,group,key);if(!alive()||state.key!==key)return;
+        const data=await filterData(place,group,key,{signal:alive.signal});if(!alive()||state.key!==key)return;
         const sel=parseSelection(data.spec,key===app.state.t[keys.map]?app.state.t[keys.sel]:'',data.spec.bins.length);
         state={key,data,sel};draw(place,shapesP);
       } catch(e) {if(alive()&&state.key===key)failure(cards.querySelector('.filter[aria-expanded=true]')??cards,e,()=>load(key),'Map data unavailable');}
@@ -53,5 +53,5 @@ export function market(el,app) {
     frame.replaceChildren(rail(MARKET.map(([key,label,icon])=>({key,label,icon})),group,key=>{app.set('mk',key);app.set('mkm','');app.set('mkr','');render();},'Market'),body);
     panel=groupView(body,app,group,{map:'mkm',sel:'mkr',unit:'mku'},alive);
   }
-  return {update(changed){if(['geo','refresh','mk','mkm','mkr'].some(k=>changed.has(k)))render();},destroy:()=>panel?.destroy?.()};
+  return {update(changed){if(['geo','refresh','mk','mkm','mkr'].some(k=>changed.has(k)))render();},destroy:()=>{life.cancel();panel?.destroy?.();}};
 }

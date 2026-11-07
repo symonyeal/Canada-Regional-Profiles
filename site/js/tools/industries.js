@@ -15,7 +15,7 @@ const yearly=M=>[...M].map(([year,value])=>({year,value}));
 // shift. The range runs over years with payroll totals here and in Canada; by default from 2019 to the latest year.
 function payrollChange(el,g,app,alive) {
   slot(el,async t=>{
-    const all=await sephSectors(g);if(!alive())return;
+    const all=await sephSectors(g,{signal:alive.signal});if(!alive())return;
     const Y=commonYears([yearly(all.agg.e),yearly(all.agg.E)]);
     if(!Y.length) throw new SourceError('empty','SEPH publishes no year with payroll totals for both this area and Canada.');
     const card=h('div'),w=clampRange(Y,parseRange(app.state.t.py)??[BASE,Y.at(-1)]);
@@ -51,7 +51,7 @@ export function industries(el,app) {
     const pay=h('div'),res=h('div');top.replaceChildren(pay,res);
     if(g.type==='PR')payrollChange(pay,g,app,a);else pay.remove();
     const bench=app.bench;
-    slot(res,async t=>{const {p,b}=await sharedPair(g,bench);if(a())residentSectors(t,g,p,b,bench);},{alive:a,context:'Resident workers by sector'});
+    slot(res,async t=>{const {p,b}=await sharedPair(g,bench,{signal:a.signal});if(a())residentSectors(t,g,p,b,bench);},{alive:a,context:'Resident workers by sector'});
   }
   const rank=lifetime(root);
   async function render() {
@@ -62,7 +62,7 @@ export function industries(el,app) {
     const body=h('div'),tools=h('div',{class:'industry-toolbar'},segmented(VIEWS,v,k=>{app.set('iv',k);render();},'Industry view'),
       h('label',{class:'field'},h('span',{},'Industry set'),filter),h('button',{type:'button',class:'btn ghost',onclick:e=>detail.open('',e.currentTarget)},'Find an industry'));
     root.replaceChildren(tools,body);loading(body,'Querying industry employment…');
-    let d;try {d=await industryData(g);}catch(e){if(!a())return;failure(body,e,render,'Industry employment unavailable');
+    let d;try {d=await industryData(g,{signal:a.signal});}catch(e){if(!a())return;failure(body,e,render,'Industry employment unavailable');
       if(e.kind==='unsupported'&&g.province)body.append(h('button',{type:'button',class:'btn ghost',onclick:()=>app.choose(parentProvince(g),'industries')},'View provincial industries'));
       return;
     }

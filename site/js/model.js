@@ -76,19 +76,33 @@ export function matchesProvince(g,province) {
 
 // Census Profile for one area: values keyed by characteristic, gender and statistic.
 export class Profile {
-  constructor(rows) {
-    this.rows=rows;this.chars=new Map();this.values=new Map();
-    for(const r of rows) {
-      this.chars.set(r.characteristic.id,{...r.characteristic,topic:r.topic,notes:r.notes});
-      this.values.set(`${r.characteristic.id}/${r.gender.id}/${r.statistic.id}`,r.value);
+  #chars=new Map();
+  #values=new Map();
+  constructor(rows,{area,time,url}={}) {
+    if(!Array.isArray(rows))throw Error('Profile observations must be an array.');
+    this.rows=Object.freeze(rows.map(r=>Object.freeze({...r,...Object.fromEntries(
+      ['area','characteristic','gender','statistic'].map(k=>{
+        if(!r?.[k]?.id||!['string','number'].includes(typeof r[k].id))throw Error(`Profile lacks ${k} identity.`);
+        return [k,Object.freeze({...r[k],id:String(r[k].id)})];
+      }))})));
+    const expectedArea=area??this.rows[0]?.area.id,expectedTime=time??this.rows[0]?.time;
+    for(const r of this.rows) {
+      if(r.value!==null&&!Number.isFinite(r.value))throw Error('Profile values must be finite numbers or missing.');
+      if(r.area.id!==expectedArea)throw Error('Profile mixes or mismatches geographies.');
+      if(typeof r.time!=='string'||!r.time||r.time!==expectedTime)throw Error('Profile mixes or mismatches reference periods.');
+      const key=JSON.stringify([String(r.characteristic.id),String(r.gender.id),String(r.statistic.id)]);
+      if(this.#values.has(key))throw Error('Profile has duplicate observation keys.');
+      this.#chars.set(String(r.characteristic.id),Object.freeze({...r.characteristic,topic:r.topic,notes:r.notes}));
+      this.#values.set(key,r.value);
     }
-    this.area=rows[0]?.area;this.time=rows[0]?.time;
+    this.area=this.rows[0]?.area;this.time=this.rows[0]?.time;this.url=url;
+    Object.freeze(this);
   }
-  value(id,gender='1',stat='1') {return this.values.get(`${id}/${gender}/${stat}`)??null;}
+  value(id,gender='1',stat='1') {return this.#values.get(JSON.stringify([String(id),String(gender),String(stat)]))??null;}
   share(id,total,gender='1') {const a=this.value(id,gender),b=this.value(total,gender);return a==null||b==null||b<=0?null:100*a/b;}
   sum(ids,gender='1') {return completeSum(ids.map(id=>this.value(id,gender)));}
-  children(id) {return [...this.chars.values()].filter(c=>c.parent===String(id)).sort((a,b)=>a.order-b.order);}
-  name(id) {return this.chars.get(String(id))?.name??null;}
+  children(id) {return [...this.#chars.values()].filter(c=>c.parent===String(id)).sort((a,b)=>a.order-b.order);}
+  name(id) {return this.#chars.get(String(id))?.name??null;}
   // The name without its leading classification code: "44-45 Retail trade" is "Retail trade".
   label(id) {return this.name(id)?.replace(/^\d+(-\d+)? /,'')??null;}
 }

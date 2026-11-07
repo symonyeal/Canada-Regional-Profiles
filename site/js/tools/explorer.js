@@ -13,14 +13,15 @@ export function explorer(el,app) {
   const mapEl=h('div',{class:'map',role:'region','aria-label':'Map of communities'}),panel=h('div',{class:'selected-panel',hidden:true}),note=h('p',{class:'map-note',hidden:true});
   const wrap=h('div',{class:'map-wrap'},mapEl,panel,note);
   el.append(h('div',{class:'frame explorer'},h('div',{class:'explorer-head'},h('label',{class:'search'},icon('search',16),search),chips),listEl,wrap));
-  const m=createMap(mapEl);let shown=PAGE,data=null;
+  const m=createMap(mapEl),selection=lifetime(el);let shown=PAGE,data=null;
 
   async function render() {
+    selection.cancel();
     const alive=life.next(),place=await app.resolved();if(!alive()||place.id!==app.state.geo.id)return;
     const pr=provinceOf(place);
     search.value=app.state.t.exq;loading(listEl,'Loading official communities…');panel.hidden=true;note.hidden=true;shown=PAGE;
     try {
-      const all=(await geographies('CSD')).filter(g=>matchesProvince(g,pr));if(!alive())return;
+      const all=(await geographies('CSD',{signal:alive.signal})).filter(g=>matchesProvince(g,pr));if(!alive())return;
       data={pr,all,place,features:null,points:new Map()};
       drawChips();drawList();
       if(!pr){note.hidden=false;note.textContent='Choose a province or territory to map its communities. The list covers all of Canada.';return;}
@@ -73,6 +74,7 @@ export function explorer(el,app) {
   let selected=null;
   async function select(id,user) {
     const g=data.all.find(x=>x.id===id);if(!g)return;
+    const alive=selection.next();
     app.set('exs',id);
     drawList();
     if(m&&data.features){if(selected)m.map.setFeatureState({source:'csd',id:selected},{selected:false});m.map.setFeatureState({source:'csd',id},{selected:true});
@@ -80,12 +82,12 @@ export function explorer(el,app) {
     selected=id;
     panel.hidden=false;panel.replaceChildren(h('h5',{},g.name),h('p',{class:'card-sub'},g.description?.replace(/ \[[^\]]+\]/,'')??''),h('p',{class:'card-sub'},'Loading Census 2021 indicators…'));
     try {
-      const p=(await censusMany('CSD',[id],['1','2','3','6','40'])).get(id);if(selected!==id)return;
+      const p=(await censusMany('CSD',[id],['1','2','3','6','40'],{signal:alive.signal})).get(id);if(!alive()||selected!==id)return;
       panel.replaceChildren(h('h5',{},g.name),h('p',{class:'card-sub'},`${g.municipalType||'Census subdivision'} · CSD ${id.slice(9)}`),
         h('dl',{},h('dt',{},'Population, 2021'),h('dd',{},int(p.value('1'))),h('dt',{},'Change since 2016'),h('dd',{},p.value('3')==null?'Not available':`${fmt(p.value('3'))}%`),
           h('dt',{},'Density per km²'),h('dd',{},fmt(p.value('6'))),h('dt',{},'Median age'),h('dd',{},fmt(p.value('40')))),
         h('button',{type:'button',class:'btn',onclick:()=>app.choose({id,type:'CSD'})},'Open community profile',icon('chevronRight',15)));
-    } catch(e) {if(selected===id)failure(panel,e,()=>select(id,false),'Indicators unavailable');}
+    } catch(e) {if(alive()&&selected===id)failure(panel,e,()=>select(id,false),'Indicators unavailable');}
   }
-  return {update(changed){if(['geo','refresh','ext'].some(k=>changed.has(k))||(changed.has('exq')&&!changed.has('geo')))render();},destroy:()=>{life.next();m?.destroy();}};
+  return {update(changed){if(['geo','refresh','ext'].some(k=>changed.has(k))||(changed.has('exq')&&!changed.has('geo')))render();},destroy:()=>{life.cancel();selection.cancel();m?.destroy();}};
 }

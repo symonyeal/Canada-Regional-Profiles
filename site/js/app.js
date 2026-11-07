@@ -24,7 +24,7 @@ let state=parse(location.search,location.hash),place=null,placeToken=0;
 const mounted=new Map();
 let mapDialog=null,mapTool=null;
 const lists=new Map();
-const placeList=type=>memoRequest(lists,type,()=>geographies(type));
+const placeList=(type,options={})=>options.signal?geographies(type,options):memoRequest(lists,type,()=>geographies(type));
 
 // Resolve name and province for a geography from the official list (or the profile when the list fails).
 async function resolve(geo) {
@@ -159,6 +159,7 @@ function build() {
 }
 function showSection(changed=new Set()) {
   const key=state.section||'overview';
+  for(const [id] of mounted)if(id!==key||changed.has('geo')||changed.has('refresh'))$(`${id}-tool`).dispatchEvent(new Event('deactivate'));
   for(const id of SECTIONS)$(id).hidden=id!==key;
   $('section-links').querySelectorAll('a').forEach(a=>a.setAttribute('aria-current',String(a.hash===`#${key}`)));
   if(!mounted.has(key)){
@@ -179,7 +180,7 @@ async function openMap(kind='market') {
 }
 function refresh() {
   clearCache();lists.clear();$('geo-status').textContent='Querying the public sources again.';
-  for(const [,tool] of mounted)tool.update(new Set(['geo','refresh']));
+  showSection(new Set(['geo','refresh']));
   mapTool?.update(new Set(['geo','refresh']));
 }
 function sources() {

@@ -54,11 +54,12 @@ export const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;'
 // ---------- dialog ----------
 export function dialog(title,content) {
   const opener=document.activeElement;
-  const close=()=>{d.close();d.remove();opener?.focus?.();};
+  const close=()=>d.close();
   const d=h('dialog',{class:'dialog','aria-label':title},
     h('div',{class:'dialog-head'},h('h3',{},title),h('button',{class:'icon-btn',type:'button','aria-label':'Close',onclick:close},icon('close',18))),
     h('div',{class:'dialog-body'},content));
   d.addEventListener('cancel',e=>{e.preventDefault();close();});
+  d.addEventListener('close',()=>{d.remove();opener?.focus?.();},{once:true});
   d.addEventListener('click',e=>{if(e.target===d)close();});
   document.body.append(d);d.showModal();return d;
 }
@@ -127,19 +128,29 @@ function menu(items,label='More options') {
   const wrap=h('div',{class:'menu-wrap'},button,list);return wrap;
 }
 // The standard chart menu: data table, CSV and source details for one exhibit.
+export function sourceRows(meta) {
+  const rows=[['Geography',meta.geo],['Period',meta.period],['Universe',meta.universe],['Notes',meta.notes]];
+  if(meta.sources?.length)for(const s of meta.sources){
+    const role={numerator:'Numerator',denominator:'Denominator',value:'Source'}[s.role]??s.role;
+    rows.push([role,s.source,s.url],['Source geography',s.geography],['Source unit',s.unit],
+      ['Source periods',s.periods?.join('; ')],['Source series',s.coordinate??Object.entries(s.selector??{}).map(([k,v])=>`${k}: ${v}`).join('; ')],
+      ['Retrieved',s.retrievedAt?.join('; ')],
+      ['Source observations',s.observations?.map(v=>`${v.refPer??v.year}: ${v.value??'missing'}${v.statusCode!=null?` (status ${v.statusCode})`:''}${v.qualityCode!=null?` (quality ${v.qualityCode})`:''}${v.symbolCode!=null?` (symbol ${v.symbolCode})`:''}`).join('; ')]);
+  } else rows.unshift(['Source',meta.source,meta.url]);
+  if(meta.transformation)rows.push(['Calculation',meta.transformation.formula],['Calculation version',meta.transformation.id]);
+  return rows.filter(([,v])=>v);
+}
 export function exhibitMenu(meta) {
   return menu([
     {label:'View data table',icon:'table',action:()=>dialog(meta.title,h('div',{},sourceBlock(meta),dataTable(meta.table())))},
     {label:'Download CSV',icon:'download',action:()=>{const t=meta.table();download(`${meta.title.toLowerCase().replace(/[^a-z0-9]+/g,'-')}.csv`,
-      [[meta.title],[`Geography: ${meta.geo??''}`],[`Period: ${meta.period??''}`],[`Source: ${meta.source??''}`],...(meta.universe?[[`Universe: ${meta.universe}`]]:[]),[`Retrieved: ${new Date().toISOString()}`],[],t.headers,...t.rows]);}},
+      [[meta.title],...sourceRows(meta).map(([k,v,url])=>[`${k}: ${v}${url?` (${url})`:''}`]),[`Exported: ${new Date().toISOString()}`],[],t.headers,...t.rows]);}},
     {label:'Source and definitions',icon:'info',action:()=>dialog(meta.title,sourceBlock(meta))},
   ],`Options for ${meta.title}`);
 }
 function sourceBlock(meta) {
   return h('dl',{class:'source-block'},
-    ...[['Source',meta.url?h('a',{href:meta.url,target:'_blank',rel:'noopener'},meta.source,' ',icon('external',13)):meta.source],
-      ['Geography',meta.geo],['Period',meta.period],['Universe',meta.universe],['Notes',meta.notes],['Retrieved',new Date().toLocaleString('en-CA',{dateStyle:'medium',timeStyle:'short'})]]
-      .filter(([,v])=>v).flatMap(([k,v])=>[h('dt',{},k),h('dd',{},v)]));
+    ...sourceRows(meta).flatMap(([k,v,url])=>[h('dt',{},k),h('dd',{},url?h('a',{href:url,target:'_blank',rel:'noopener'},v,' ',icon('external',13)):v)]));
 }
 export function segmented(options,value,onchange,label) {
   const el=h('div',{class:'segmented',role:'group','aria-label':label});
@@ -185,10 +196,13 @@ export function kpiCard({title,value,sub,spark,meta}) {
 const ICONS={"economic":[["path",{"d":"M3 3v16a2 2 0 0 0 2 2h16"}],["path",{"d":"m19 9-5 5-4-4-3 3"}]],"resident":[["path",{"d":"M18 20a6 6 0 0 0-12 0"}],["circle",{"cx":"12","cy":"10","r":"4"}],["circle",{"cx":"12","cy":"12","r":"10"}]],"household":[["path",{"d":"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"}],["circle",{"cx":"9","cy":"7","r":"4"}],["path",{"d":"M22 21v-2a4 4 0 0 0-3-3.87"}],["path",{"d":"M16 3.13a4 4 0 0 1 0 7.75"}]],"dwelling":[["path",{"d":"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"}],["path",{"d":"M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"}]],"workforce":[["path",{"d":"M18 21a8 8 0 0 0-16 0"}],["circle",{"cx":"10","cy":"8","r":"5"}],["path",{"d":"M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"}]],"livability":[["circle",{"cx":"12","cy":"12","r":"4"}],["path",{"d":"M12 2v2"}],["path",{"d":"M12 20v2"}],["path",{"d":"m4.93 4.93 1.41 1.41"}],["path",{"d":"m17.66 17.66 1.41 1.41"}],["path",{"d":"M2 12h2"}],["path",{"d":"M20 12h2"}],["path",{"d":"m6.34 17.66-1.41 1.41"}],["path",{"d":"m19.07 4.93-1.41 1.41"}]],"search":[["circle",{"cx":"11","cy":"11","r":"8"}],["path",{"d":"m21 21-4.3-4.3"}]],"chevronRight":[["path",{"d":"m9 18 6-6-6-6"}]],"more":[["circle",{"cx":"12","cy":"12","r":"1"}],["circle",{"cx":"12","cy":"5","r":"1"}],["circle",{"cx":"12","cy":"19","r":"1"}]],"plus":[["path",{"d":"M5 12h14"}],["path",{"d":"M12 5v14"}]],"minus":[["path",{"d":"M5 12h14"}]],"download":[["path",{"d":"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"}],["polyline",{"points":"7 10 12 15 17 10"}],["line",{"x1":"12","x2":"12","y1":"15","y2":"3"}]],"table":[["path",{"d":"M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"}]],"info":[["circle",{"cx":"12","cy":"12","r":"10"}],["path",{"d":"M12 16v-4"}],["path",{"d":"M12 8h.01"}]],"close":[["path",{"d":"M18 6 6 18"}],["path",{"d":"m6 6 12 12"}]],"mapPin":[["path",{"d":"M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"}],["circle",{"cx":"12","cy":"10","r":"3"}]],"dollar":[["line",{"x1":"12","x2":"12","y1":"2","y2":"22"}],["path",{"d":"M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"}]],"user":[["path",{"d":"M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"}],["circle",{"cx":"12","cy":"7","r":"4"}]],"clock":[["circle",{"cx":"12","cy":"12","r":"10"}],["polyline",{"points":"12 6 12 12 16 14"}]],"building":[["rect",{"width":"16","height":"20","x":"4","y":"2","rx":"2","ry":"2"}],["path",{"d":"M9 22v-4h6v4"}],["path",{"d":"M8 6h.01"}],["path",{"d":"M16 6h.01"}],["path",{"d":"M12 6h.01"}],["path",{"d":"M12 10h.01"}],["path",{"d":"M12 14h.01"}],["path",{"d":"M16 10h.01"}],["path",{"d":"M16 14h.01"}],["path",{"d":"M8 10h.01"}],["path",{"d":"M8 14h.01"}]],"key":[["path",{"d":"M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"}],["circle",{"cx":"16.5","cy":"7.5","r":".5","fill":"currentColor"}]],"bed":[["path",{"d":"M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8"}],["path",{"d":"M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"}],["path",{"d":"M12 4v6"}],["path",{"d":"M2 18h20"}]],"store":[["path",{"d":"m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"}],["path",{"d":"M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"}],["path",{"d":"M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"}],["path",{"d":"M2 7h20"}],["path",{"d":"M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7"}]],"maximize":[["polyline",{"points":"15 3 21 3 21 9"}],["polyline",{"points":"9 21 3 21 3 15"}],["line",{"x1":"21","x2":"14","y1":"3","y2":"10"}],["line",{"x1":"3","x2":"10","y1":"21","y2":"14"}]],"refresh":[["path",{"d":"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"}],["path",{"d":"M21 3v5h-5"}],["path",{"d":"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"}],["path",{"d":"M8 16H3v5"}]],"link":[["path",{"d":"M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"}],["path",{"d":"M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"}]],"alert":[["path",{"d":"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"}],["path",{"d":"M12 9v4"}],["path",{"d":"M12 17h.01"}]],"arrowLeft":[["path",{"d":"m12 19-7-7 7-7"}],["path",{"d":"M19 12H5"}]],"external":[["path",{"d":"M15 3h6v6"}],["path",{"d":"M10 14 21 3"}],["path",{"d":"M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"}]],"list":[["path",{"d":"M3 12h.01"}],["path",{"d":"M3 18h.01"}],["path",{"d":"M3 6h.01"}],["path",{"d":"M8 12h13"}],["path",{"d":"M8 18h13"}],["path",{"d":"M8 6h13"}]],"benchmarks":[["circle",{"cx":"7.5","cy":"7.5","r":".5","fill":"currentColor"}],["circle",{"cx":"18.5","cy":"5.5","r":".5","fill":"currentColor"}],["circle",{"cx":"11.5","cy":"11.5","r":".5","fill":"currentColor"}],["circle",{"cx":"7.5","cy":"16.5","r":".5","fill":"currentColor"}],["circle",{"cx":"17.5","cy":"14.5","r":".5","fill":"currentColor"}],["path",{"d":"M3 3v16a2 2 0 0 0 2 2h16"}]]};
 ICONS.home=ICONS.dwelling;
 
-// A generation counter per tool: work started for an older selection never draws.
+// A tool generation owns request leases as well as permission to draw.
 export function lifetime(el) {
-  let gen=0;
-  return {next(){const g=++gen;return ()=>g===gen&&el.isConnected;}};
+  let gen=0,stop=new AbortController();
+  const cancel=()=>{gen++;stop.abort();};
+  (el.closest?.('.tool')??el).addEventListener('deactivate',cancel);
+  return {cancel,next(){cancel();stop=new AbortController();const g=gen;
+    const alive=()=>g===gen&&!stop.signal.aborted&&el.isConnected;alive.signal=stop.signal;return alive;}};
 }
 // Run fn(el) into its own element with loading and retry states; one slot failing never blocks another.
 export function slot(el,fn,{text,context,alive=()=>true}={}) {

@@ -178,3 +178,27 @@ One industry workspace uses the existing payroll and employee-estimate adapters.
 Resident labour-force sectors and occupations use shares and benchmark marks. Their exports retain the underlying counts alongside shares. Qualification categories keep their published nested definitions and now explain their overlap beside the chart. Household income distribution remains a comparison; repeated profile maps and the duplicate workforce view are removed from the main flow. Climate is omitted from the general housing view rather than given an empty national panel.
 
 This is an approved presentation and navigation change, including which rows are selected for job-change rankings. The source adapters, industry estimator, missing-value reconciliation and five-year source pairing are unchanged. It is not a claim of complete numerical parity across every geography and filter.
+
+## 2026-11-06: admitted observations and request ownership
+
+Census responses must identify the requested geography and 2021 period. A profile
+has one geography, one period and one observation per characteristic, gender and
+statistic. Missing observations remain missing; an unpublished area may have an
+empty profile. Malformed SDMX coordinates and unexpected areas fail admission.
+
+Source decoding and admission run inside the cached request promise. A rejected
+response is evicted by identity, so Retry can fetch a replacement without clearing
+unrelated data. Decoder contracts distinguish different interpretations of one
+endpoint. Fulfilled requests expire after five minutes; at most 128 are retained.
+The diagnostic journal retains the latest 256 exchanges.
+
+Each active tool generation owns cancellable request leases. Deactivation and a
+new selection release them; another consumer of the same request keeps its read.
+The last departing consumer cancels queued work, retries and physical requests.
+All copies of a request share the host budget, including hedges and races: two
+physical exchanges for OECD and six for other hosts. Idle host queues are removed.
+
+Derived annual measures retain both operands, their observation periods and
+source status, with the transformation recorded in exhibit metadata and exports.
+Deterministic browser regressions now gate CI. Pages consumes the site artifact
+from the exact successful checks run and skips superseded main revisions.
