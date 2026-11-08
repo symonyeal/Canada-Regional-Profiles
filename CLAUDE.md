@@ -16,7 +16,6 @@ not break. Codex reads the same file through [AGENTS.md](AGENTS.md).
 | State what was measured and what was not. | "Not measured" is a finding. A projection is not a measurement. |
 | Every observed value on the live site comes from a public API named under its exhibit; no observation bundles or typed-in figures. Boundary geometry is the one static input (`site/boundaries/`). | The owner requested runtime data, without downloaded static datasets; boundaries were approved as static geometry on 2026-10-24 because the boundary service fails about half its connections. |
 | Jurisdictions follow the order of `regions.PT`: territories first, then west to east. | Coverage was requested one province or territory at a time, territories first; all thirteen are built. |
-| Read Statistics Canada files through `analysis/statcan.py`. | The files mix UTF-8 and cp1252 bytes behind a byte-order mark; `text()` repairs them in one place. |
 
 ## The live model is written once
 
@@ -42,9 +41,8 @@ Browser checks live in `tests/browser/` (`workflows.mjs`, `sweep.mjs`); they nee
 and a Chromium-based browser. Live-source workflows run locally; deterministic regressions also gate CI.
 `regressions.mjs` checks suppression and calendar gaps with synthetic inputs; `visuals.mjs` checks maps and charts.
 
-`analysis/` is the historical offline implementation. Its size-class formula and classification
-are comparison references; the live site does not run its fetch/build pipeline. Do not regenerate
-or commit `site/data/*.js`. `site/classification.json` is taxonomy configuration, not observations.
+The earlier offline Python build is archived outside the repository. Do not commit `site/data/*.js`.
+`site/classification.json` is taxonomy configuration, not observations.
 
 ## Code
 
@@ -57,13 +55,11 @@ source. Mathematical outcomes are return values, not exceptions.
 ```text
 node --test tests/*.test.js
 cargo test --release --manifest-path tools/boundaries/Cargo.toml
-python -m pytest -q -m "not slow"
-python -m ruff check .
-python -m pip check
+cargo fmt --check --manifest-path tools/boundaries/Cargo.toml
+cargo clippy --release --all-targets --manifest-path tools/boundaries/Cargo.toml -- -D warnings
 ```
 
 Run `tests/browser/workflows.mjs` and `sweep.mjs` for runtime-data or interaction changes, covering municipal selection,
-shared URLs, missing data and source failure. Historical `-m slow` build checks require the old
-download collection and apply only when changing that offline pipeline. A behavioural change
+shared URLs, missing data and source failure. A behavioural change
 states its measured effect, jurisdiction and revision; do not claim exact reference parity
 without a complete rendered comparison.

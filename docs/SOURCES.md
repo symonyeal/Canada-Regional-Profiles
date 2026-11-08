@@ -54,4 +54,4 @@ Until 2026-10-26 the logistics, talent and climate exhibits also queried Statist
 
 ## Historical offline inputs
 
-`analysis/` and its tests document an earlier offline build that downloaded source files (SEPH 14-10-0202, Census Profile, LFS 14-10-0464, Business Counts, PSIS 37-10-0277, ODEF, NRCan Atlas layers, ISED broadband files, OurAirports, World Port Index). The website neither downloads nor serves them.
+The archived `analysis/` and its tests documented an earlier offline build that downloaded source files (SEPH 14-10-0202, Census Profile, LFS 14-10-0464, Business Counts, PSIS 37-10-0277, ODEF, NRCan Atlas layers, ISED broadband files, OurAirports, World Port Index). The website neither downloads nor serves them.

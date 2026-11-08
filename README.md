@@ -80,7 +80,3 @@ It pages through the 2021 cartographic boundary service into `<cache-dir>` (resu
 ```text
 cargo run --release --manifest-path tools/boundaries/Cargo.toml --bin neighbours -- site/boundaries
 ```
-
-## Historical analysis
-
-`analysis/` is an earlier offline Python build kept for its comparison records. The website does not use it. Its unit checks run with `python -m pytest -q -m "not slow"`; the slow checks need a download collection that is not part of this repository.

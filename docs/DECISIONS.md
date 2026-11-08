@@ -164,7 +164,7 @@ Census requests list the 172 characteristics the exhibits use: about 100 KB and 
 
 ## Historical pipeline
 
-`analysis/` is the earlier offline Python build. It is not used by the website or its deployment and is kept for its comparison records and tests.
+The earlier offline Python build (`analysis/`) was not used by the website or its deployment and has been archived outside the repository.
 
 
 ## 2026-10-26: regional brief and peer comparison
