@@ -10,36 +10,63 @@
 //!   w   effective area of each position, degrees²; endpoints are infinite and always kept
 //! Cost: O(n log n) per arc with a binary heap (stale entries skipped).
 
-use std::{cmp::{Ordering, Reverse}, collections::BinaryHeap};
 use crate::topo::{arc, P};
+use std::{
+    cmp::{Ordering, Reverse},
+    collections::BinaryHeap,
+};
 
 #[derive(PartialEq)]
 struct W(f64);
 impl Eq for W {}
-impl PartialOrd for W { fn partial_cmp(&self, o: &Self) -> Option<Ordering> { Some(self.cmp(o)) } }
-impl Ord for W { fn cmp(&self, o: &Self) -> Ordering { self.0.total_cmp(&o.0) } }
+impl PartialOrd for W {
+    fn partial_cmp(&self, o: &Self) -> Option<Ordering> {
+        Some(self.cmp(o))
+    }
+}
+impl Ord for W {
+    fn cmp(&self, o: &Self) -> Ordering {
+        self.0.total_cmp(&o.0)
+    }
+}
 
 /// Effective areas w of arc `a`.
 pub fn areas(a: &[[f64; 2]]) -> Vec<f64> {
     let n = a.len();
     let mut w = vec![f64::INFINITY; n];
-    if n < 3 { return w; }
-    let tri = |i: usize, j: usize, k: usize|
-        ((a[j][0] - a[i][0]) * (a[k][1] - a[i][1]) - (a[k][0] - a[i][0]) * (a[j][1] - a[i][1])).abs() / 2.0;
-    let (mut prev, mut next): (Vec<usize>, Vec<usize>) = ((0..n).map(|i| i.wrapping_sub(1)).collect(), (1..=n).collect());
+    if n < 3 {
+        return w;
+    }
+    let tri = |i: usize, j: usize, k: usize| {
+        ((a[j][0] - a[i][0]) * (a[k][1] - a[i][1]) - (a[k][0] - a[i][0]) * (a[j][1] - a[i][1]))
+            .abs()
+            / 2.0
+    };
+    let (mut prev, mut next): (Vec<usize>, Vec<usize>) = (
+        (0..n).map(|i| i.wrapping_sub(1)).collect(),
+        (1..=n).collect(),
+    );
     let mut cur = vec![0.0; n];
     let mut heap = BinaryHeap::new();
-    for i in 1..n - 1 { cur[i] = tri(i - 1, i, i + 1); heap.push(Reverse((W(cur[i]), i))); }
+    for (i, c) in cur.iter_mut().enumerate().take(n - 1).skip(1) {
+        *c = tri(i - 1, i, i + 1);
+        heap.push(Reverse((W(*c), i)));
+    }
     let mut floor = 0.0f64;
     while let Some(Reverse((W(x), i))) = heap.pop() {
-        if w[i].is_finite() || x != cur[i] { continue; }
+        if w[i].is_finite() || x != cur[i] {
+            continue;
+        }
         floor = floor.max(x);
         w[i] = floor;
         let (p, q) = (prev[i], next[i]);
         next[p] = q;
         prev[q] = p;
         for j in [p, q] {
-            if j > 0 && j < n - 1 { cur[j] = tri(prev[j], j, next[j]); heap.push(Reverse((W(cur[j]), j))); }
+            if j > 0 && j < n - 1 {
+                cur[j] = tri(prev[j], j, next[j]);
+                heap.push(Reverse((W(cur[j]), j)));
+            }
         }
     }
     w
@@ -49,11 +76,15 @@ pub fn areas(a: &[[f64; 2]]) -> Vec<f64> {
 pub fn planar(a: &[P]) -> Vec<[f64; 2]> {
     let phi = a.iter().map(|p| p[1] as f64).sum::<f64>() / a.len() as f64 * 1e-7;
     let k = phi.to_radians().cos() * 1e-7;
-    a.iter().map(|p| [p[0] as f64 * k, p[1] as f64 * 1e-7]).collect()
+    a.iter()
+        .map(|p| [p[0] as f64 * k, p[1] as f64 * 1e-7])
+        .collect()
 }
 
 /// Positions kept at threshold `eps`: endpoints and every position with w ≥ eps.
-pub fn keep(w: &[f64], eps: f64) -> Vec<bool> { w.iter().map(|&x| x >= eps).collect() }
+pub fn keep(w: &[f64], eps: f64) -> Vec<bool> {
+    w.iter().map(|&x| x >= eps).collect()
+}
 
 /// Keeps further positions until every ring has at least three distinct positions: each step restores the
 /// position of greatest area among the ring's arcs. A restored position serves every ring sharing the arc.
@@ -61,12 +92,26 @@ pub fn guard(w: &[Vec<f64>], kept: &mut [Vec<bool>], rings: &[&Vec<i64>]) {
     for refs in rings {
         loop {
             let k: &[Vec<bool>] = kept;
-            let distinct: usize = refs.iter().map(|&r| k[arc(r).0].iter().filter(|&&x| x).count() - 1).sum();
-            if distinct >= 3 { break; }
-            let best = refs.iter().map(|&r| arc(r).0)
-                .flat_map(|i| (0..w[i].len()).filter(move |&j| !k[i][j]).map(move |j| (i, j)))
+            let distinct: usize = refs
+                .iter()
+                .map(|&r| k[arc(r).0].iter().filter(|&&x| x).count() - 1)
+                .sum();
+            if distinct >= 3 {
+                break;
+            }
+            let best = refs
+                .iter()
+                .map(|&r| arc(r).0)
+                .flat_map(|i| {
+                    (0..w[i].len())
+                        .filter(move |&j| !k[i][j])
+                        .map(move |j| (i, j))
+                })
                 .max_by(|x, y| w[x.0][x.1].total_cmp(&w[y.0][y.1]));
-            match best { Some((i, j)) => kept[i][j] = true, None => break }
+            match best {
+                Some((i, j)) => kept[i][j] = true,
+                None => break,
+            }
         }
     }
 }

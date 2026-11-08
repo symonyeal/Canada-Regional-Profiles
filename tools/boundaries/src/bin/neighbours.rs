@@ -7,10 +7,17 @@
 //! neighbours across a provincial border are absent. Output: {DGUID: [DGUID, ...]}, sorted, both levels in one file.
 
 use serde_json::Value;
-use std::{collections::{BTreeMap, BTreeSet}, env, fs, path::Path, process};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    env, fs,
+    path::Path,
+    process,
+};
 
 /// Provinces and territories, territories first (the site's order).
-const PT: [&str; 13] = ["60", "61", "62", "59", "48", "47", "46", "35", "24", "13", "12", "11", "10"];
+const PT: [&str; 13] = [
+    "60", "61", "62", "59", "48", "47", "46", "35", "24", "13", "12", "11", "10",
+];
 
 type Graph = BTreeMap<String, BTreeSet<String>>;
 
@@ -18,20 +25,38 @@ type Graph = BTreeMap<String, BTreeSet<String>>;
 /// Cost: O(Σ refs + Σ_arc u_a²), u_a the areas using arc a (at most two in a planar subdivision).
 fn adjacency(t: &Value, g: &mut Graph) {
     let mut users: BTreeMap<i64, BTreeSet<&str>> = BTreeMap::new();
-    for f in t["objects"]["areas"]["geometries"].as_array().into_iter().flatten() {
-        let Some(id) = f["properties"]["DGUID"].as_str() else { continue };
+    for f in t["objects"]["areas"]["geometries"]
+        .as_array()
+        .into_iter()
+        .flatten()
+    {
+        let Some(id) = f["properties"]["DGUID"].as_str() else {
+            continue;
+        };
         g.entry(id.to_string()).or_default();
         let mut stack = vec![&f["arcs"]];
         while let Some(v) = stack.pop() {
             match v {
                 Value::Array(a) => stack.extend(a),
-                Value::Number(n) => { let r = n.as_i64().unwrap_or(0); users.entry(if r < 0 { !r } else { r }).or_default().insert(id); }
+                Value::Number(n) => {
+                    let r = n.as_i64().unwrap_or(0);
+                    users
+                        .entry(if r < 0 { !r } else { r })
+                        .or_default()
+                        .insert(id);
+                }
                 _ => {}
             }
         }
     }
     for u in users.values() {
-        for a in u { for b in u { if a != b { g.get_mut(*a).unwrap().insert(b.to_string()); } } }
+        for a in u {
+            for b in u {
+                if a != b {
+                    g.get_mut(*a).unwrap().insert(b.to_string());
+                }
+            }
+        }
     }
 }
 
@@ -40,11 +65,14 @@ fn run(dir: &Path) -> Result<(), String> {
         let mut g = Graph::new();
         for level in ["csd", "cd"] {
             let path = dir.join(format!("{level}-{pr}.json"));
-            let t: Value = serde_json::from_str(&fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?)
-                .map_err(|e| format!("{}: {e}", path.display()))?;
+            let t: Value = serde_json::from_str(
+                &fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?,
+            )
+            .map_err(|e| format!("{}: {e}", path.display()))?;
             adjacency(&t, &mut g);
         }
-        let out: BTreeMap<&String, Vec<&String>> = g.iter().map(|(k, v)| (k, v.iter().collect())).collect();
+        let out: BTreeMap<&String, Vec<&String>> =
+            g.iter().map(|(k, v)| (k, v.iter().collect())).collect();
         let s = serde_json::to_string(&out).map_err(|e| e.to_string())?;
         fs::write(dir.join(format!("neighbours-{pr}.json")), &s).map_err(|e| e.to_string())?;
         println!("neighbours-{pr}.json  {} areas  {} bytes", g.len(), s.len());
@@ -54,8 +82,14 @@ fn run(dir: &Path) -> Result<(), String> {
 
 fn main() {
     let a: Vec<String> = env::args().collect();
-    if a.len() != 2 { eprintln!("usage: neighbours <boundary-dir>"); process::exit(2); }
-    if let Err(e) = run(Path::new(&a[1])) { eprintln!("error: {e}"); process::exit(1); }
+    if a.len() != 2 {
+        eprintln!("usage: neighbours <boundary-dir>");
+        process::exit(2);
+    }
+    if let Err(e) = run(Path::new(&a[1])) {
+        eprintln!("error: {e}");
+        process::exit(1);
+    }
 }
 
 #[cfg(test)]
