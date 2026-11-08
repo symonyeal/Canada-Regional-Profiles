@@ -109,7 +109,7 @@ export class Profile {
 
 export function csv(rows) {
   return '﻿'+rows.map(row=>row.map(v=>{
-    let s=String(v??'');if(/^[=+\-@\t\r]/.test(s))s="'"+s;
+    let s=String(v??'');if(typeof v==='string'&&/^[=+\-@\t\r]/.test(s))s="'"+s;
     return '"'+s.replaceAll('"','""')+'"';
   }).join(',')).join('\r\n');
 }

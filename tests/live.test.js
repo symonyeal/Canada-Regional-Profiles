@@ -71,6 +71,7 @@ test('geographic matching uses classification codes, not ambiguous city names', 
 test('CSV guards spreadsheet formulas and correctly quotes delimiters', () => {
   assert.equal(csv([['name','value'],['=cmd','a,b'],['a"b',null]]),
     '\ufeff"name","value"\r\n"\'=cmd","a,b"\r\n"a""b",""');
+  assert.equal(csv([[-5,'-5']]),'\ufeff"-5","\'-5"');
 });
 test('concurrent requests share a promise; failures are evicted so retry can succeed', async () => {
   let n=0; const cache=new Map(); const f=async()=>{n++; return 9;};
