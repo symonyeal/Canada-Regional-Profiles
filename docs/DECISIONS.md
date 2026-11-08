@@ -136,7 +136,7 @@ Census DGUIDs select profiles; WDS classification codes match tables; display na
 
 The URL holds the geography, the comparison area and every view choice; defaults are omitted. A geography change adds a history entry. View and filter changes replace the current entry, so Back returns to the previous place rather than stepping through every filter. A new geography keeps view choices but clears facility and area selections that belonged to the old one. Malformed parameters fall back to defaults.
 
-Each tool keeps a generation counter; work started for an older selection never draws. Each card loads on its own. A failed benchmark removes only the comparison marks; a failed boundary request leaves the card, legend and table; a failed Census request does not stop payroll, logistics or talent exhibits. Retry asks the source again; a combination a source does not publish is shown as such, without Retry.
+Each tool keeps a generation counter; work started for an older selection never draws. Each card loads on its own. A failed benchmark removes only the comparison marks; a failed boundary request leaves the card, legend and table; a failed Census request does not stop payroll exhibits. Retry asks the source again; a combination a source does not publish is shown as such, without Retry.
 
 ## Requests
 

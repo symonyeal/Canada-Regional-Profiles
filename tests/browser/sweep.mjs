@@ -14,6 +14,7 @@ for(const g of geos.filter(g=>!only.length||only.includes(g))){
   for(const k of ['overview','industries','compare','detail']){
     await p.locator(`#section-links a[href="#${k}"]`).click();
     await p.waitForFunction(k=>{const e=document.getElementById(k);return e.querySelector('.finding-value,.kpi-value,.industry-name,.bar-row,.state.failure,.unpublished');},k,{timeout:90000}).catch(()=>{});
+    await p.waitForFunction(k=>!document.getElementById(k).querySelector('.state.loading'),k,{timeout:90000}).catch(()=>{});
     views[k]=await p.locator(`#${k}`).evaluate(e=>({loading:e.querySelectorAll('.state.loading').length,failures:[...e.querySelectorAll('.state.failure')].map(x=>x.textContent),
       values:[...e.querySelectorAll('.finding-value,.kpi-value,.rank-value>span')].slice(0,4).map(x=>x.textContent),rows:e.querySelectorAll('.bar-row,tbody tr').length,text:e.innerText.slice(-350)}));
   }
@@ -21,8 +22,15 @@ for(const g of geos.filter(g=>!only.length||only.includes(g))){
   await p.locator('#section-links a[href="#overview"]').click();
   await p.waitForFunction(()=>document.querySelector('#overview .trend-panel .chart-card,#overview .trend-panel .notice,#overview .trend-panel .state.failure'),undefined,{timeout:90000}).catch(()=>{});
   const trend=await p.locator('#overview .trend-panel').evaluate(e=>({title:e.querySelector('h4')?.textContent??null,range:e.querySelector('.trend-range .field-label')?.textContent??null,
-    notice:e.querySelector('.notice,.state.failure')?.textContent??null,measures:e.querySelectorAll('option').length}));
+    notice:e.querySelector('.notice,.state.failure')?.textContent??null,failed:!!e.querySelector('.state.failure'),measures:e.querySelectorAll('option').length}));
   R.push({geo:g,place:await p.locator('#place-name').textContent(),views,trend,errors});console.log(g,R.at(-1).place,JSON.stringify(Object.fromEntries(Object.entries(views).map(([k,v])=>[k,{loading:v.loading,failures:v.failures.length,rows:v.rows}]))),trend.title??trend.notice,trend.range??'');
   fs.writeFileSync(out,JSON.stringify({base,results:R},null,2));await p.close();
 }
-await b.close();if(R.some(r=>r.errors.length))process.exitCode=1;
+await b.close();
+// Pass criterion: no page error, and in every view neither a failed nor a still-loading card. "Not published" notices are not failures.
+const bad=R.flatMap(r=>[...r.errors.map(e=>`${r.geo} page error: ${e}`),
+  ...Object.entries(r.views).filter(([,v])=>v.loading||v.failures.length).map(([k,v])=>`${r.geo} ${k}: ${v.loading} loading, ${v.failures.length} failed`),
+  ...r.trend.notice&&r.trend.failed?[`${r.geo} trend: ${r.trend.notice}`]:[]]);
+for(const m of bad)console.log('FAIL',m);
+console.log(bad.length?`${bad.length} failures in ${R.length} geographies`:`PASS ${R.length} geographies`);
+if(bad.length||!R.length)process.exitCode=1;

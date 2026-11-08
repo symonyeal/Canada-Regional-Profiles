@@ -27,7 +27,7 @@ test('business-count specialization requires complete denominators',async()=>{
     else value=JSON.parse(opts.body).map(x=>{
       const [g,s,i]=x.coordinate.split('.').map(Number);
       return {status:'SUCCESS',object:{coordinate:x.coordinate,vectorDataPoint:[
-        {value:s!==1?null:g===1?(i===2?20:null):i===2?100:900}
+        {refPer:'2025',value:s!==1?null:g===1?(i===2?20:null):i===2?100:900}
       ]}};
     });
     return new Response(JSON.stringify(value));

@@ -230,7 +230,6 @@ The site's own modules computed live values, compared field by field with refere
 | Establishments 2018–2026 | 0/9 equal; neither total nor classified subtotal of either release month reproduces the reference |
 | Census distributions and KPIs (income bands, sectors, industry treemap, occupations, education, construction, tenure, commuting, place of work, households, median age, rent, dwelling value) | 98 of 100 exact or within display rounding; the two differences are the reference's "80 and older" band (85+ only) for Manitoba and Canada |
 | Market card, individual income $30K–$70K | 433,775 (provincial total) vs 433,675 (reference sum of census subdivisions) |
-| Talent total | 37-10-0011 publishes no Manitoba year equal to the reference's 63,027; groupings rank in the same order |
 
 ## Responsive and accessibility checks
 

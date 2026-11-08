@@ -46,7 +46,6 @@ Each is queried from the visitor's browser when the exhibit is shown. All were c
 | Dunn, E. S., "A statistical and analytical technique for regional analysis", *Papers and Proceedings of the Regional Science Association* 6, 1960 | shift-share decomposition (`regional-model.shiftShare`) | cited; additivity tested |
 | Krugman, P., *Geography and Trade*, MIT Press, 1991 | specialisation (dissimilarity) index D = ½ Σ \|s − S\| (`regional-model.sectorBase`) | cited |
 | Dean, J. and Barroso, L. A., "The tail at scale", *Communications of the ACM* 56(2), 2013 | hedged Statistics Canada requests (`site/js/api.js`) | cited |
-| Douglas, D. H. and Peucker, T. K., *Cartographica* 10(2), 1973 | line simplification in the historical `analysis/logistics.py` | cited |
 
 ## Retired services
 

@@ -78,7 +78,7 @@ test('a rejected request from before Refresh cannot evict its replacement',async
 test('WDS empty and suppression markers remain missing after scaling',async()=>{
   const real=globalThis.fetch;clearCache();
   globalThis.fetch=async()=>new Response(JSON.stringify([{status:'SUCCESS',object:{coordinate:'1',vectorDataPoint:
-    [null,'','..','x',0,2].map(value=>({value,scalarFactorCode:3}))}}]));
+    [null,'','..','x',0,2].map((value,i)=>({refPer:String(2020+i),value,scalarFactorCode:3}))}}]));
   try {
     assert.deepEqual((await points('14100202',['1'])).get('1').map(p=>p.value),[null,null,null,null,0,2000]);
   } finally {globalThis.fetch=real;clearCache();}

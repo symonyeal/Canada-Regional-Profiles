@@ -153,9 +153,9 @@ export async function points(pid,coordinates,latestN=1,options={}) {
         seen.add(o.coordinate);
         const periods=new Set();
         return [o.coordinate,(o.vectorDataPoint??[]).map(p=>{
-          if(!p||typeof p!=='object'||p.refPer!=null&&(typeof p.refPer!=='string'||periods.has(p.refPer)))
+          if(!p||typeof p!=='object'||typeof p.refPer!=='string'||periods.has(p.refPer))
             throw new SourceError('malformed','Invalid or repeated table period.');
-          if(p.refPer!=null)periods.add(p.refPer);
+          periods.add(p.refPer);
           const x=numeric(p.value);return {...p,retrievedAt,value:x==null?null:x*10**(p.scalarFactorCode??0)};
         })];
       });
@@ -208,8 +208,11 @@ const oecdArea=g=>g.id===CANADA.id?'CAN':['PR','CD'].includes(g.type)?`CA${g.id.
 // The Northwest Territories and Nunavut on current boundaries exist from 1999; the OECD fills earlier years with 0
 // marked as normal values (checked 2026-10-26 in income and homicides), so those years are not observations.
 const BORN={CA61:1999,CA62:1999};
-// Quoted CSV fields may hold commas; the OECD's CSV has no embedded newlines.
-const fields=line=>{const v=[];let cur='',q=false;for(const c of line){if(c==='"')q=!q;else if(c===','&&!q){v.push(cur);cur='';}else cur+=c;}v.push(cur);return v;};
+// Quoted CSV fields may hold commas and doubled quotes; the OECD's CSV has no embedded newlines.
+export const fields=line=>{const v=[];let cur='',q=false;
+  for(let i=0;i<line.length;i++){const c=line[i];
+    if(c==='"'){if(q&&line[i+1]==='"'){cur+=c;i++;}else q=!q;}else if(c===','&&!q){v.push(cur);cur='';}else cur+=c;}
+  v.push(cur);return v;};
 // One OECD regional series for many areas, every published year: key gives the dimensions after
 // TERRITORIAL_TYPE. Values are scaled by UNIT_MULT. One request; the API answers bursts with HTTP 429, so at most
 // two run at a time. Returns Map geo.id → {name, values: [{year, value}], base} (base: price reference year).

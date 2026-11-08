@@ -4,7 +4,7 @@ import {niceTicks,geographyType,compact,ramp,luminance,tradedShare} from '../sit
 import {parse,serialize,withGeography} from '../site/js/state.js';
 import {matcher,topology,shapes} from '../site/js/geo.js';
 import {parseSelection,serializeSelection} from '../site/js/tools/choropleth.js';
-import {units,areas,PROFILE_IDS} from '../site/js/api.js';
+import {units,areas,PROFILE_IDS,fields,points} from '../site/js/api.js';
 import {request,clearCache,SourceError} from '../site/js/transport.js';
 import {FILTERS,HH_INCOME5} from '../site/js/census.js';
 
@@ -131,4 +131,14 @@ test('a read with no answer after the hedge delay is sent again; the first answe
     assert.deepEqual(await request('https://example.test/hedged',{hedge:20}),{copy:2});
     assert.equal(n,2);assert.equal(aborted,1);
   } finally {globalThis.fetch=realFetch;}
+});
+
+test('OECD CSV fields keep commas and doubled quotes inside quoted values',()=>{
+  assert.deepEqual(fields('a,"b ""x"", c",,d'),['a','b "x", c','','d']);
+});
+test('a table point without a reference period is malformed',async()=>{
+  clearCache();
+  globalThis.fetch=async(url,o)=>reply(200,JSON.parse(o.body).map(x=>({status:'SUCCESS',object:{coordinate:x.coordinate,vectorDataPoint:[{value:1}]}})));
+  try {await assert.rejects(points('1',['1.0.0.0.0.0.0.0.0.0'],1,{}),e=>e instanceof SourceError&&e.kind==='malformed');}
+  finally {globalThis.fetch=realFetch;clearCache();}
 });

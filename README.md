@@ -48,10 +48,11 @@ python -m http.server 8772 --directory site
 
 Open http://localhost:8772/. The page needs internet access to the public sources, the basemap and the map library CDN.
 
-Checks (Node 22 or later):
+Checks (Node 22 or later). `tests/fixtures/record.mjs` re-records the responses the golden tests replay; `sweep.mjs` exits non-zero on a page error, a failed card or a card still loading.
+
 
 ```text
-node --test tests/*.test.js
+node --test tests/*.test.js   # includes the golden tests on the recorded responses in tests/fixtures
 cargo test --release --manifest-path tools/boundaries/Cargo.toml
 cargo fmt --check --manifest-path tools/boundaries/Cargo.toml
 cargo clippy --release --all-targets --manifest-path tools/boundaries/Cargo.toml -- -D warnings

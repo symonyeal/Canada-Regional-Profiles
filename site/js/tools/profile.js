@@ -74,7 +74,7 @@ const DASH={
     const {place,base}=ctx,[a,b,c,m,s,t]=['a','b','c','m','s','t'].map(n=>cell(body,n));
     seriesKpi(a,{title:'Median family income',ctx,load:()=>incomeSeries(place,'family',{signal:ctx.alive.signal}),format:money,universe:'Census families, median total income (tax data)',
       fallback:async()=>({title:'Median household income',value:(await base).p.value(KPI.medianHouseholdIncome),sub:`${place.name} · 2020 income, Census 2021`,universe:'Private households'})});
-    censusKpi(b,{title:'Average household size',id:KPI.householdSize,ctx,base,format:v=>fmt(v,'ratio').replace(/(\.\d)\d$/,'$1')});
+    censusKpi(b,{title:'Average household size',id:KPI.householdSize,ctx,base,format:v=>v==null?fmt(v):fmt(Math.round(v*10)/10,'ratio')});
     censusKpi(c,{title:'Number of households',id:KPI.households,ctx,base,format:v=>compact(v)});
     slot(s,async el=>{const {p}=await base,rows=HH_TYPE.groups.map(([label,ids])=>({label,count:p.sum(ids)}));
       el.replaceChildren(chartCard({title:'Household type',subtitle:'Private households by family structure, Census 2021',
