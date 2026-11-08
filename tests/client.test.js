@@ -91,6 +91,11 @@ test('permanent failures are not retried and keep their kind; failed requests ca
     assert.deepEqual(await request('https://example.test/missing',{attempts:4,backoff:1}),{fine:true});}
   finally {globalThis.fetch=realFetch;}
 });
+test('HTTP 400 is a malformed request, not an unpublished measure, and is not retried',async()=>{
+  clearCache();let n=0;globalThis.fetch=async()=>{n++;return reply(400,{});};
+  try {await assert.rejects(request('https://example.test/bad',{attempts:4,backoff:1}),e=>e instanceof SourceError&&e.kind==='malformed');assert.equal(n,1);}
+  finally {globalThis.fetch=realFetch;}
+});
 test('an error payload with HTTP 200 is a malformed response, not data',async()=>{
   clearCache();globalThis.fetch=async()=>reply(200,{error:{message:'Invalid query'}});
   try {await assert.rejects(request('https://example.test/error',{attempts:2,backoff:1}),e=>e.kind==='malformed');}

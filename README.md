@@ -43,22 +43,23 @@ Details: [reference](docs/REFERENCE.md), [coverage](docs/COVERAGE.md), [sources]
 Serve `site/` with any static server, for example with Python:
 
 ```text
-python -m http.server 8765 --directory site
+python -m http.server 8772 --directory site
 ```
 
-Open http://localhost:8765/. The page needs internet access to the public sources, the basemap and the map library CDN.
+Open http://localhost:8772/. The page needs internet access to the public sources, the basemap and the map library CDN.
 
 Checks (Node 22 or later):
 
 ```text
 node --test tests/*.test.js
 cargo test --release --manifest-path tools/boundaries/Cargo.toml
+cargo fmt --check --manifest-path tools/boundaries/Cargo.toml
+cargo clippy --release --all-targets --manifest-path tools/boundaries/Cargo.toml -- -D warnings
 npm install
-node tests/browser/workflows.mjs http://localhost:8765/ <evidence-folder>/workflows.json
-node tests/browser/visuals.mjs http://localhost:8765/ <evidence-folder>/visuals.json
-node tests/browser/sweep.mjs http://localhost:8765/ <evidence-folder>/sweep.json
-node tests/browser/regressions.mjs http://localhost:8765/ <evidence-folder>/regressions.json
-node tests/browser/visuals.mjs http://localhost:8765/ <evidence-folder>/maps.json
+node tests/browser/workflows.mjs http://localhost:8772/ <evidence-folder>/workflows.json
+node tests/browser/visuals.mjs http://localhost:8772/ <evidence-folder>/visuals.json
+node tests/browser/sweep.mjs http://localhost:8772/ <evidence-folder>/sweep.json
+node tests/browser/regressions.mjs http://localhost:8772/ <evidence-folder>/regressions.json
 ```
 
 The browser checks use `playwright-core` with an installed Chromium-based browser; set `BROWSER` to its path if it is not Edge at the default Windows location.

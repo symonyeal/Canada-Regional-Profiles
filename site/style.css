@@ -107,17 +107,6 @@ p{margin:0}
 
 .maplibregl-ctrl-attrib{font-size:10px}
 
-/* ---------- logistics ---------- */
-
-.net{display:flex;align-items:center;gap:14px;text-align:left;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:#fff;transition:background .15s,border-color .15s}
-.net:hover{border-color:var(--line-2)}
-
-.net b{display:block;font:650 14px/1.3 var(--ui);color:var(--ink)}
-.net small{display:block;color:var(--muted);font-size:12px}
-.net[aria-pressed=true]{border-color:var(--c);background:color-mix(in srgb,var(--c) 9%,#fff)}
-
-.net[aria-pressed=true] b{color:var(--c)}
-
 /* ---------- rail and dashboards ---------- */
 .with-rail{grid-template-columns:92px minmax(0,1fr)}
 /* Dashboards keep the reference's 765 px frame as a minimum and grow rather than clip their cards. */
@@ -132,7 +121,6 @@ p{margin:0}
 .cell>*{flex:1 1 auto;min-height:0}
 .cell>.state{flex:1}
 .map-cell .map-wrap{border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
-
 
 /* ---------- cards and exhibits ---------- */
 .card{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;display:flex;flex-direction:column;min-height:0;position:relative;box-shadow:var(--shadow)}
@@ -178,8 +166,6 @@ p{margin:0}
 .stack-bar.missing{align-items:center;padding:0 10px;font-size:12px;color:var(--muted)}
 .stack-seg{display:grid;place-items:center;font-size:11px;font-weight:650;min-width:0;overflow:hidden;white-space:nowrap}
 
-.tile{position:absolute;border-radius:6px;padding:9px 10px;overflow:hidden;font-size:11.5px;line-height:1.25;display:flex;flex-direction:column;gap:2px;cursor:default}
-
 .share-bars{display:flex;flex-direction:column;gap:16px;padding-top:10px}
 .share-row{display:grid;grid-template-columns:1fr 64px;align-items:center;gap:10px}
 .share-track{position:relative;height:30px;border-radius:6px;background:var(--track);overflow:hidden}
@@ -198,7 +184,7 @@ p{margin:0}
 .state.failure p{margin:2px 0 10px}
 .state.empty{border:1px dashed var(--line-2);border-radius:10px}
 .spinner{width:18px;height:18px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent)}
-@media (prefers-reduced-motion:no-preference){.spinner{animation:spin .9s linear infinite}.net,.rail-item{transition:background .15s,border-color .15s}}
+@media (prefers-reduced-motion:no-preference){.spinner{animation:spin .9s linear infinite}.rail-item{transition:background .15s,border-color .15s}}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* ---------- industries (option cards and exhibit card) ---------- */
@@ -227,9 +213,6 @@ tbody th{font-weight:500;color:var(--ink)}
 .sort{border:0;background:none;padding:0;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;display:inline-flex;gap:4px;align-items:center}
 th[aria-sort=ascending] .sort-mark::after{content:'▲';font-size:8px}
 th[aria-sort=descending] .sort-mark::after{content:'▼';font-size:8px}
-.rank{color:var(--faint);width:28px}
-
-.pos{font-weight:700;color:var(--ink)}
 
 /* ---------- explorer ---------- */
 .explorer{grid-template-columns:400px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);height:var(--frame-h)}
@@ -282,14 +265,6 @@ th[aria-sort=descending] .sort-mark::after{content:'▼';font-size:8px}
 .switch-row[aria-checked=true] .switch{background:var(--accent)}
 .switch-row[aria-checked=true] .switch::after{left:21px}
 @media (prefers-reduced-motion:no-preference){.switch::after{transition:left .15s}}
-
-/* ---------- talent ---------- */
-.talent{grid-template-columns:360px minmax(0,1fr)}
-
-.cip{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;text-align:left;font:500 13px/1.35 var(--ui);color:var(--ink);min-height:58px}
-.cip[aria-pressed=true]{background:var(--tint);border-color:var(--accent)}
-.cip b{display:block;font:650 15px var(--ui);text-align:right}
-.cip small{display:block;font:600 9.5px var(--ui);letter-spacing:.06em;color:var(--body);text-transform:uppercase;text-align:right}
 
 /* ---------- insights ---------- */
 .overlay{position:fixed;inset:0;z-index:150;background:#f2f2f2;display:grid;grid-template-rows:56px minmax(0,1fr)}
@@ -347,18 +322,12 @@ th[aria-sort=descending] .sort-mark::after{content:'▼';font-size:8px}
   .geo-bar .combo{grid-column:1/-1}
   
   .field select,.field input{height:44px}
-  .talent .map-wrap{height:auto;display:flex;flex-direction:column;background:#fff}
-  .talent .map{position:relative;inset:auto;height:380px}
   
   
-  .talent .map-note{position:static;max-width:none;margin:8px;order:4;box-shadow:none}
   .map-kpi{padding:9px 12px;min-width:0}.map-kpi b{font-size:21px}
   .tool-section{padding:40px 0 12px}
   .frame{height:auto}
-  .talent{grid-template-columns:1fr}
-  .talent .side{border-right:0;border-bottom:1px solid var(--line);padding:20px 16px}
   
-  .net{flex:0 0 auto;padding:10px 12px;min-height:46px}.net small{display:none}
   
   .map-wrap{height:420px}
   

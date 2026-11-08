@@ -63,8 +63,8 @@ let library=null;
 export function mapLibrary() {
   if(window.maplibregl)return Promise.resolve();
   return library??=new Promise((resolve,reject)=>{
-    const css=h('link',{rel:'stylesheet',href:'https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css',crossorigin:'anonymous'});
-    const js=h('script',{src:'https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js',crossorigin:'anonymous'});
+    const css=h('link',{rel:'stylesheet',href:'https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css',integrity:'sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V',crossorigin:'anonymous'});
+    const js=h('script',{src:'https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js',integrity:'sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj',crossorigin:'anonymous'});
     js.onload=resolve;js.onerror=()=>{library=null;js.remove();css.remove();reject(new Error('Map library unavailable. Close this view and try again.'));};
     document.head.append(css,js);
   });

@@ -102,7 +102,7 @@ The owner asked to simplify the site and give concrete insight; logistics and si
 
 The owner requested a complete visual upgrade. The interface now uses ivory backgrounds, forest green marks, copper comparisons, DM Serif Display headings and DM Sans controls and data labels. Numbered, left-aligned section headings and a separate geography panel establish a consistent hierarchy across the nine tools. Selected options use borders and labels as well as colour.
 
-Chart colours are declared in `site/js/palette.js`; CSS holds the matching interface tokens. Maps share a sequential green scale; benchmark marks use copper. Treemap and stacked-bar text chooses black or white from the fill's relative luminance, with a threshold of 0.179. The masthead outline is derived from the committed 2021 provincial boundaries in a Lambert azimuthal equal-area projection centred on Canada; it contains no observations. The existing SVG charts, MapLibre maps, public data adapters, tables and CSV exports remain in use.
+Chart colours are declared in `site/js/model.js`; CSS holds the matching interface tokens. Maps share a sequential green scale; benchmark marks use copper. Treemap and stacked-bar text chooses black or white from the fill's relative luminance, with a threshold of 0.179. The masthead outline is derived from the committed 2021 provincial boundaries in a Lambert azimuthal equal-area projection centred on Canada; it contains no observations. The existing SVG charts, MapLibre maps, public data adapters, tables and CSV exports remain in use.
 
 This design intentionally departs from the reference's typography, brown palette and centred uppercase headings. The reference remains the record of the original tool behaviour and data definitions.
 

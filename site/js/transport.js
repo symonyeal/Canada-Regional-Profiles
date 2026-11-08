@@ -68,7 +68,8 @@ async function exchange(url,{body,accept,timeout,parse,attempt,signal,cache='no-
     throw err;
   }
   record({url,status:r.status,ms:Math.round(performance.now()-start),at:new Date().toISOString(),attempt});
-  if(r.status===404||r.status===400) throw new SourceError('unsupported',MESSAGES.unsupported,url);
+  if(r.status===404) throw new SourceError('unsupported',MESSAGES.unsupported,url);
+  if(r.status===400) throw new SourceError('malformed','The source rejected the request.',url);
   if(r.status===429) {const e=new SourceError('rate',MESSAGES.rate,url);e.wait=Math.min(8000,1000*(Number(r.headers.get('Retry-After'))||attempt*2));throw e;}
   if(r.status>=500) throw new SourceError('server',MESSAGES.server,url);
   if(!r.ok) throw new SourceError('unsupported',`${MESSAGES.unsupported} (HTTP ${r.status})`,url);
